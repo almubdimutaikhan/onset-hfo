@@ -192,6 +192,10 @@ SIDEBAR_WIDTH = 190
 COLUMN_WIDTH = 320
 #: The side column's floor on Review › Recording; it starts wider.
 SIDE_MIN_WIDTH = 380
+#: What the Recording page's side column starts at, at least: the compact
+#: ranking's five columns at the designed type size (470 px), grown with
+#: the text.
+RANKING_WIDTH = round((COLUMN_WIDTH + 150) * theme.TEXT_SCALE)
 
 
 def _cell(row: dict, key: str, fmt: str = "{}") -> str:
@@ -1082,7 +1086,7 @@ class PageWindow(QMainWindow):
             shortcut.setContext(Qt.WidgetWithChildrenShortcut)
             shortcut.activated.connect(self.open_review_mode)
         outer.addWidget(self._split("recording", Qt.Horizontal, [left, side_card],
-                                    [1000, max(COLUMN_WIDTH + 150,
+                                    [1000, max(RANKING_WIDTH,
                                                self.side_full_width + 2 * theme.SPACING + 2)],
                                     stretch=(1, 0)), 1)
         return page

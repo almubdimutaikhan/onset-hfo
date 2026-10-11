@@ -2381,10 +2381,11 @@ def test_the_compact_ranking_fits_the_side_column_at_laptop_width(qapp, review):
     """Seen at 1366 px: the ranking's last column cut off behind a scroll
     bar. Five columns now, headers padded less, verdicts in the button's
     own words; the sum has to fit the column the Recording page gives it."""
+    from onset_review.pages import RANKING_WIDTH
     from onset_review.panels import FindingsPanel
 
     panel = FindingsPanel(review)
-    panel.resize(470, 500)
+    panel.resize(RANKING_WIDTH, 500)        # the column's starting width
     panel.show()
     qapp.processEvents()
     header = panel.view.horizontalHeader()
