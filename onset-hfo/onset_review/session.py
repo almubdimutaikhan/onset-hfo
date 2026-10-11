@@ -411,6 +411,12 @@ class ReviewSession:
                 f"{self.request.t_start:g}–{self.request.t_stop:g} s; click any "
                 f"event to load the minute it is in.")
 
+    def tied_with_leader(self) -> list[str]:
+        """The channels that cannot be told apart from the busiest one, the
+        busiest itself left out, in rate order."""
+        leader = self.leader.get("leader") if self.leader.get("available") else None
+        return [channel for channel in self.candidates if channel != leader]
+
     def caveat(self) -> str:
         """The one sentence that has to be on screen whatever else is.
 
@@ -423,10 +429,17 @@ class ReviewSession:
         if not self.leader.get("available"):
             return "No channel ranking: nothing was detected in this window."
         if self.leader.get("distinguishable"):
-            return (f"{self.leader['leader']} stands out "
-                    f"({self.leader['leader_rate_per_min']:g}/min, interval "
-                    f"{self.leader['leader_ci'][0]:g}–{self.leader['leader_ci'][1]:g}); "
-                    f"{len(self.candidates)} channel(s) cannot be told apart from it.")
+            # Whole numbers, as the ranking prints them: the sentence and the
+            # table beside it must not disagree in the decimals. The tied set
+            # holds the leader itself, which is not tied with itself.
+            leader = self.leader["leader"]
+            low, high = self.leader["leader_ci"]
+            others = self.tied_with_leader()
+            tail = (f"{len(others)} other channel{'s' if len(others) != 1 else ''} "
+                    "cannot be told apart from it." if others else
+                    "No other channel's interval overlaps it.")
+            return (f"{leader} stands out: {self.leader['leader_rate_per_min']:.0f} "
+                    f"per minute (interval {low:.0f}–{high:.0f}). {tail}")
         return ("NO CHANNEL STANDS OUT in this window: the busiest channel's "
                 "interval overlaps the median channel's, so this ordering is "
                 "counting noise. Review a longer window before reading it as a "

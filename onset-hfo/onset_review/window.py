@@ -279,7 +279,44 @@ def open_trace(session: ReviewSession, duration: float = DEFAULT_DURATION,
         title=session.request.label(), block=False, show=show, verbose="ERROR")
     _colour_annotations(figure)
     _keep_labels_readable(figure)
+    hide_load_bar_when_done(figure)
     return figure
+
+
+def hide_load_bar_when_done(figure) -> bool:
+    """Hide MNE's "Loading…" bar once the browser has finished loading.
+
+    `mne-qt-browser` shows the bar while it precomputes the trace and only
+    hides it again on a path its own loader rarely takes, so a finished
+    trace kept a full "Loading… 100%" bar under it for good. The browser
+    says "Loading Finished" in its status bar when it is done, from the GUI
+    thread, and that is what this listens for: the loader's own signal comes
+    from its worker thread, where touching a widget does nothing reliable.
+    True when the bar was hidden now (loading had already finished)."""
+    mne_state = getattr(figure, "mne", None)
+    bar = getattr(mne_state, "load_progressbar", None)
+    label = getattr(mne_state, "load_prog_label", None)
+    if bar is None:
+        return False
+
+    def finished() -> bool:
+        thread = getattr(figure, "load_thread", None)
+        running = thread is not None and thread.isRunning()
+        return bool(getattr(mne_state, "data_precomputed", False)) and not running
+
+    def check(*_args) -> None:
+        if finished():
+            bar.hide()
+            if label is not None:
+                label.hide()
+
+    status = figure.statusBar() if hasattr(figure, "statusBar") else None
+    if status is not None:
+        status.messageChanged.connect(check)
+    if finished():
+        check()
+        return True
+    return False
 
 
 #: Minimum horizontal gap, in pixels, between two annotation labels. Below it
@@ -1319,6 +1356,10 @@ def _menus(figure, host: QMainWindow, panels: dict, docks: dict,
     navigate = menubar.addMenu("&Navigate")
     navigate.addAction("&Next event", lambda: panels["events"].step(+1))
     navigate.addAction("&Previous event", lambda: panels["events"].step(-1))
+    review = navigate.addAction("&Review events one at a time…",
+                                lambda: _review_mode(host, session, panels))
+    review.setToolTip("Full screen, one event at a time: A real, D not real, U unsure "
+                      "(Space on the trace or the side column)")
     navigate.addSeparator()
     navigate.addAction("Busiest &channel",
                        lambda: _goto_channel(figure, session,
@@ -1338,6 +1379,16 @@ def _menus(figure, host: QMainWindow, panels: dict, docks: dict,
     help_menu.addAction("Keyboard shortcuts (MNE trace)",
                         lambda: _shortcuts(figure, host))
     _support_menu(help_menu, host)
+
+
+def _review_mode(host, session, panels):
+    """Navigate → Review events one at a time, in either arrangement."""
+    opener = getattr(host, "open_review_mode", None)
+    if callable(opener):
+        return opener()
+    from onset_review.reviewmode import open_review
+
+    return open_review(session, panels["events"], host)
 
 
 def how_to_read_text() -> str:

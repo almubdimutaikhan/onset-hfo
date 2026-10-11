@@ -162,11 +162,17 @@ onset-hfo fetch --subject sub-01 --t-start 0 --t-stop 60
 
    ![The Recording page](images/onset-review.png)
 
-2. **Read the status bar first.** It says either that one channel stands out,
-   with its rate and interval, or that no channel can be told apart from the
-   rest. That sentence decides what the rest of the screen is worth.
-3. **Look at the trend** at the top: rate per channel over time. Is the
-   activity on a few channels, or everywhere?
+2. **Read the answer first.** The large sentence at the top says either that
+   one channel stands out, with its rate and interval in the ranking's own
+   whole numbers and how many other channels are tied with it, or that no
+   channel can be told apart from the rest. That sentence decides what the
+   rest of the screen is worth, and the status bar repeats it on every page.
+   The channels under it are buttons: the busiest one, then those tied with
+   it. Press one and the ranking and the trace go to it.
+3. **Open the trend** (*Trend — rate per channel over time*, under the
+   answer): rate per channel over time. Is the activity on a few channels,
+   or everywhere? It stays folded until you open it, and stays open once you
+   have.
 4. **Look at the ranking** on the right. Tinted rows are channels whose rate
    intervals overlap the busiest one's: statistically tied with it. One
    tinted row means a leader; eight mean a candidate set, not a winner.
@@ -179,10 +185,20 @@ onset-hfo fetch --subject sub-01 --t-start 0 --t-stop 60
    from a sharp transient is a *column*.
 7. **Say who you are**, once, when asked, or start with
    `onset-review --reader "Dr Smith"`. Verdicts are never anonymous.
-8. **Judge events.** With the Events list focused, press **A** (real),
-   **D** (not real) or **U** (cannot tell); the selection moves on. **N** adds
-   a sentence, **Backspace** takes a verdict back, and **Ctrl+J** jumps to the
-   next unjudged event.
+8. **Judge events, one at a time.** Press **Review events** in the toolbar,
+   or **Space** on the trace or the side column. One event fills the screen,
+   raw, band-passed and time-frequency on one time axis. **A** (real), **D**
+   (not real) or **U** (cannot tell) records your verdict and the next event
+   follows; **←** and **→** step, **J** jumps to the next unjudged one, **N**
+   adds a sentence, **Backspace** takes a verdict back, **Esc** leaves. The
+   bar at the top counts what you have judged. The events come from the
+   Events list as you have filtered it, so filter it to the busiest channel
+   first to read that channel's events.
+
+   ![Review mode: one event, full screen](images/onset-review-review-mode.png)
+
+   The same keys work in the Events list itself, with it focused, and
+   **Ctrl+J** jumps to the next unjudged event there.
 9. **Judge the channel.** In the ranking, *Count it*, *Ignore it* or *Cannot
    tell*. Nothing is deleted: your verdict goes beside the number.
 10. **See what the experts marked.** *View → Overlay expert markings* puts
@@ -536,7 +552,7 @@ the notebooks in `notebooks/`.
 |---|---|
 | **Patient › Overview** | the windows on disk, grouped by patient; open, continue, or import |
 | **Patient › Case** | the open case, its ten steps down the side; with none open, *New case…* and *Open a case…* |
-| **Review › Recording** | the trend, the trace, the ranking, the events, one event, spectrum, average event, threshold |
+| **Review › Recording** | the answer and its channels, the trend (folded), the trace, the ranking, the events, one event, spectrum, average event, threshold; *Review events* opens review mode |
 | **Review › Signal** | the HFO band, preprocessing, data quality, ICA components |
 | **Review › Contacts** | the patient record, and the contacts in 3D, measured or schematic |
 | **Review › Map** | the contacts flat, coloured by rate |
@@ -555,7 +571,9 @@ the notebooks in `notebooks/`.
 | **Alt+1 … Alt+5** | Patient, Review, Assistant, Report, Library |
 | **Ctrl+Page Down**, **Ctrl+Page Up** | the next and previous page inside a place |
 | **Ctrl+Shift+E** | Analysis mode on or off |
+| **Space** | review mode, from the trace or the side column |
 | **A**, **D**, **U** | judge the selected event: real, not real, cannot tell |
+| **←**, **→**, **J**, **Esc** | in review mode: previous, next, next unjudged, leave |
 | **N** | a note on the event |
 | **Backspace** | take a verdict back |
 | **Ctrl+1**, **Ctrl+2**, **Ctrl+3** | the same verdicts from anywhere |

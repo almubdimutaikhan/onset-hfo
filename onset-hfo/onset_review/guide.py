@@ -233,7 +233,9 @@ to choose the band and the detectors as well, or
 <li>{_link('page:recording', 'Review › Recording')} ranks the channels by event rate, both
 detectors side by side. Click a channel for its events; click an event for its
 raw, filtered and time-frequency views.</li>
-<li>Judge events with the keys shown on the page; your verdicts go into the
+<li>Judge events one at a time: <b>Review events</b> in the toolbar, or <b>Space</b>
+on the trace, gives each event the whole screen; <b>A</b> real, <b>D</b> not real,
+<b>U</b> unsure, and the next one follows. Your verdicts go into the
 {_link('page:report', 'Report')}.</li>
 <li>{_link('page:quality', 'Review › Signal')} shows what was analysed and how;
 {_link('page:contacts', 'Contacts')} and {_link('page:map', 'Map')}, beside it, show
