@@ -20,7 +20,6 @@ from __future__ import annotations
 import datetime
 import json
 import os
-import subprocess
 
 import mne
 import numpy as np
@@ -30,6 +29,23 @@ import pytest
 from onset_hfo.case import annotations as marks
 from onset_hfo.case import bids, bridges, overview
 from onset_hfo.case.model import Case
+
+
+def _identifying(root, words) -> list[str]:
+    """Every (file, word) where a text file under `root` holds one of `words`,
+    once runs of 12 or more hex digits (digests) are taken out."""
+    import re
+
+    found = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        blob = path.read_bytes()
+        if b"\0" in blob:
+            continue
+        text = re.sub(r"[0-9a-fA-F]{12,}", "", blob.decode("utf-8", errors="replace"))
+        found += [f"{path.relative_to(root)}: {word}" for word in words if word in text]
+    return found
 
 
 @pytest.fixture
@@ -108,11 +124,11 @@ def test_a_clinical_file_converts_without_the_patient_s_name(clinical_edf, tmp_p
     assert list(events["trial_type"]) == ["seizure-onset", "seizure", "button", "note"]
     assert list(events["value"]) == ["Sz onset", "seizure", "pt pushed button", "called family"]
     assert events.loc[1, "duration"] == pytest.approx(5.0)
-    # Nothing in the case names the patient or dates the recording.
-    found = subprocess.run(["grep", "-rIl", "-e", "Jane", "-e", "Doe", "-e", "MRN123456",
-                            "-e", "2025-03-04", "-e", "1980", str(case.root)],
-                           capture_output=True, text=True).stdout
-    assert found == ""
+    # Nothing in the case names the patient or dates the recording. The audit
+    # log's SHA-256 digests are hex and hold "1980" by chance about one run in
+    # a few hundred, so they are taken out before looking; binary files are
+    # skipped, as grep -I skips them.
+    assert _identifying(case.root, ("Jane", "Doe", "MRN123456", "2025-03-04", "1980")) == []
     again = Case.open(case.root)
     assert again.recordings[0].source_sha256 == report.sha256
     assert again.step_done("import")
