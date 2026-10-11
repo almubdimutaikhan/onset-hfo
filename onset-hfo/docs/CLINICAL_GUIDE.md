@@ -408,6 +408,20 @@ event. The letters work while the events list has focus; **Read → …**
 (`Ctrl+1`, `Ctrl+2`, `Ctrl+3`) does the same from anywhere, and **Read → Next
 unjudged event** (`Ctrl+J`) skips what you have already done.
 
+**Review mode, one event at a time.** *Review events* in the toolbar, **Space**
+on the trace or the side column, or **Navigate → Review events one at a time…**
+gives one event the whole screen: the wideband, band-passed and time-frequency
+pictures on one time axis, the event's numbers under them, and what you have
+said about it in the corner. The same keys record your verdict and the next
+event follows; `←` and `→` step, `J` jumps to the next unjudged one, `Esc`
+leaves. The events are the Events list's, in its order and with its filters,
+so filtering the list to one channel first reviews that channel's events, and
+the bar at the top counts what you have judged of them. Nothing is kept twice:
+the verdicts go through the list and are saved as they are given, and leaving
+review mode leaves the list, the trace and the event view where you stopped.
+
+![Review mode: one event, full screen, with the reader's three keys](images/onset-review-review-mode.png)
+
 **Judging a contact.** In **Findings**, *Count it*, *Ignore it* or *Cannot
 tell*: one segmented control, the verdict already given shown filled, and
 *Clear* beside it to take it back. The event verdicts are the same shape.

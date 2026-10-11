@@ -952,27 +952,36 @@ class PageWindow(QMainWindow):
         box = QVBoxLayout(left)
         box.setContentsMargins(0, 0, 0, 0)
         box.setSpacing(4)
-        # The site's first question. Answered in plain text when there is a
-        # clear answer; the tinted box is kept for the case that needs care,
-        # a leader that cannot be told from its neighbours.
+        # The site's first question, answered first and largest: the answer
+        # is what the page is for, and the evidence under it is there to be
+        # checked. Plain text when there is a clear answer; the tinted box is
+        # kept for the case that needs care, a leader that cannot be told
+        # from its neighbours.
+        tokens = theme.current()
+        clear = bool(self.session.leader.get("distinguishable"))
         self.leader = QLabel(self.session.caveat())
         self.leader.setObjectName("onset_leader")
         self.leader.setWordWrap(True)
+        self.leader.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.leader.setStyleSheet(
-            f"color:{theme.current().text};background:transparent;border:none;"
-            if self.session.leader.get("distinguishable") else theme.card("bad"))
+            f"color:{tokens.text};background:transparent;border:none;"
+            "font-size:14pt;font-weight:600;" if clear else theme.card("bad"))
         head = QWidget()
         head_box = QVBoxLayout(head)
         head_box.setContentsMargins(0, 0, 0, 0)
-        head_box.setSpacing(4)
+        head_box.setSpacing(6)
         head_box.addWidget(theme.section_label("Does any channel actually stand out?"))
         head_box.addWidget(self.leader)
+        head_box.addLayout(self._leader_chips())
 
         self.trend_toggle = QToolButton()
         self.trend_toggle.setText("Trend — rate per channel over time")
         self.trend_toggle.setCheckable(True)
-        self.trend_toggle.setChecked(True)
-        self.trend_toggle.setArrowType(Qt.DownArrow)
+        # Folded until asked for, and remembered: the answer above is the
+        # page's first line, and the trend is evidence for it.
+        trend_open = bool(self._remembered_value("trend_open"))
+        self.trend_toggle.setChecked(trend_open)
+        self.trend_toggle.setArrowType(Qt.DownArrow if trend_open else Qt.RightArrow)
         self.trend_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.trend_toggle.setAutoRaise(True)
         self.trend_toggle.toggled.connect(self._toggle_trend)
@@ -983,11 +992,22 @@ class PageWindow(QMainWindow):
                                    "second monitor, or just bigger. Everything "
                                    "here keeps driving it. Ctrl+Shift+T.")
         self.pop_button.clicked.connect(lambda _=False: self.toggle_trace_window())
+        self.review_button = QPushButton("Review events")
+        self.review_button.setObjectName("onset_review_events")
+        self.review_button.setProperty("primary", True)
+        self.review_button.setToolTip("One event at a time, full screen: A real, D not real, "
+                                      "U unsure, the next one follows (Space)")
+        self.review_button.clicked.connect(lambda _=False: self.open_review_mode())
+        self._register_action("recording", self.review_button)
         self._register_action("recording", self.pop_button)
         head_box.addWidget(self.trend_toggle)
         head_box.addWidget(self.panels["trends"], 1)
         self.panels["trends"].setMinimumHeight(90)
+        self.panels["trends"].setVisible(trend_open)
         upper = theme.card_frame(head)
+        # Never shorter than the answer and its chips: the splitter may
+        # shrink the card, but not into the sentence it is there to show.
+        upper.setMinimumHeight(150)
         lower_body = QWidget()
         under = QVBoxLayout(lower_body)
         under.setContentsMargins(0, 0, 0, 0)
@@ -1015,7 +1035,7 @@ class PageWindow(QMainWindow):
         under.addWidget(self._trace_slot, 1)
         lower = theme.card_frame(lower_body)
         box.addWidget(self._split("recording_v", Qt.Vertical,
-                                  [upper, lower], [250, 700],
+                                  [upper, lower], [250 if trend_open else 190, 800],
                                   stretch=(0, 1)), 1)
 
         self.side = QTabWidget()
@@ -1044,10 +1064,28 @@ class PageWindow(QMainWindow):
                                    "— does the ranking survive?")
         side_card = theme.card_frame(self.side)
         side_card.setMinimumWidth(self.side.minimumWidth() + 2 * theme.SPACING + 2)
+        # Space opens review mode from the trace and the side column -- the
+        # places a reader's hands already are -- and not window-wide, where it
+        # would take Space away from a focused button or the assistant's box.
+        for owner in (self.figure, self.side):
+            shortcut = QShortcut(QKeySequence("Space"), owner)
+            shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+            shortcut.activated.connect(self.open_review_mode)
         outer.addWidget(self._split("recording", Qt.Horizontal, [left, side_card],
                                     [1000, max(COLUMN_WIDTH + 150, side_card.minimumWidth())],
                                     stretch=(1, 0)), 1)
         return page
+
+    # -- review mode ----------------------------------------------------------
+    def open_review_mode(self, full_screen: bool = True):
+        """One event at a time, full screen (`onset_review.reviewmode`)."""
+        if not self.loaded or self.panels.get("events") is None:
+            return None
+        from onset_review.reviewmode import open_review
+
+        self.review_mode = open_review(self.session, self.panels["events"], self,
+                                       full_screen=full_screen)
+        return self.review_mode
 
     # -- the trace in a window of its own ----------------------------------
     @property
@@ -1136,9 +1174,53 @@ class PageWindow(QMainWindow):
         self.panels["trends"].setVisible(bool(on))
         self.trend_toggle.setArrowType(Qt.DownArrow if on else Qt.RightArrow)
         splitter = self.splitter("recording_v")
-        if splitter is not None and not on:
+        if splitter is not None:
+            total = max(300, sum(splitter.sizes()))
             upper = splitter.widget(0)
-            splitter.setSizes([upper.sizeHint().height(), max(300, sum(splitter.sizes()))])
+            height = upper.sizeHint().height() if not on else max(250, upper.sizeHint().height())
+            splitter.setSizes([height, max(200, total - height)])
+        self.remember_layout()
+
+    def _leader_chips(self) -> QHBoxLayout:
+        """The busiest channel and those tied with it, as buttons that take
+        the ranking, and with it the trace, to that channel."""
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+        #: channel -> its chip.
+        self.leader_chips: dict[str, QPushButton] = {}
+        leader = self.session.leader.get("leader") if self.session.leader.get("available") else None
+        channels = ([leader] if leader else []) + self.session.tied_with_leader()
+        if not channels:
+            return row
+        tokens = theme.current()
+        for index, channel in enumerate(channels):
+            chip = QPushButton(channel)
+            chip.setObjectName("onset_leader_chip")
+            chip.setCursor(Qt.PointingHandCursor)
+            first = index == 0
+            chip.setToolTip("The busiest channel: show it in the ranking and the trace"
+                            if first else "Tied with the busiest: show it in the ranking "
+                                          "and the trace")
+            chip.setStyleSheet(
+                f"QPushButton{{border-radius:11px;padding:2px 10px;"
+                f"background:{tokens.accent if first else tokens.surface_alt};"
+                f"color:{tokens.accent_text if first else tokens.text};"
+                f"border:1px solid {tokens.accent if first else tokens.separator};}}")
+            chip.clicked.connect(lambda _=False, channel=channel: self.show_channel(channel))
+            row.addWidget(chip)
+            self.leader_chips[channel] = chip
+        tied = len(channels) - 1
+        if tied:
+            row.addWidget(theme.muted(f"{tied} tied with it", size=9))
+        row.addStretch(1)
+        return row
+
+    def show_channel(self, channel: str) -> None:
+        """The ranking selects `channel`, which moves the trace to it."""
+        self.panels["findings"].select_channel(channel)
+        if hasattr(self, "side"):
+            self.side.setCurrentWidget(self.panels["findings"])
 
     def _analysis_page(self) -> QWidget:
         """Spyder on one page: the Editor on the left; the Workspace and
@@ -1982,6 +2064,8 @@ class PageWindow(QMainWindow):
             payload.update({"schema": 1, "compact": self.compact(), "splitters": splitters,
                             "sidebar": self.sidebar_shown,
                             "analysis_mode": self._analysis_mode})
+            if hasattr(self, "trend_toggle"):
+                payload["trend_open"] = self.trend_toggle.isChecked()
             if getattr(self, "docks", None) and not self.panes_lent:
                 # While the Analysis page holds the panes their docks stand
                 # hidden; that is not an arrangement to remember.

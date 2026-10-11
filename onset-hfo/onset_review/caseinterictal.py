@@ -124,15 +124,22 @@ class InterictalResult:
     def statement(self) -> str:
         if not self.leader.get("available"):
             return "No channel could be ranked."
-        tied = list(self.table.loc[self.table["tied"], "channel"])
         lead = self.leader
+        # The tied set holds the busiest channel itself, which is not tied
+        # with itself.
+        tied = [c for c in self.table.loc[self.table["tied"], "channel"]
+                if c != lead.get("leader")]
         minutes = f"{self.minutes:.1f}" if self.minutes < 10 else f"{self.minutes:.0f}"
         head = (f"Over {self.n_segments} segment(s), {minutes} minutes: "
                 f"{lead['leader']} is the busiest at {lead['leader_rate_per_min']:g}/min "
                 f"(interval {lead['leader_ci'][0]:g}–{lead['leader_ci'][1]:g}). ")
         if lead.get("distinguishable"):
-            return head + (f"It stands out from the median channel; {len(tied)} channel(s) "
-                           f"cannot be told apart from it: {', '.join(tied[:12])}"
+            if not tied:
+                return head + ("It stands out from the median channel, and no other "
+                               "channel's interval overlaps it.")
+            return head + (f"It stands out from the median channel; {len(tied)} other "
+                           f"channel{'s' if len(tied) != 1 else ''} cannot be told apart "
+                           f"from it: {', '.join(tied[:12])}"
                            + ("…" if len(tied) > 12 else "") + ".")
         return head + ("No channel stands out: its interval overlaps the median channel's, "
                        "so the order is counting noise.")
