@@ -1083,6 +1083,27 @@ nobody checked whether the defaults suited their recording. These are the same
 MNE operations (`filter`, `notch_filter`, `resample`, `drop_channels`), with a
 mouse on them.
 
+**How to read this recording** comes first, as three choices:
+
+- **Standard**, the measured defaults: high-pass at 1 Hz, the mains and its
+  harmonics notched narrowly, the bipolar montage, nothing marked.
+- **Noisy recording**, the same, with the muscle and amplitude markers below
+  turned on. The filters and the reference stay the measured ones; the marked
+  seconds are set aside with the reason, not repaired or deleted.
+- **Custom**, every setting in the table below, starting from what is set.
+
+Standard and Noisy keep the channels left out, the sampling rate and the mains
+as they are. A window analysed with anything else opens on Custom.
+
+**Preview** shows two seconds of the busiest channel, from the recording as it
+was read, and the same two seconds through the high-pass, low-pass and notch as
+they are set, redrawn a moment after a setting changes. The two seconds start
+just before that channel's first accepted event. They are filtered with three
+seconds either side and then cut, so the filter's own start-up does not show at
+the edges. Only the filters are previewed: the reference, the artefact markers,
+regression and ICA act across channels or over the whole window, and take
+effect on *Apply*.
+
 | control | what it does | what to watch |
 |---|---|---|
 | **High-pass** | removes drift | anything up to 80 Hz is free; above that it eats the ripple band |
@@ -1496,6 +1517,15 @@ as, and will not open until something is marked SEEG or ECoG. Set them all with
 one of the buttons, then change the exceptions — the EKG, the DC channels, the
 trigger — individually. The count beside the buttons is the number that will
 actually be analysed.
+
+A file that itself declares some contacts SEEG or ECoG, as a FIF written by
+MNE can, is taken at its word, and the list is folded under *Check the N
+channels*. The dialog says what the file declares, for example *86 × seeg, 2 ×
+ecg*, and the count is still there. Open the list to change any
+channel; choosing another kind of recording opens it too. For MEG the list
+folds the same way when the file declares its sensors, and the note on one
+sensor type at a time stays. A scalp EEG file never folds: every channel typed
+`eeg` is exactly the claim that has to be checked.
 
 **This recording is…** sits above the list: intracranial EEG, scalp EEG or
 MEG. It decides which channels are analysed and in what unit, and changing it

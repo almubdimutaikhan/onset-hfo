@@ -3591,7 +3591,8 @@ def test_the_preprocessing_panel_is_settings_rows_in_groups(built):
 
     panel = built.panels["preprocess"]
     groups = [f for f in panel.findChildren(QFrame) if f.objectName() == "onset_group"]
-    assert len(groups) == 7, "band, filtering, reference, artifacts, experimental, rate, channels"
+    assert len(groups) == 9, ("band, presets, preview, filtering, reference, artifacts, "
+                              "experimental, rate, channels")
     lines = [f for f in panel.findChildren(QFrame) if f.objectName() == "onset_group_line"]
     assert len(lines) >= 12, "a hairline between rows"
     # The radios sit in rows of their own and are still exclusive.

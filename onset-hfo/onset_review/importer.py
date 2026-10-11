@@ -42,6 +42,7 @@ from qtpy.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QToolButton,
     QVBoxLayout,
 )
 
@@ -177,7 +178,7 @@ class ImportDialog(QDialog):
         whose display is too small to grant it -- which is every headless one.
         """
         height = self.sizeHint().height()
-        if self.table is None:
+        if self.table is None or not self.table.isVisibleTo(self):
             return height
         return (height + self._rows_tall(VISIBLE_ROWS)
                 - self._rows_tall(VISIBLE_ROWS_MIN))
@@ -241,6 +242,20 @@ class ImportDialog(QDialog):
         tools.addWidget(self.counts)     # line, beside the buttons it counts
         box.addLayout(tools)
 
+        # A file that already says which channels are intracranial (or which
+        # are MEG sensors) is taken at its word, with the list one click away;
+        # the export that calls everything scalp EEG -- the one this screen
+        # exists for -- still opens on the list and the warning.
+        self.channels_toggle = QToolButton()
+        self.channels_toggle.setObjectName("onset_import_channels_toggle")
+        self.channels_toggle.setCheckable(True)
+        self.channels_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.channels_toggle.setAutoRaise(True)
+        self.channels_toggle.setText(f"Check the {len(self.overview)} channels")
+        self.channels_toggle.toggled.connect(self._show_channels)
+        tools.insertWidget(0, self.channels_toggle)   # where the list's buttons go
+        self._tools = tools
+
         self.table = QTableWidget(len(self.overview), 3)
         self.table.setHorizontalHeaderLabels(
             ["Channel", "The file says", "Analyse it as"])
@@ -273,10 +288,48 @@ class ImportDialog(QDialog):
         # and it shrinks for a short montage so an eight-channel strip does
         # not open a dialog two thirds empty.
         self.table.setMinimumHeight(self._rows_tall(VISIBLE_ROWS_MIN))
-        box.addWidget(self.table)
+        box.addWidget(self.table, 1)
+        box.addStretch(0)         # what the table takes when it is folded away
         self.kind.currentIndexChanged.connect(self._kind_changed)
+        self.stated = self._file_states_types()
+        self.channels_toggle.setVisible(self.stated)
+        self._show_channels(not self.stated)
         self._describe_kind()
         return group
+
+    # -- a file that states its own types ------------------------------------------
+    def _file_states_types(self) -> bool:
+        """True when the file's own types already say what is analysed: some
+        channel declared SEEG or ECoG in an intracranial recording, or an MEG
+        sensor in an MEG one. A clinical export that declares every channel
+        scalp EEG states nothing, and is checked channel by channel."""
+        declared = {str(d) for d in self.overview["declared"]}
+        kind = self.kind_name()
+        if kind == "ieeg":
+            return bool(declared & {"seeg", "ecog"})
+        if kind == "meg":
+            return bool(declared & set(_MEG_TYPES))
+        return False
+
+    def _show_channels(self, on: bool) -> None:
+        on = bool(on)
+        self.table.setVisible(on)
+        for index in range(self._tools.count()):
+            widget = self._tools.itemAt(index).widget()
+            if widget is not None and widget not in (self.counts, self.channels_toggle):
+                widget.setVisible(on and self._button_wanted(widget))
+        self.channels_toggle.blockSignals(True)
+        self.channels_toggle.setChecked(on)
+        self.channels_toggle.blockSignals(False)
+        self.channels_toggle.setArrowType(Qt.DownArrow if on else Qt.RightArrow)
+
+    def _button_wanted(self, widget) -> bool:
+        kind = self.kind_name()
+        for key, button in self.all_buttons.items():
+            if button is widget:
+                return (kind == "ieeg" and key in ("seeg", "ecog")
+                        or kind == "eeg" and key == "eeg")
+        return True
 
     # -- the kind of recording ---------------------------------------------
     def kind_name(self) -> str:
@@ -289,6 +342,8 @@ class ImportDialog(QDialog):
 
     def _kind_changed(self) -> None:
         kind = self.kind_name()
+        # Saying what the recording is re-suggests every type: show them.
+        self._show_channels(True)
         for row, declared in enumerate(self.overview["declared"]):
             chooser = self.table.cellWidget(row, 2)
             if not _select(chooser, suggest_type(str(declared), kind)):
@@ -299,9 +354,20 @@ class ImportDialog(QDialog):
     def _describe_kind(self) -> None:
         kind = self.kind_name()
         for key, button in self.all_buttons.items():
-            button.setVisible(kind == "ieeg" and key in ("seeg", "ecog")
-                              or kind == "eeg" and key == "eeg")
+            button.setVisible(self.table.isVisibleTo(self)
+                              and (kind == "ieeg" and key in ("seeg", "ecog")
+                                   or kind == "eeg" and key == "eeg"))
         summary = self._declared_summary()
+        stated = getattr(self, "stated", False) and not self.table.isVisibleTo(self)
+        self.warning.setStyleSheet(card("info" if stated and kind == "ieeg" else "warn"))
+        if stated and kind == "ieeg":
+            # The warning below is about exports that call everything scalp
+            # EEG; this file names its intracranial channels itself.
+            self.warning.setText(
+                f"This file states its channel types: <b>{summary}</b>. They are "
+                "used as the file states them; check the channels below if you "
+                "want to change any.")
+            return
         if kind == "ieeg":
             text = ("<b>Check these before opening.</b> This file declares "
                     f"<b>{summary}</b>. Clinical exports usually declare every "
@@ -316,7 +382,8 @@ class ImportDialog(QDialog):
         else:
             text = ("<b>Analysed as MEG</b>, one sensor type at a time: the "
                     "gradiometers (fT/cm) when there are any, otherwise the "
-                    f"magnetometers (fT). This file declares <b>{summary}</b>. "
+                    f"magnetometers (fT). This file declares <b>{summary}</b>"
+                    + (", used as it states them" if stated else "") + ". "
                     f"{_sentence(MODALITIES['meg_grad'].caveat)}")
         self.warning.setText(text)
 

@@ -64,7 +64,8 @@ from onset_review.theme import SettingsGroup, card, current, muted, scrolled
 #: Re-exported: the sentence and the warnings a reviewer reads under these
 #: controls are computed in `onset_hfo.preprocess`, beside the refusals they
 #: mirror, so the two cannot drift. Nothing in this file decides anything.
-__all__ = ["PreprocessPanel", "RESAMPLE_CHOICES", "describe"]
+__all__ = ["PreprocessPanel", "RESAMPLE_CHOICES", "describe", "PRESETS", "preset_config",
+           "matching_preset"]
 
 #: Offered downsampling rates. Upsampling is not offered: it adds no
 #: information and the only thing it can do is mislead someone reading the
@@ -81,6 +82,49 @@ MAINS_CHOICES = [("From the dataset", None), ("50 Hz", 50.0), ("60 Hz", 60.0)]
 #: Inputs stop growing past this: "1.0 Hz" in a box half the screen wide
 #: reads as a text field waiting for a sentence.
 FIELD_WIDTH = 260
+
+#: The Signal page's three answers to "how should this recording be read?":
+#: (key, label, what it does). Most recordings want the first; a recording
+#: with muscle or movement in it wants the second; the third is every
+#: setting. A preset sets the signal chain only: the band, the channels left
+#: out and the sampling rate are kept as they are.
+PRESETS = (
+    ("standard", "Standard",
+     "The measured defaults: high-pass at 1 Hz, the mains and its harmonics "
+     "notched narrowly, the bipolar montage, nothing marked."),
+    ("noisy", "Noisy recording",
+     "The measured defaults, and two markers on: seconds of muscle or movement, "
+     "and seconds above a peak-to-peak ceiling learned from the data, which the "
+     "quality stage sets aside with the reason. The filters and the reference "
+     "stay the measured ones; nothing is repaired or deleted."),
+    ("custom", "Custom",
+     "Every setting: the filters and their design, the reference, the artefact "
+     "markers, regression and ICA."),
+)
+
+
+def preset_config(name: str, base: PreprocessConfig) -> PreprocessConfig:
+    """`base` with its signal chain set as preset `name` sets it. What a preset
+    does not decide (the channels left out, the sampling rate, the mains
+    frequency, the kind of recording) is kept from `base`."""
+    import dataclasses
+
+    if name == "custom":
+        return base
+    cfg = dataclasses.replace(
+        PreprocessConfig(), modality=base.modality, exclude=base.exclude,
+        drop_bads=base.drop_bads, resample=base.resample, line_freq=base.line_freq)
+    if name == "noisy":
+        cfg = dataclasses.replace(cfg, annotate_muscle=True, annotate_amplitude=True)
+    return cfg
+
+
+def matching_preset(cfg: PreprocessConfig) -> str:
+    """The preset `cfg` is exactly, or "custom"."""
+    for name, _label, _what in PRESETS:
+        if name != "custom" and preset_config(name, cfg) == cfg:
+            return name
+    return "custom"
 
 
 class PreprocessPanel(QWidget):
@@ -397,12 +441,42 @@ class PreprocessPanel(QWidget):
         buttons.addStretch(1)
         buttons.addWidget(self.apply)
 
+        # -- presets and the preview ------------------------------------------
+        from onset_review import theme
+        from onset_review.filterpreview import PreviewPanel
+
+        self.preset_buttons: dict[str, QPushButton] = {}
+        preset_row = QHBoxLayout()
+        preset_row.setContentsMargins(0, 0, 0, 0)
+        for key, label, what in PRESETS:
+            button = QPushButton(label)
+            button.setObjectName(f"onset_preset_{key}")
+            button.setToolTip(what)
+            button.clicked.connect(lambda _=False, key=key: self.choose_preset(key))
+            preset_row.addWidget(button)
+            self.preset_buttons[key] = button
+        theme.segmented(list(self.preset_buttons.values()), preset_row)
+        preset_row.addStretch(1)
+        self.preset_about = muted("", current())
+        self.preset_about.setObjectName("onset_preset_about")
+        self.preset_about.setWordWrap(True)
+        presets = SettingsGroup("How to read this recording")
+        presets.add_wide(_row_widget(preset_row))
+        presets.add_wide(self.preset_about)
+        self.preview = PreviewPanel(session)
+        self.preview.setObjectName("onset_filter_preview")
+        preview = SettingsGroup("Preview")
+        preview.add_wide(self.preview)
+        #: The groups only Custom shows.
+        self.custom_groups = [filters.widget, reference.widget, artifacts.widget,
+                              experimental.widget]
+
         body = QWidget()
         column = QVBoxLayout(body)
         column.setContentsMargins(4, 4, 4, 4)
         column.setSpacing(6)
-        for group in (band_group, filters, reference, artifacts, experimental, rate,
-                      channels):
+        for group in (band_group, presets, preview, filters, reference, artifacts,
+                      experimental, rate, channels):
             column.addWidget(group.widget)
         column.addWidget(self.summary)
         column.addWidget(self.warnings)
@@ -428,7 +502,33 @@ class PreprocessPanel(QWidget):
         self.channels.itemChanged.connect(self.refresh)
         self.apply.clicked.connect(self._apply)
         self.reset.clicked.connect(self.reset_to_defaults)
+        self._preset = matching_preset(self.config())
+        self._show_preset()
         self.refresh()
+        self.preview.show_config(self.config(), now=True)
+
+    # -- presets -----------------------------------------------------------
+    @property
+    def preset(self) -> str:
+        return self._preset
+
+    def choose_preset(self, key: str) -> None:
+        """Standard or Noisy set the signal chain and fold its settings away;
+        Custom shows every setting, starting from what is set now."""
+        if key != "custom":
+            self._load(preset_config(key, self.config()))
+        self._preset = key
+        self._show_preset()
+        self.refresh()
+
+    def _show_preset(self) -> None:
+        for key, button in self.preset_buttons.items():
+            button.blockSignals(True)
+            button.setChecked(key == self._preset)
+            button.blockSignals(False)
+        self.preset_about.setText(dict((k, w) for k, _l, w in PRESETS)[self._preset])
+        for group in self.custom_groups:
+            group.setVisible(self._preset == "custom")
 
     # -- the config this panel describes -----------------------------------
     def band_name(self) -> str:
@@ -530,9 +630,22 @@ class PreprocessPanel(QWidget):
         self.apply.setEnabled(
             self.config() != (self._session.request.preprocess or self._default)
             or self.band_name() != self._session.request.band)
+        if hasattr(self, "preview"):
+            self.preview.show_config(cfg)
 
     def reset_to_defaults(self) -> None:
-        cfg = self._default
+        self._load(self._default)
+        _select(self.band, "ripple")
+        for index in range(self.channels.count()):
+            self.channels.item(index).setCheckState(Qt.Unchecked)
+        if hasattr(self, "preset_buttons"):
+            self._preset = "standard"
+            self._show_preset()
+        self.refresh()
+
+    def _load(self, cfg: PreprocessConfig) -> None:
+        """Set every signal control to `cfg`. The band is left as it is; the
+        channels left out follow `cfg.exclude`."""
         self.highpass.setValue(cfg.highpass or 0.0)
         self.lowpass.setValue(cfg.lowpass or 0.0)
         self.notch.setChecked(cfg.notch)
@@ -551,10 +664,19 @@ class PreprocessPanel(QWidget):
         self.amplitude.setChecked(bool(cfg.annotate_amplitude))
         self.ptp.setValue(float(cfg.amplitude_ptp_uv or 0.0))
         self.drop_bads.setChecked(cfg.drop_bads)
-        _select(self.band, "ripple")
-        for index in range(self.channels.count()):
-            self.channels.item(index).setCheckState(Qt.Unchecked)
-        self.refresh()
+        self.ica.setChecked(bool(cfg.ica))
+        index = self.ica_method.findData(cfg.ica_method)
+        self.ica_method.setCurrentIndex(index if index >= 0 else 0)
+        self.ica_components.setValue(int(cfg.ica_n_components or 0))
+        self._ica_exclude = tuple(int(i) for i in cfg.ica_exclude)
+        regressing = set(cfg.regress_channels)
+        for row in range(self.regress.count()):
+            item = self.regress.item(row)
+            item.setCheckState(Qt.Checked if item.text() in regressing else Qt.Unchecked)
+        excluded = set(cfg.exclude)
+        for row in range(self.channels.count()):
+            item = self.channels.item(row)
+            item.setCheckState(Qt.Checked if item.text() in excluded else Qt.Unchecked)
 
     def _describe(self, cfg):
         """`describe`, without the band warning on a recording no band fits as
@@ -622,6 +744,12 @@ def _contacts(session) -> list[str]:
             if contact:
                 seen.setdefault(contact, None)
     return list(seen)
+
+
+def _row_widget(layout) -> QWidget:
+    widget = QWidget()
+    widget.setLayout(layout)
+    return widget
 
 
 def _spin(low: float, high: float, step: float, suffix: str, value: float,
