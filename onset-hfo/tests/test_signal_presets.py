@@ -25,11 +25,19 @@ import pytest
 
 from onset_hfo.config import PreprocessConfig
 from onset_review.filterpreview import SECONDS, Preview, apply_filters, preview_signal
-from onset_review.preprocessing import PRESETS, matching_preset, preset_config
 from onset_review.session import ReviewRequest, session_from_recording
+
+# The presets live beside the Signal page's widgets, so they need Qt; the
+# preview's signal and filters do not, and run without it.
+try:
+    from onset_review.preprocessing import PRESETS, matching_preset, preset_config
+except ImportError:            # the review extra is not installed
+    PRESETS = None
+needs_qt = pytest.mark.skipif(PRESETS is None, reason="the review extra is not installed")
 
 
 # -- the presets as configs --------------------------------------------------------------
+@needs_qt
 def test_a_preset_sets_the_chain_and_keeps_what_it_does_not_decide():
     base = PreprocessConfig(highpass=80.0, reference="average", exclude=("SA1",),
                             resample=1000.0, line_freq=60.0, ica=True)
@@ -45,6 +53,7 @@ def test_a_preset_sets_the_chain_and_keeps_what_it_does_not_decide():
     assert preset_config("custom", base) is base
 
 
+@needs_qt
 def test_a_config_is_named_by_the_preset_it_is_exactly():
     assert [key for key, _label, _what in PRESETS] == ["standard", "noisy", "custom"]
     assert matching_preset(PreprocessConfig()) == "standard"
