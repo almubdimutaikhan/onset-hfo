@@ -13,7 +13,7 @@ from qtpy.QtCore import Qt, QThread, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 
 from onset_review import sensitivity, theme
-from onset_review.theme import card
+from onset_review.theme import card, pt
 
 __all__ = ["SensitivityPanel"]
 
@@ -72,7 +72,7 @@ class SensitivityPanel(QWidget):
         self.headline.setObjectName("onset_sensitivity_headline")
         self.headline.setWordWrap(True)
         self.headline.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
-        self.headline.setStyleSheet(f"font-size:9pt;padding:1px 4px;color:{tokens.text};")
+        self.headline.setStyleSheet(f"font-size:{pt(9)}pt;padding:1px 4px;color:{tokens.text};")
         self.headline.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.caption = QLabel(
             "The ranking detector re-run at multiples of the threshold this window "

@@ -154,7 +154,7 @@ class BrainPanel(QWidget):
         # the caption grew to fill a page and the scene sat in a strip.
         self.headline.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
         self.headline.setStyleSheet(
-            f"font-size:9pt;padding:1px 4px;color:{theme.current().text};")
+            f"font-size:{theme.pt(9)}pt;padding:1px 4px;color:{theme.current().text};")
 
         # Matplotlib does not see the Qt stylesheet, so a dark window would
         # otherwise hold one bright white rectangle. Colours come from the same

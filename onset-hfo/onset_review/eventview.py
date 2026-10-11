@@ -21,7 +21,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from onset_review import detail, theme
-from onset_review.theme import card
+from onset_review.theme import card, pt
 
 __all__ = ["EventDetailPanel"]
 
@@ -72,7 +72,7 @@ class EventDetailPanel(QWidget):
         self.headline.setWordWrap(True)
         self.headline.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Minimum)
         self.headline.setStyleSheet(
-            f"font-size:9pt;padding:1px 4px;color:{tokens.text};")
+            f"font-size:{pt(9)}pt;padding:1px 4px;color:{tokens.text};")
 
         self.caption = QLabel()
         self.caption.setWordWrap(True)

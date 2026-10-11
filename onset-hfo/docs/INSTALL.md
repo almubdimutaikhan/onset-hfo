@@ -185,7 +185,7 @@ cards.
 | **Patient › Case** | an open case, its ten steps down the side; *Close the case* below it. With none open, what a case is, with *New case…* and *Open a case…* |
 | **Review › Recording** | *Does any channel actually stand out?* answered in one large sentence, with the busiest channel and those tied with it as buttons that take the ranking and the trace there; the trend strip, folded until opened; the trace, and a side column with the ranking, the events, the selected event close up and, on tabs beside it, every channel's spectrum, a channel's events averaged, and the leaders re-tested at stricter thresholds. *Review events*, in the toolbar (`Space` on the trace or the side column), shows one event at a time full screen and takes `A` / `D` / `U` for your verdict. *Open the trace in a new window*, in the toolbar (`Ctrl+Shift+T`), lifts MNE's browser into a window of its own, for a second monitor; closing that window puts it back. The row above the trace is the only toolbar on it: MNE's own bar, which repeats that row, is hidden while the trace is on the page, and what it alone offers (annotation mode, the crosshair, the overview bar, MNE's settings and help) sits under *Trace tools* at the row's end |
 | **Review › Contacts** | the 3D view, the patient record, where the coordinates came from, and the button that fetches MNE's `fsaverage` template brain (a few hundred megabytes, once) for the 3D view to draw under measured coordinates |
-| **Review › Signal** | data quality and preprocessing side by side, the preprocessing as groups of settings rows — filter design, reference, muscle and amplitude marking, reference regression and an experimental ICA among them — provenance and the ICA components under them; *Apply* re-runs the analysis and every page follows |
+| **Review › Signal** | data quality and preprocessing side by side. The preprocessing starts with *Standard*, *Noisy recording* or *Custom* and a two-second preview of the filters, and Custom opens the groups of settings rows — filter design, reference, muscle and amplitude marking, reference regression and an experimental ICA among them — provenance and the ICA components under them; *Apply* re-runs the analysis and every page follows |
 | **Report** | the review as it will be exported, the findings paragraph (yours, or drafted by the assistant and marked as such), agreement with the archive's annotators, *Export review…* in the toolbar |
 | **Assistant › This recording** | the assistant, one card per exchange with a chip saying what the answer is (Checked, From the documents, Not checked, Refused) and the trace folded under it; a *Stop* button for a model taking too long, *New conversation*, the tick that lets it run the pipeline's analyses, and the box that gets a local Qwen onto this machine. A refusal says what the model wrote and which check it failed |
 | **Assistant › Chat** | the same local model on its own, not connected to the recording and checked by nothing, with a line at the top that says so. There before a recording is opened |
@@ -216,8 +216,9 @@ a file…*. Each pane can be dragged to any edge of the window, tabbed with the
 other or apart, floated as a window of its own, or closed; **View → Workspace**
 (`Ctrl+Shift+W`) and **View → Files** (`Ctrl+Shift+F`) bring them back, and
 the arrangement is remembered. On a screen narrower than 1600 px a loaded
-window starts with them hidden, and a pane shown there opens as its own
-window: beside the Recording page on a 1366 px laptop there is no room.
+window starts with them hidden. A pane shown there docks beside the page when
+the window still fits the screen, as on a 1366 px laptop, and opens as its own
+window when it would not.
 
 ![The Workspace and Files panes beside the Recording page](images/onset-review-workspace.png)
 
@@ -500,9 +501,11 @@ maximised when that was a reduction. If a dock layout you have dragged about
 has pushed it wider than the screen again, **View → Fit the window to this
 screen** (`Ctrl+0`) puts it back, **View → Maximise window** and **View → Full
 screen** (`F11`) are there whatever your window manager does with title bars,
-and **View → Restore the default layout** undoes the dragging. The window can
-be made as small as 963 × 753 px; below that, panels scroll inside their docks
-rather than the window growing past the screen.
+and **View → Restore the default layout** undoes the dragging. On every page,
+with Analysis mode on or off, the window can be made as small as about
+1050 × 630 px. Below the size a page wants, its rows of buttons wrap, the
+Recording page's tabs scroll and the top of a Library page scrolls, rather than
+the window growing past the screen. A test keeps it within 1100 × 720 px.
 
 **It opens but there is no trace** — check the window actually loaded:
 `onset-review --list` should show the window you picked. If the recording is

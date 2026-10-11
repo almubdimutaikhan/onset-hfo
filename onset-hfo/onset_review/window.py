@@ -60,6 +60,7 @@ from onset_review.preprocessing import PreprocessPanel
 from onset_review.sensitivityview import SensitivityPanel
 from onset_review.session import BAND_COLOURS, ReviewSession, annotations_for
 from onset_review.spectrumview import SpectrumPanel
+from onset_review.theme import pt
 from onset_review.workspace import WorkspacePanel
 
 __all__ = ["decorate", "open_trace", "has_dock_host", "marks_for",
@@ -1187,7 +1188,7 @@ def _status(host: QMainWindow, session: ReviewSession) -> None:
     # in the muted secondary colour would read as a footnote, which is exactly
     # what it must not be.
     label.setStyleSheet(
-        "padding:2px 8px;font-size:9pt;"
+        f"padding:2px 8px;font-size:{pt(9)}pt;"
         + (f"color:{theme.current().good};" if distinguishable
            else f"color:{theme.current().bad};font-weight:700;"))
     label.setObjectName("onset_caveat")
@@ -1203,7 +1204,7 @@ def _status(host: QMainWindow, session: ReviewSession) -> None:
         scope = QLabel(session.scope())
         scope.setObjectName("onset_scope")
         scope.setStyleSheet(
-            f"padding:2px 8px;font-size:9pt;color:{theme.current().warn};")
+            f"padding:2px 8px;font-size:{pt(9)}pt;color:{theme.current().warn};")
         host.statusBar().addWidget(scope)
 
     # Whose read this is, on the right, permanently. The caveat says what the
@@ -1212,7 +1213,7 @@ def _status(host: QMainWindow, session: ReviewSession) -> None:
     reader = QLabel()
     reader.setObjectName("onset_reader")
     reader.setStyleSheet(
-        f"padding:2px 8px;font-size:9pt;color:{theme.current().text_muted};")
+        f"padding:2px 8px;font-size:{pt(9)}pt;color:{theme.current().text_muted};")
     host.statusBar().addPermanentWidget(reader)
 
 

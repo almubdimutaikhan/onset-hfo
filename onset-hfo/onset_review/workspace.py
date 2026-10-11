@@ -103,7 +103,7 @@ def _label(text: str, muted: bool = False) -> QLabel:
     label.setWordWrap(True)
     label.setTextInteractionFlags(Qt.TextSelectableByMouse)
     if muted:
-        label.setStyleSheet(f"color:{theme.current().text_muted};font-size:9pt;")
+        label.setStyleSheet(f"color:{theme.current().text_muted};font-size:{theme.pt(9)}pt;")
     return label
 
 

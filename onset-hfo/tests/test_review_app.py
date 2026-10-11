@@ -2381,10 +2381,11 @@ def test_the_compact_ranking_fits_the_side_column_at_laptop_width(qapp, review):
     """Seen at 1366 px: the ranking's last column cut off behind a scroll
     bar. Five columns now, headers padded less, verdicts in the button's
     own words; the sum has to fit the column the Recording page gives it."""
+    from onset_review.pages import RANKING_WIDTH
     from onset_review.panels import FindingsPanel
 
     panel = FindingsPanel(review)
-    panel.resize(470, 500)
+    panel.resize(RANKING_WIDTH, 500)        # the column's starting width
     panel.show()
     qapp.processEvents()
     header = panel.view.horizontalHeader()
@@ -3239,12 +3240,23 @@ def test_a_removed_component_is_a_preprocessing_choice_in_the_report(qapp, recor
     assert "removed 0 (the reviewer's choice)" in text and "experimental" in text
 
 
-def test_the_side_column_is_wide_enough_for_every_tab(paged):
+def test_the_side_column_is_wide_enough_for_every_tab(qapp, paged):
+    from qtpy.QtCore import QThread
+
     side = paged.pages.side
+    paged.host.resize(1366, 768)
+    paged.pages.show_page("recording")
+    paged.host.show()
+    for _ in range(10):
+        qapp.processEvents()
+        QThread.msleep(15)
     labels = [side.tabText(i) for i in range(side.count())]
     assert labels == ["Ranking", "Events", "Event", "Spectrum", "Average", "Threshold"]
-    assert side.minimumWidth() >= side.tabBar().sizeHint().width()
-    assert paged.pages.splitter("recording").sizes()[1] >= side.minimumWidth() or True
+    # Every tab shows at the column's starting width; the floor is lower, so
+    # the window can still be made laptop-sized (the tabs then scroll).
+    assert paged.pages.side_full_width >= side.tabBar().sizeHint().width()
+    assert paged.pages.splitter("recording").sizes()[1] >= paged.pages.side_full_width
+    assert side.minimumWidth() <= 380 and side.usesScrollButtons()
 
 
 # --------------------------------------------------------------------------
@@ -3591,7 +3603,8 @@ def test_the_preprocessing_panel_is_settings_rows_in_groups(built):
 
     panel = built.panels["preprocess"]
     groups = [f for f in panel.findChildren(QFrame) if f.objectName() == "onset_group"]
-    assert len(groups) == 7, "band, filtering, reference, artifacts, experimental, rate, channels"
+    assert len(groups) == 9, ("band, presets, preview, filtering, reference, artifacts, "
+                              "experimental, rate, channels")
     lines = [f for f in panel.findChildren(QFrame) if f.objectName() == "onset_group_line"]
     assert len(lines) >= 12, "a hairline between rows"
     # The radios sit in rows of their own and are still exclusive.

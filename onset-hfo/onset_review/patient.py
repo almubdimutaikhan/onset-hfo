@@ -22,7 +22,7 @@ from qtpy.QtWidgets import (
 )
 
 from onset_review.record import CHART_FIELDS, ILAE_CLASSES, patient_record
-from onset_review.theme import SPACING, card, current, muted, scrolled, section_label
+from onset_review.theme import SPACING, card, current, muted, pt, scrolled, section_label
 
 __all__ = ["PatientPanel", "patient_record", "CHART_FIELDS", "ILAE_CLASSES"]
 
@@ -222,7 +222,7 @@ def _withheld(tokens) -> QLabel:
 def _title(subject: str) -> QLabel:
     label = QLabel(str(subject))
     label.setStyleSheet(
-        f"font-size:16pt;font-weight:600;color:{current().text};")
+        f"font-size:{pt(16)}pt;font-weight:600;color:{current().text};")
     return label
 
 
@@ -241,11 +241,11 @@ def _facts(rows, palette) -> QWidget:
     grid.setColumnStretch(1, 1)
     for index, (name, value, why) in enumerate(rows):
         key = QLabel(name)
-        key.setStyleSheet(f"color:{palette.text_muted};font-size:9pt;")
+        key.setStyleSheet(f"color:{palette.text_muted};font-size:{pt(9)}pt;")
         key.setAlignment(Qt.AlignRight | Qt.AlignTop)
         key.setMinimumWidth(130)
         body = QLabel(f"<b>{value}</b><br>"
-                      f"<span style='color:{palette.text_muted};font-size:8pt;'>"
+                      f"<span style='color:{palette.text_muted};font-size:{pt(8)}pt;'>"
                       f"{why}</span>")
         body.setWordWrap(True)
         body.setTextFormat(Qt.RichText)

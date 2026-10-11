@@ -190,6 +190,12 @@ def page_label(key: str) -> str:
 
 SIDEBAR_WIDTH = 190
 COLUMN_WIDTH = 320
+#: The side column's floor on Review › Recording; it starts wider.
+SIDE_MIN_WIDTH = 380
+#: What the Recording page's side column starts at, at least: the compact
+#: ranking's five columns at the designed type size (470 px), grown with
+#: the text.
+RANKING_WIDTH = round((COLUMN_WIDTH + 150) * theme.TEXT_SCALE)
 
 
 def _cell(row: dict, key: str, fmt: str = "{}") -> str:
@@ -302,7 +308,7 @@ class PageWindow(QMainWindow):
         self.banner.setObjectName("onset_banner")
         self.banner.setWordWrap(True)
         self.banner.setStyleSheet(
-            f"color:{theme.current().warn};font-size:9pt;padding:2px 0 0 0;")
+            f"color:{theme.current().warn};font-size:{theme.pt(9)}pt;padding:2px 0 0 0;")
         self.banner.setOpenExternalLinks(False)
         self.banner.linkActivated.connect(lambda _link: self.toggle_disclaimer())
         self._disclaimer_open = False
@@ -389,7 +395,7 @@ class PageWindow(QMainWindow):
         tokens = theme.current()
         self.title = QLabel("")
         self.title.setObjectName("onset_page_title")
-        self.title.setStyleSheet(f"color:{tokens.text};font-size:13pt;font-weight:600;"
+        self.title.setStyleSheet(f"color:{tokens.text};font-size:{theme.pt(13)}pt;font-weight:600;"
                                  "background:transparent;border:none;")
         if self.loaded:
             request = self.session.request
@@ -400,10 +406,13 @@ class PageWindow(QMainWindow):
             self.where = QLabel("No recording open")
         self.where.setObjectName("onset_where")
         self.where.setAlignment(Qt.AlignCenter)
+        # Wraps rather than holding the window wide: with a page's buttons
+        # beside it, one line of it set the Recording page's floor.
+        self.where.setWordWrap(True)
         self.where.setStyleSheet(f"color:{tokens.text};background:transparent;border:none;")
         self.reader = QLabel("No reader named")
         self.reader.setObjectName("onset_sidebar_reader")
-        self.reader.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;"
+        self.reader.setStyleSheet(f"color:{tokens.text_muted};font-size:{theme.pt(9)}pt;"
                                   "background:transparent;border:none;")
 
         self._toolbar = QWidget()
@@ -719,8 +728,8 @@ class PageWindow(QMainWindow):
                 (len(self.session.findings), "channels ranked"),
                 (f"{self.session.span_duration:g} s", "analysed span"),
             ):
-                tile = QLabel(f"<div style='font-size:18pt;font-weight:700;'>{value}</div>"
-                              f"<div style='font-size:9pt;'>{caption}</div>")
+                tile = QLabel(f"<div style='font-size:{theme.pt(18)}pt;font-weight:700;'>{value}</div>"
+                              f"<div style='font-size:{theme.pt(9)}pt;'>{caption}</div>")
                 tile.setStyleSheet(theme.card("plain"))
                 tile.setObjectName("onset_tile")
                 numbers.addWidget(tile)
@@ -965,7 +974,7 @@ class PageWindow(QMainWindow):
         self.leader.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.leader.setStyleSheet(
             f"color:{tokens.text};background:transparent;border:none;"
-            "font-size:14pt;font-weight:600;" if clear else theme.card("bad"))
+            f"font-size:{theme.pt(14)}pt;font-weight:600;" if clear else theme.card("bad"))
         head = QWidget()
         head_box = QVBoxLayout(head)
         head_box.setContentsMargins(0, 0, 0, 0)
@@ -1046,11 +1055,16 @@ class PageWindow(QMainWindow):
         self.side.addTab(self.panels["spectrum"], "Spectrum")
         self.side.addTab(self.panels["average"], "Average")
         self.side.addTab(self.panels["sensitivity"], "Threshold")
-        # Wide enough for every tab to show: six tabs in a 260 px column
-        # overflowed into scroll arrows, and a tab a reviewer cannot see is a
-        # view they do not have. The splitter honours this minimum.
+        # The column starts wide enough for every tab to show: six tabs in a
+        # 260 px column overflowed into scroll arrows, and a tab a reviewer
+        # cannot see is a view they do not have. Its floor is lower: a floor of
+        # every tab's width made the whole window too wide to maximise on a
+        # laptop, so a window narrowed below the starting width scrolls the
+        # tabs instead.
         self.side.tabBar().setExpanding(False)
-        self.side.setMinimumWidth(max(260, self.side.tabBar().sizeHint().width() + 12))
+        self.side.setUsesScrollButtons(True)
+        self.side_full_width = max(260, self.side.tabBar().sizeHint().width() + 12)
+        self.side.setMinimumWidth(min(self.side_full_width, SIDE_MIN_WIDTH))
         self.side.setTabToolTip(0, "Channels ranked by rate — evidence, not a "
                                    "recommendation. Tinted rows are tied with "
                                    "the busiest.")
@@ -1072,7 +1086,8 @@ class PageWindow(QMainWindow):
             shortcut.setContext(Qt.WidgetWithChildrenShortcut)
             shortcut.activated.connect(self.open_review_mode)
         outer.addWidget(self._split("recording", Qt.Horizontal, [left, side_card],
-                                    [1000, max(COLUMN_WIDTH + 150, side_card.minimumWidth())],
+                                    [1000, max(RANKING_WIDTH,
+                                               self.side_full_width + 2 * theme.SPACING + 2)],
                                     stretch=(1, 0)), 1)
         return page
 

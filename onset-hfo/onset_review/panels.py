@@ -36,7 +36,7 @@ from qtpy.QtWidgets import (
 
 from onset_review import adjudication, compact, theme, trends
 from onset_review.session import ReviewSession
-from onset_review.theme import card
+from onset_review.theme import TEXT_SCALE, card, pt
 
 __all__ = ["FindingsPanel", "EventsPanel", "TrendsPanel", "AgreementPanel",
            "ProvenancePanel", "DataFrameModel", "MIN_TABLE_HEIGHT"]
@@ -122,8 +122,8 @@ def _compact(button):
     window height, which is most of a laptop screen's margin.
     """
     button.setAutoDefault(False)
-    button.setStyleSheet("padding:1px 8px;font-size:11px;")
-    button.setMaximumHeight(22)
+    button.setStyleSheet(f"padding:1px 8px;font-size:{pt(8.25)}pt;")    # 11 px, scaled
+    button.setMaximumHeight(round(22 * TEXT_SCALE))
     return button
 
 
@@ -453,7 +453,7 @@ class FindingsPanel(QWidget):
                if has_expert else "."))
         caption.setWordWrap(True)
         caption.setStyleSheet(
-            f"color:{theme.current().text_muted};font-size:9pt;padding:2px 4px;")
+            f"color:{theme.current().text_muted};font-size:{pt(9)}pt;padding:2px 4px;")
 
         foot = QHBoxLayout()
         foot.setSpacing(4)
@@ -647,7 +647,7 @@ class EventsPanel(QWidget):
         self.all_columns.toggled.connect(lambda on: self.set_compact(not on))
 
         self.count = QLabel()
-        self.count.setStyleSheet(f"color:{theme.current().text_muted};font-size:9pt;")
+        self.count.setStyleSheet(f"color:{theme.current().text_muted};font-size:{pt(9)}pt;")
         # Wrapping rows: in one line, these set the side column's minimum
         # width and with it the window's, past a 1366-wide screen.
         bar = theme.flow_layout(spacing=8)
@@ -689,7 +689,7 @@ class EventsPanel(QWidget):
         self._bind("N", self._write_note)
         self.progress = QLabel()
         self.progress.setStyleSheet(
-            f"color:{theme.current().text_muted};font-size:9pt;")
+            f"color:{theme.current().text_muted};font-size:{pt(9)}pt;")
         for group in (theme.cluster(QLabel("This event:"), segments, spacing=4),
                       theme.cluster(self.undo, self.note, spacing=4),
                       self.progress):

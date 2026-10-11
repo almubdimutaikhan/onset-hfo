@@ -24,6 +24,7 @@ from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
 from onset_review import studycharts, theme
+from onset_review.theme import pt
 
 __all__ = ["ChartWindow"]
 
@@ -52,7 +53,7 @@ class ChartWindow(QWidget):
         self.readout.setWordWrap(True)
         self.readout.setTextFormat(Qt.RichText)
         self.hint = QLabel("")
-        self.hint.setStyleSheet(f"color:{theme.current().text_muted};font-size:9pt;")
+        self.hint.setStyleSheet(f"color:{theme.current().text_muted};font-size:{pt(9)}pt;")
         self.hint.setWordWrap(True)
         box = QVBoxLayout(self)
         box.setContentsMargins(theme.SPACING, theme.SPACING, theme.SPACING, theme.SPACING)

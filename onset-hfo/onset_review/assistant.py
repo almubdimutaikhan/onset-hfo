@@ -53,10 +53,10 @@ from onset_review import theme
 __all__ = ["AssistantPanel", "BACKENDS", "SUGGESTIONS", "parse_evidence_id",
            "explain_refusal", "describe_step"]
 
-#: The transcript's type sizes, in points. The application font is 10 pt; a
-#: transcript is read, not scanned, and was asked to be larger.
-TEXT_PT = 11
-SMALL_PT = 10
+#: The transcript's type sizes, in points, one step above the application
+#: font: a transcript is read, not scanned, and was asked to be larger.
+TEXT_PT = theme.pt(11)
+SMALL_PT = theme.pt(10)
 
 #: The most a served model may write per call. An answer is two or three
 #: sentences; a tool call is a line. At the five tokens a second a CPU

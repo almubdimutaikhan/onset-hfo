@@ -130,15 +130,13 @@ class PlotsPanel(QWidget):
         box = QVBoxLayout(self)
         box.setContentsMargins(0, 0, 0, 0)
         box.setSpacing(4)
-        bar = QHBoxLayout()
-        bar.setSpacing(2)
+        # The buttons wrap below the figure count on a narrow pane.
+        bar = theme.flow_layout(spacing=2)
         self.previous_button = _button("◀", "The figure before (newer)", lambda: self.step(-1))
         self.next_button = _button("▶", "The figure after (older)", lambda: self.step(1))
         self.where = QLabel("")
         self.where.setStyleSheet(f"color:{theme.current().text_muted};")
-        bar.addWidget(self.previous_button)
-        bar.addWidget(self.next_button)
-        bar.addWidget(self.where, 1)
+        bar.addWidget(theme.cluster(self.previous_button, self.next_button, self.where))
         self.window_button = _button("Open in a window", "Zoom and pan this figure in a "
                                      "window of its own", self.open_current,
                                      "onset_plots_window")
@@ -151,7 +149,7 @@ class PlotsPanel(QWidget):
         for button in (self.window_button, self.save_button, self.remove_button,
                        self.clear_button):
             bar.addWidget(button)
-        box.addLayout(bar)
+        box.addWidget(theme.flow_widget(bar))
         row = QHBoxLayout()
         row.setSpacing(6)
         self.view = _FigureView()

@@ -188,7 +188,13 @@ def test_one_entry_closes_every_variable_and_figure_window(qapp, window):
 
 def test_on_a_narrow_screen_a_layout_opens_its_panes_as_windows(qapp, window, monkeypatch):
     host = window.pages
+    # A 1366 px laptop has room for them beside the page now that the pages
+    # themselves shrink; a 1024 px screen does not.
     monkeypatch.setattr(host, "_screen_width", lambda: 1366)
+    shown = host.apply_pane_layout("Spyder")
+    assert shown and not any(host.pane(k).isFloating() for k in shown)
+    host.apply_pane_layout("Page only")
+    monkeypatch.setattr(host, "_screen_width", lambda: 1024)
     shown = host.apply_pane_layout("Spyder")
     floated = [k for k in shown if host.pane(k).isFloating()]
     assert floated, "beside the page they would push the window past the screen"

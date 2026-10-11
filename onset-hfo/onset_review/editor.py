@@ -66,6 +66,7 @@ from qtpy.QtWidgets import (
 )
 
 from onset_review import cells, codewriter, theme
+from onset_review.theme import pt
 
 __all__ = ["EditorPanel", "CodeEdit", "PythonHighlighter", "CodeAssistant", "SCRIPT_FILTER",
            "TemplateDialog"]
@@ -467,7 +468,7 @@ class CodeAssistant(QWidget):
         self.stop_button.clicked.connect(lambda _=False: self.stop())
         self.model_line = QLabel("")
         self.model_line.setObjectName("onset_code_model")
-        self.model_line.setStyleSheet(f"color:{p.text_muted};font-size:9pt;")
+        self.model_line.setStyleSheet(f"color:{p.text_muted};font-size:{pt(9)}pt;")
         self.model_line.setWordWrap(True)
         self.notes = QLabel("")
         self.notes.setObjectName("onset_code_notes")
@@ -610,7 +611,7 @@ class CodeAssistant(QWidget):
 
     def _say(self, lines: list[str], bad: bool = False) -> None:
         p = theme.current()
-        self.notes.setStyleSheet(f"color:{p.warn if bad else p.text_muted};font-size:9pt;")
+        self.notes.setStyleSheet(f"color:{p.warn if bad else p.text_muted};font-size:{pt(9)}pt;")
         self.notes.setText("\n".join(lines))
         self.notes.show()
 
@@ -665,8 +666,10 @@ class EditorPanel(QWidget):
         bar = theme.flow_layout()
         for key in ("new", "open", "templates", "save", "save_as"):
             bar.addWidget(self.buttons[key])
-        bar.addWidget(theme.cluster(*(self.buttons[k] for k in
-                                      ("run_file", "run_cell", "run_next", "run_selection"))))
+        # The run buttons in two pairs, so the bar wraps between them on a
+        # narrow window instead of holding the window wide.
+        for pair in (("run_file", "run_cell"), ("run_next", "run_selection")):
+            bar.addWidget(theme.cluster(*(self.buttons[k] for k in pair)))
         bar_host = QWidget()
         bar_host.setLayout(bar)
 
@@ -679,7 +682,7 @@ class EditorPanel(QWidget):
         self.tabs.currentChanged.connect(lambda _index: self._say_where())
         self.where = QLabel("")
         self.where.setObjectName("onset_editor_where")
-        self.where.setStyleSheet(f"color:{theme.current().text_muted};font-size:9pt;")
+        self.where.setStyleSheet(f"color:{theme.current().text_muted};font-size:{pt(9)}pt;")
         self.where.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.assistant = CodeAssistant(self)
 

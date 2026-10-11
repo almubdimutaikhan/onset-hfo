@@ -219,10 +219,18 @@ behind it.
    ripple or fast ripple; only what the recording's sampling rate can carry
    is offered. Choose *fast ripple* and press *Apply and re-analyse*. Does the
    same channel lead?
-2. **Change a filter.** Still on **Signal**, widen the notch to 4 Hz and
-   apply. Watch the rates move: that much of the number is a filter choice.
-   Settings that would destroy the band, such as a low-pass inside it, are
-   refused with a reason, not applied.
+2. **Change a filter.** Still on **Signal**, *How to read this recording*
+   offers three choices. *Standard* is the measured defaults. *Noisy
+   recording* also marks seconds of muscle and seconds above an amplitude
+   ceiling. *Custom* shows every setting. Choose *Custom*, widen the notch to
+   4 Hz and apply. Watch the rates move: that much of the number is a filter
+   choice. Settings that would destroy the band, such as a low-pass inside it,
+   are refused with a reason, not applied.
+
+   The **Preview** above the settings shows two seconds of the busiest channel
+   as recorded and through the filters as they are set, redrawn as you change
+   them, before anything is re-analysed. Set the high-pass to 80 Hz there and
+   the ripples are what is left.
 
    ![The Signal page](images/onset-review-preprocessing.png)
 
@@ -265,7 +273,9 @@ really are, and analyse it.
 
 3. **Check the channel list. This is the step that matters.** A clinical
    export usually types every channel `eeg`, including the EKG and the DC
-   channels. The column *The file says* shows the file's claim and *Analyse it
+   channels. (A file that itself declares contacts as SEEG or ECoG, as a FIF
+   written by MNE can, is taken at its word: the list is folded under *Check
+   the N channels*, and opens if you want to change any.) The column *The file says* shows the file's claim and *Analyse it
    as* shows what will be analysed. Set them all with one button (*All as
    SEEG*, *All as ECoG*), then fix the exceptions: the EKG as ECG, the DC and
    trigger channels as not analysed. The count beside the buttons is the
@@ -338,9 +348,10 @@ bunch.license, bunch.citation
 are worth.
 
 1. **Open it** as in Tutorial 3 or 4, and say *Scalp EEG* or *MEG* in the
-   import dialog. A file that declares MEG sensors opens as MEG by itself.
-   Each sensor can be re-typed only as another sensor type or as not
-   analysed, and the count says which sensor type will be analysed.
+   import dialog. A file that declares MEG sensors opens as MEG by itself,
+   its sensors used as declared and the list folded under *Check the N
+   channels*. Open the list to re-type a sensor, only as another sensor type
+   or as not analysed. The count says which sensor type will be analysed.
 
    ![The import dialog on a MEGIN recording from OpenNeuro: 204 planar gradiometers of 323 channels will be analysed](images/onset-review-import-meg.png)
 

@@ -181,10 +181,12 @@ class TraceControls(QWidget):
 
         # Sized to their content, so that on a laptop the row wraps onto two
         # lines rather than three; every line taken here is a line of trace.
-        self.gain.setMinimumWidth(62)
-        self.seconds.setMaximumWidth(84)
-        self.channels.setMaximumWidth(72)
-        self.position.setMaximumWidth(96)
+        # (In pixels at the designed type size, grown with the text.)
+        scale = theme.TEXT_SCALE
+        self.gain.setMinimumWidth(round(62 * scale))
+        self.seconds.setMaximumWidth(round(84 * scale))
+        self.channels.setMaximumWidth(round(72 * scale))
+        self.position.setMaximumWidth(round(96 * scale))
 
         amplitude = theme.cluster(
             labelled("Amplitude"),
