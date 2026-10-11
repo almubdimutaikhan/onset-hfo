@@ -189,7 +189,7 @@ def test_a_case_is_held_on_patient_case_not_in_a_window_of_its_own(qapp, start, 
 
     start.case_page.close_button.click()
     assert start.held_case is None
-    assert start.case_page.views.currentWidget() is start.case_page.front
+    assert start.case_page.views.currentWidget() is start.case_page.front_area
 
 
 def test_a_case_moves_into_the_next_window_with_nothing_lost(qapp, start, tmp_path):
@@ -246,4 +246,44 @@ def test_the_app_holds_a_new_case_and_carries_it_through_a_recording(qapp, recor
     finally:
         review.parts.panels["console"].clear_user_variables()
         review.parts.host.close()
+        _settle(qapp)
+
+
+# The window has to fit a laptop: a window whose minimum is larger than the
+# screen's work area cannot be maximised, and most window managers then take
+# the maximise button away. The study pages' ask row, the case page's picture
+# and the six tabs of the Recording side column once made it 1247 × 886 px.
+LAPTOP = (1100, 720)
+
+
+def test_every_page_lets_the_window_shrink_to_a_laptop_screen(qapp, recording, config,
+                                                              monkeypatch):
+    from onset_review import launcher
+    from onset_review.app import _Review, build_parser
+
+    monkeypatch.setattr(launcher, "load_with_progress",
+                        lambda request, cache_dir=None, parent=None:
+                        session_from_recording(recording, request))
+    review = _Review(qapp, None, False, build_parser().parse_args([]))
+    review._open_request(ReviewRequest(dataset="", subject="synthetic", t_start=0.0,
+                                       t_stop=float(recording.duration),
+                                       detectors=("rms",)))
+    _settle(qapp)
+    host, pages = review.parts.host, review.parts.pages
+    try:
+        host.resize(1280, 800)
+        host.show()
+        pages.set_analysis_mode(True, remember=False)
+        too_big = {}
+        for key in list(pages._pages):
+            pages.show_page(key)
+            _settle(qapp, 4)
+            floor = host.minimumSizeHint()
+            if floor.width() > LAPTOP[0] or floor.height() > LAPTOP[1]:
+                too_big[key] = (floor.width(), floor.height())
+        assert not too_big, f"the window cannot shrink below {too_big}"
+        assert pages.side.tabBar().sizeHint().width() <= pages.side_full_width
+    finally:
+        review.parts.panels["console"].clear_user_variables()
+        host.close()
         _settle(qapp)

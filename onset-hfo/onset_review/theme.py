@@ -728,6 +728,62 @@ def flow_layout(parent=None, spacing: int = SPACING // 2):
     return _FLOW(parent, spacing)
 
 
+def fitted_scroll(body):
+    """`scrolled`, asking for exactly the height `body` needs at the width it
+    is given -- wrapped text and wrapped rows included -- so it is shown whole
+    when there is room and scrolls only when the window is too short.
+    (`AdjustToContents` asks for the unwrapped height, capped.)"""
+    from qtpy.QtCore import Qt
+    from qtpy.QtWidgets import QFrame, QScrollArea
+
+    class FittedScroll(QScrollArea):
+        _width = -1
+
+        def sizeHint(self):                                # noqa: N802
+            hint = super().sizeHint()
+            widget = self.widget()
+            if widget is not None:
+                width = self.viewport().width() if self._width > 0 else widget.sizeHint().width()
+                height = (widget.heightForWidth(width) if widget.hasHeightForWidth()
+                          else -1)
+                if height <= 0:
+                    height = widget.sizeHint().height()
+                hint.setHeight(height + 2 * self.frameWidth())
+            return hint
+
+        def resizeEvent(self, event):                      # noqa: N802
+            super().resizeEvent(event)
+            if event.size().width() != self._width:
+                self._width = event.size().width()
+                self.updateGeometry()
+
+    area = FittedScroll()
+    area.setWidget(body)
+    area.setWidgetResizable(True)
+    area.setFrameShape(QFrame.NoFrame)
+    area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    return area
+
+
+def flow_widget(layout):
+    """A widget holding the flow `layout`, as tall as its rows are once
+    wrapped. Not every parent asks a child for its height at a given width (a
+    splitter or a card in one does not), and a row that wrapped to two lines
+    in the height of one is cut off."""
+    from qtpy.QtWidgets import QWidget
+
+    class FlowHost(QWidget):
+        def resizeEvent(self, event):                      # noqa: N802
+            super().resizeEvent(event)
+            height = self.layout().heightForWidth(self.width())
+            if height > 0 and height != self.minimumHeight():
+                self.setMinimumHeight(height)
+
+    host = FlowHost()
+    host.setLayout(layout)
+    return host
+
+
 def cluster(*widgets, spacing: int = 3):
     """Widgets that belong together, as one item a flow row wraps around
     rather than through: a label with its control, a run of buttons."""

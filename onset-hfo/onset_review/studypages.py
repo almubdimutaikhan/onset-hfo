@@ -323,10 +323,10 @@ class PageAsk(QWidget):
                                    "background:transparent;border:none;")
         self.verdict.setVisible(False)
 
-        chips = QHBoxLayout()
-        chips.setSpacing(4)
+        # The suggestions wrap: on one line they made every page, and so the
+        # window, at least as wide as all of them together.
+        chips = theme.flow_layout(spacing=4)
         chips.addWidget(theme.section_label("Ask about this page"))
-        chips.addStretch(1)
         for text in pageask.SUGGESTIONS:
             chip = QPushButton(text.rstrip(".").split(",")[0])
             chip.setToolTip(text)
@@ -341,7 +341,7 @@ class PageAsk(QWidget):
         box = QVBoxLayout(self)
         box.setContentsMargins(0, 0, 0, 0)
         box.setSpacing(theme.SPACING // 2)
-        box.addLayout(chips)
+        box.addWidget(theme.flow_widget(chips))
         box.addLayout(row)
         box.addWidget(self.answer)
         box.addWidget(self.verdict)
@@ -432,22 +432,21 @@ class StudyPage(QWidget):
         self.lead.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.lead.setStyleSheet(f"color:{tokens.text};font-size:11pt;"
                                 "background:transparent;border:none;")
-        self.tiles = QHBoxLayout()
-        self.tiles.setSpacing(theme.SPACING)
+        # The tiles and the row of choices wrap, so a page is never wider
+        # than its widest tile or control, and neither is the window.
+        self.tiles = theme.flow_layout(spacing=theme.SPACING)
         self._tile_widgets: list[QLabel] = []
         key_body = QWidget()
         key_box = QVBoxLayout(key_body)
         key_box.setContentsMargins(0, 0, 0, 0)
         key_box.setSpacing(theme.SPACING)
         key_box.addWidget(self.lead)
-        key_box.addLayout(self.tiles)
+        key_box.addWidget(theme.flow_widget(self.tiles))
         self.key_card = theme.card_frame(key_body, "What this page shows")
         self.key_card.setObjectName("onset_key_card")
 
         # -- the choices -------------------------------------------------------
-        top = QHBoxLayout()
-        top.setContentsMargins(0, 0, 0, 0)
-        top.setSpacing(theme.SPACING)
+        top = theme.flow_layout(spacing=theme.SPACING)
         for name, (label, options, default) in studies.controls(key).items():
             combo = QComboBox()
             combo.setObjectName(f"onset_study_{key}_{name}")
@@ -457,8 +456,7 @@ class StudyPage(QWidget):
             if index >= 0:
                 combo.setCurrentIndex(index)
             combo.currentIndexChanged.connect(lambda _i: self.rebuild())
-            top.addWidget(QLabel(label))
-            top.addWidget(combo)
+            top.addWidget(theme.cluster(QLabel(label), combo))
             self.combos[name] = combo
         self.open_button = None
         if key == "patients":
@@ -495,7 +493,6 @@ class StudyPage(QWidget):
         action("notebook", "Open as notebook", "Write this page as a notebook that "
                "rebuilds it from the same tables, and open it on the Analysis page",
                self.open_notebook)
-        top.addStretch(1)
         self.show_tables = QCheckBox("Show every table")
         self.show_tables.setObjectName(f"onset_study_{key}_tables")
         self.show_tables.setToolTip(f"Tables longer than {studies.FOLD_ROWS} rows are folded "
@@ -511,24 +508,34 @@ class StudyPage(QWidget):
         # -- the ask box -------------------------------------------------------
         self.ask = PageAsk()
 
-        box = QVBoxLayout(self)
-        box.setContentsMargins(0, 0, 0, 0)
-        box.setSpacing(theme.SPACING)
-        box.addWidget(self.key_card)
-        box.addLayout(top)
+        # What sits above the text scrolls on its own when the window is too
+        # short for all of it, rather than squeezing the text to a sliver or
+        # holding the window tall; on a large screen it is shown whole.
+        upper = QWidget()
+        above = QVBoxLayout(upper)
+        above.setContentsMargins(0, 0, 0, 0)
+        above.setSpacing(theme.SPACING)
+        above.addWidget(self.key_card)
+        above.addWidget(theme.flow_widget(top))
         if self.actions:
             row = theme.flow_layout()
             for button in self.actions.values():
                 row.addWidget(button)
-            holder = QWidget()
-            holder.setLayout(row)
             self.note = QLabel("")
             self.note.setObjectName(f"onset_study_{key}_note")
             self.note.setWordWrap(True)
             self.note.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;")
             self.note.hide()
-            box.addWidget(holder)
-            box.addWidget(self.note)
+            above.addWidget(theme.flow_widget(row))
+            above.addWidget(self.note)
+        self.upper = theme.fitted_scroll(upper)
+        self.upper.setObjectName(f"onset_study_{key}_upper")
+        self.view.setMinimumHeight(160)
+
+        box = QVBoxLayout(self)
+        box.setContentsMargins(0, 0, 0, 0)
+        box.setSpacing(theme.SPACING)
+        box.addWidget(self.upper)
         box.addWidget(self.view, 1)
         box.addWidget(self.ask)
 
@@ -613,7 +620,8 @@ class StudyPage(QWidget):
                                f"padding:{theme.SPACING}px {theme.SPACING + 4}px;")
             self.tiles.addWidget(tile)
             self._tile_widgets.append(tile)
-        self.tiles.addStretch(1)
+        if hasattr(self, "upper"):
+            self.upper.updateGeometry()
 
     # -- the link the site cannot make ---------------------------------------
     def _window_for_current(self) -> dict | None:

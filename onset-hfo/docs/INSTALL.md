@@ -500,9 +500,11 @@ maximised when that was a reduction. If a dock layout you have dragged about
 has pushed it wider than the screen again, **View → Fit the window to this
 screen** (`Ctrl+0`) puts it back, **View → Maximise window** and **View → Full
 screen** (`F11`) are there whatever your window manager does with title bars,
-and **View → Restore the default layout** undoes the dragging. The window can
-be made as small as 963 × 753 px; below that, panels scroll inside their docks
-rather than the window growing past the screen.
+and **View → Restore the default layout** undoes the dragging. On every page,
+with Analysis mode on or off, the window can be made as small as about
+1000 × 620 px. Below the size a page wants, its rows of buttons wrap, the
+Recording page's tabs scroll and the top of a Library page scrolls, rather than
+the window growing past the screen. A test keeps it within 1100 × 720 px.
 
 **It opens but there is no trace** — check the window actually loaded:
 `onset-review --list` should show the window you picked. If the recording is

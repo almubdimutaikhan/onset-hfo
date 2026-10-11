@@ -665,8 +665,10 @@ class EditorPanel(QWidget):
         bar = theme.flow_layout()
         for key in ("new", "open", "templates", "save", "save_as"):
             bar.addWidget(self.buttons[key])
-        bar.addWidget(theme.cluster(*(self.buttons[k] for k in
-                                      ("run_file", "run_cell", "run_next", "run_selection"))))
+        # The run buttons in two pairs, so the bar wraps between them on a
+        # narrow window instead of holding the window wide.
+        for pair in (("run_file", "run_cell"), ("run_next", "run_selection")):
+            bar.addWidget(theme.cluster(*(self.buttons[k] for k in pair)))
         bar_host = QWidget()
         bar_host.setLayout(bar)
 

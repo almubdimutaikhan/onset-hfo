@@ -190,6 +190,8 @@ def page_label(key: str) -> str:
 
 SIDEBAR_WIDTH = 190
 COLUMN_WIDTH = 320
+#: The side column's floor on Review › Recording; it starts wider.
+SIDE_MIN_WIDTH = 380
 
 
 def _cell(row: dict, key: str, fmt: str = "{}") -> str:
@@ -1046,11 +1048,16 @@ class PageWindow(QMainWindow):
         self.side.addTab(self.panels["spectrum"], "Spectrum")
         self.side.addTab(self.panels["average"], "Average")
         self.side.addTab(self.panels["sensitivity"], "Threshold")
-        # Wide enough for every tab to show: six tabs in a 260 px column
-        # overflowed into scroll arrows, and a tab a reviewer cannot see is a
-        # view they do not have. The splitter honours this minimum.
+        # The column starts wide enough for every tab to show: six tabs in a
+        # 260 px column overflowed into scroll arrows, and a tab a reviewer
+        # cannot see is a view they do not have. Its floor is lower: a floor of
+        # every tab's width made the whole window too wide to maximise on a
+        # laptop, so a window narrowed below the starting width scrolls the
+        # tabs instead.
         self.side.tabBar().setExpanding(False)
-        self.side.setMinimumWidth(max(260, self.side.tabBar().sizeHint().width() + 12))
+        self.side.setUsesScrollButtons(True)
+        self.side_full_width = max(260, self.side.tabBar().sizeHint().width() + 12)
+        self.side.setMinimumWidth(min(self.side_full_width, SIDE_MIN_WIDTH))
         self.side.setTabToolTip(0, "Channels ranked by rate — evidence, not a "
                                    "recommendation. Tinted rows are tied with "
                                    "the busiest.")
@@ -1072,7 +1079,8 @@ class PageWindow(QMainWindow):
             shortcut.setContext(Qt.WidgetWithChildrenShortcut)
             shortcut.activated.connect(self.open_review_mode)
         outer.addWidget(self._split("recording", Qt.Horizontal, [left, side_card],
-                                    [1000, max(COLUMN_WIDTH + 150, side_card.minimumWidth())],
+                                    [1000, max(COLUMN_WIDTH + 150,
+                                               self.side_full_width + 2 * theme.SPACING + 2)],
                                     stretch=(1, 0)), 1)
         return page
 

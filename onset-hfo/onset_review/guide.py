@@ -440,7 +440,10 @@ class CasePage(QWidget):
         outer.addWidget(self.views)
         self.front = QWidget()
         self.front.setObjectName("onset_case_front")
-        self.views.addWidget(self.front)
+        # Scrolled, so its picture and list of steps are not a floor under
+        # the whole window's height and width.
+        self.front_area = theme.scrolled(self.front)
+        self.views.addWidget(self.front_area)
         self.held = QWidget()
         self.held.setObjectName("onset_case_held")
         held = QVBoxLayout(self.held)
@@ -535,7 +538,7 @@ class CasePage(QWidget):
             case_window.deleteLater()
         else:
             case_window.setParent(None)
-        self.views.setCurrentWidget(self.front)
+        self.views.setCurrentWidget(self.front_area)
         return case_window
 
     def close_windows(self) -> None:

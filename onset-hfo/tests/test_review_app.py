@@ -3239,12 +3239,23 @@ def test_a_removed_component_is_a_preprocessing_choice_in_the_report(qapp, recor
     assert "removed 0 (the reviewer's choice)" in text and "experimental" in text
 
 
-def test_the_side_column_is_wide_enough_for_every_tab(paged):
+def test_the_side_column_is_wide_enough_for_every_tab(qapp, paged):
+    from qtpy.QtCore import QThread
+
     side = paged.pages.side
+    paged.host.resize(1366, 768)
+    paged.pages.show_page("recording")
+    paged.host.show()
+    for _ in range(10):
+        qapp.processEvents()
+        QThread.msleep(15)
     labels = [side.tabText(i) for i in range(side.count())]
     assert labels == ["Ranking", "Events", "Event", "Spectrum", "Average", "Threshold"]
-    assert side.minimumWidth() >= side.tabBar().sizeHint().width()
-    assert paged.pages.splitter("recording").sizes()[1] >= side.minimumWidth() or True
+    # Every tab shows at the column's starting width; the floor is lower, so
+    # the window can still be made laptop-sized (the tabs then scroll).
+    assert paged.pages.side_full_width >= side.tabBar().sizeHint().width()
+    assert paged.pages.splitter("recording").sizes()[1] >= paged.pages.side_full_width
+    assert side.minimumWidth() <= 380 and side.usesScrollButtons()
 
 
 # --------------------------------------------------------------------------
