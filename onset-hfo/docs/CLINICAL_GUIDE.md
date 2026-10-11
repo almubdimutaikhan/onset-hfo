@@ -41,6 +41,9 @@ You don't need to know the menus to start.
 - **Patient › Case** holds an open case, its ten steps down the side, in this
   window. With none open it explains a case, with *New case…* and *Open a
   case…*.
+- **Type size.** Text is set 10% larger than the layout was drawn at: 11 pt
+  for body text, and headings and captions in proportion (`theme.TEXT_SCALE`).
+  Exported reports keep their own sizes.
 - **View → Interface size** (100% to 200%) enlarges text, icons and spacing
   together, from the next start. Setting `QT_SCALE_FACTOR` in the environment
   overrides it.

@@ -503,7 +503,7 @@ screen** (`Ctrl+0`) puts it back, **View → Maximise window** and **View → Fu
 screen** (`F11`) are there whatever your window manager does with title bars,
 and **View → Restore the default layout** undoes the dragging. On every page,
 with Analysis mode on or off, the window can be made as small as about
-1000 × 620 px. Below the size a page wants, its rows of buttons wrap, the
+1050 × 630 px. Below the size a page wants, its rows of buttons wrap, the
 Recording page's tabs scroll and the top of a Library page scrolls, rather than
 the window growing past the screen. A test keeps it within 1100 × 720 px.
 

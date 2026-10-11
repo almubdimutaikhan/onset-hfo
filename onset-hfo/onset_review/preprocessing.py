@@ -59,7 +59,7 @@ from onset_hfo.preprocess import (
     ica_methods_available,
     parse_grid_columns,
 )
-from onset_review.theme import SettingsGroup, card, current, muted, scrolled
+from onset_review.theme import SettingsGroup, card, current, muted, pt, scrolled
 
 #: Re-exported: the sentence and the warnings a reviewer reads under these
 #: controls are computed in `onset_hfo.preprocess`, beside the refusals they
@@ -193,7 +193,7 @@ class PreprocessPanel(QWidget):
         self.transition.setSpecialValueText("auto")
         self.design = QLabel()
         self.design.setWordWrap(True)
-        self.design.setStyleSheet(f"color:{current().text_muted};font-size:9pt;")
+        self.design.setStyleSheet(f"color:{current().text_muted};font-size:{pt(9)}pt;")
 
         filters = SettingsGroup("Filtering")
         filters.add_row("High-pass", self.highpass)

@@ -149,7 +149,7 @@ class FilesPanel(QWidget):
 
         self.hint = QLabel(HINT)
         self.hint.setWordWrap(True)
-        self.hint.setStyleSheet(f"color:{theme.current().text_muted};font-size:9pt;")
+        self.hint.setStyleSheet(f"color:{theme.current().text_muted};font-size:{theme.pt(9)}pt;")
 
         bar = QHBoxLayout()
         bar.setSpacing(2)

@@ -66,6 +66,7 @@ from qtpy.QtWidgets import (
 )
 
 from onset_review import cells, codewriter, theme
+from onset_review.theme import pt
 
 __all__ = ["EditorPanel", "CodeEdit", "PythonHighlighter", "CodeAssistant", "SCRIPT_FILTER",
            "TemplateDialog"]
@@ -467,7 +468,7 @@ class CodeAssistant(QWidget):
         self.stop_button.clicked.connect(lambda _=False: self.stop())
         self.model_line = QLabel("")
         self.model_line.setObjectName("onset_code_model")
-        self.model_line.setStyleSheet(f"color:{p.text_muted};font-size:9pt;")
+        self.model_line.setStyleSheet(f"color:{p.text_muted};font-size:{pt(9)}pt;")
         self.model_line.setWordWrap(True)
         self.notes = QLabel("")
         self.notes.setObjectName("onset_code_notes")
@@ -610,7 +611,7 @@ class CodeAssistant(QWidget):
 
     def _say(self, lines: list[str], bad: bool = False) -> None:
         p = theme.current()
-        self.notes.setStyleSheet(f"color:{p.warn if bad else p.text_muted};font-size:9pt;")
+        self.notes.setStyleSheet(f"color:{p.warn if bad else p.text_muted};font-size:{pt(9)}pt;")
         self.notes.setText("\n".join(lines))
         self.notes.show()
 
@@ -681,7 +682,7 @@ class EditorPanel(QWidget):
         self.tabs.currentChanged.connect(lambda _index: self._say_where())
         self.where = QLabel("")
         self.where.setObjectName("onset_editor_where")
-        self.where.setStyleSheet(f"color:{theme.current().text_muted};font-size:9pt;")
+        self.where.setStyleSheet(f"color:{theme.current().text_muted};font-size:{pt(9)}pt;")
         self.where.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.assistant = CodeAssistant(self)
 

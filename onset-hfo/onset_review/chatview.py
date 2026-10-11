@@ -102,7 +102,7 @@ class ChatPanel(QWidget):
         self.banner.setObjectName("onset_chat_banner")
         self.banner.setWordWrap(True)
         self.banner.setStyleSheet(
-            f"color:{tokens.warn};font-size:9pt;padding:2px 0 0 0;")
+            f"color:{tokens.warn};font-size:{theme.pt(9)}pt;padding:2px 0 0 0;")
         self.banner.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
         self.model_line = muted("")
         self.model_line.setObjectName("onset_chat_model")

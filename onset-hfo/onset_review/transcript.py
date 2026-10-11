@@ -63,7 +63,7 @@ def _chip_style(kind: str) -> str:
         "bad": (p.bad_surface, p.bad),
     }.get(kind, (p.surface_alt, p.text))
     return (f"background:{back};color:{fore};border-radius:9px;padding:1px 8px;"
-            f"font-size:9pt;font-weight:600;")
+            f"font-size:{theme.pt(9)}pt;font-weight:600;")
 
 
 class ExchangeCard(QFrame):
@@ -94,7 +94,7 @@ class ExchangeCard(QFrame):
         self.chip.setStyleSheet(_chip_style("neutral"))
         self.meta = QLabel("")
         self.meta.setWordWrap(True)
-        self.meta.setStyleSheet(f"color:{p.text_muted};font-size:9pt;background:transparent;"
+        self.meta.setStyleSheet(f"color:{p.text_muted};font-size:{theme.pt(9)}pt;background:transparent;"
                                 "border:none;")
         self.answer = QLabel("Thinking…")
         self.answer.setObjectName("onset_answer")
@@ -112,13 +112,13 @@ class ExchangeCard(QFrame):
         self.toggle.setArrowType(Qt.DownArrow)
         self.toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.toggle.setAutoRaise(True)
-        self.toggle.setStyleSheet(f"color:{p.text_muted};font-size:9pt;")
+        self.toggle.setStyleSheet(f"color:{p.text_muted};font-size:{theme.pt(9)}pt;")
         self.toggle.toggled.connect(self._toggle)
         self.steps = QLabel("")
         self.steps.setObjectName("onset_steps")
         self.steps.setWordWrap(True)
         self.steps.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.steps.setStyleSheet(f"color:{p.text_muted};font-size:9pt;background:transparent;"
+        self.steps.setStyleSheet(f"color:{p.text_muted};font-size:{theme.pt(9)}pt;background:transparent;"
                                  f"border:none;padding-left:{theme.SPACING}px;")
         self.toggle.setVisible(False)
 
@@ -249,7 +249,7 @@ class Transcript(QScrollArea):
         label.setObjectName("onset_note")
         label.setWordWrap(True)
         label.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        label.setStyleSheet(f"color:{p.text_muted};font-size:9pt;background:transparent;"
+        label.setStyleSheet(f"color:{p.text_muted};font-size:{theme.pt(9)}pt;background:transparent;"
                             f"border:none;padding:0 {theme.SPACING // 2}px;")
         self._add(label)
         return label

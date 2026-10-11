@@ -95,7 +95,7 @@ def clock(seconds: float) -> str:
 def _muted(text: str) -> QLabel:
     label = QLabel(text)
     label.setWordWrap(True)
-    label.setStyleSheet(f"color:{theme.current().text_muted};font-size:9pt;")
+    label.setStyleSheet(f"color:{theme.current().text_muted};font-size:{theme.pt(9)}pt;")
     return label
 
 
@@ -1661,7 +1661,7 @@ class MapPage(QWidget):
         self.imaging_status.setObjectName("onset_case_imaging")
         self.imaging_status.setWordWrap(True)
         self.imaging_status.setStyleSheet(
-            f"color:{theme.current().text_muted};font-size:9pt;")
+            f"color:{theme.current().text_muted};font-size:{theme.pt(9)}pt;")
         row = QHBoxLayout()
         for widget in (self.mri_button, self.native_button, self.ct_button, self.take_button,
                        self.on_mri_button):

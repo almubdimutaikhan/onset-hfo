@@ -60,21 +60,21 @@ class ReviewMode(QDialog):
 
         self.where = QLabel()
         self.where.setObjectName("onset_review_where")
-        self.where.setStyleSheet(f"color:{tokens.text};font-size:14pt;font-weight:600;")
+        self.where.setStyleSheet(f"color:{tokens.text};font-size:{theme.pt(14)}pt;font-weight:600;")
         self.scope = QLabel()
         self.scope.setObjectName("onset_review_scope")
-        self.scope.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;")
+        self.scope.setStyleSheet(f"color:{tokens.text_muted};font-size:{theme.pt(9)}pt;")
         self.verdict = QLabel()
         self.verdict.setObjectName("onset_review_verdict")
         self.verdict.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.verdict.setStyleSheet("font-size:12pt;font-weight:600;")
+        self.verdict.setStyleSheet(f"font-size:{theme.pt(12)}pt;font-weight:600;")
         self.bar = QProgressBar()
         self.bar.setObjectName("onset_review_progress")
         self.bar.setTextVisible(False)
         self.bar.setFixedHeight(6)
         self.count = QLabel()
         self.count.setObjectName("onset_review_count")
-        self.count.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;")
+        self.count.setStyleSheet(f"color:{tokens.text_muted};font-size:{theme.pt(9)}pt;")
 
         top = QHBoxLayout()
         words = QVBoxLayout()
@@ -249,7 +249,7 @@ class ReviewMode(QDialog):
         word = SHORT_VERDICTS.get(verdict, "")
         self.verdict.setText(f"Your read: {word}" if word else "Not judged yet")
         self.verdict.setStyleSheet(
-            "font-size:12pt;font-weight:600;"
+            f"font-size:{theme.pt(12)}pt;font-weight:600;"
             f"color:{tokens.bad if verdict == 'disagree' else tokens.text if word else tokens.text_muted};")
         for name in ("agree", "disagree", "unsure"):
             button = self.buttons[name]

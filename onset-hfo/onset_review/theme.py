@@ -138,6 +138,18 @@ def best_font() -> str:
     return ""
 
 
+#: Every type size on screen, as a multiple of the size it was designed at.
+#: 1.1 is the default: the 10 pt the layout was drawn at read small on a
+#: laptop. The layout's spacing is not scaled, only the text; View →
+#: Interface size scales both.
+TEXT_SCALE = 1.1
+
+
+def pt(size: float) -> float:
+    """`size` points as shown: scaled by `TEXT_SCALE`, to a tenth of a point."""
+    return round(float(size) * TEXT_SCALE, 1)
+
+
 def apply_theme(app, palette: Palette | None = None) -> Palette:
     """Set the application font and stylesheet. Returns the palette used.
 
@@ -148,7 +160,7 @@ def apply_theme(app, palette: Palette | None = None) -> Palette:
     chosen = set_current(palette or _detect(app))
     family = best_font()
     font = QFont(family) if family else QFont()
-    font.setPointSizeF(10.0)
+    font.setPointSizeF(pt(10))
     font.setHintingPreference(QFont.PreferFullHinting)
     app.setFont(font)
     app.setPalette(qt_palette(chosen))
@@ -340,7 +352,7 @@ def stylesheet(p: Palette) -> str:
     }}
     QGroupBox::title {{
         subcontrol-origin: margin; left: 0px; padding: 0 0 {SPACING // 2}px 0;
-        color: {p.text}; font-size: 10pt; font-weight: 600;
+        color: {p.text}; font-size: {pt(10)}pt; font-weight: 600;
     }}
 
     QPushButton {{
@@ -419,7 +431,7 @@ def section_label(text: str, palette: Palette | None = None):
     p = palette or current()
     label = QLabel(text)
     label.setStyleSheet(
-        f"color:{p.text};font-size:11pt;font-weight:600;"
+        f"color:{p.text};font-size:{pt(11)}pt;font-weight:600;"
         f"padding:{SPACING // 2}px 0 2px 0;background:transparent;border:none;")
     return label
 
@@ -456,7 +468,7 @@ def muted(text: str, palette: Palette | None = None, size: int = 9):
     p = palette or current()
     label = QLabel(text)
     label.setWordWrap(True)
-    label.setStyleSheet(f"color:{p.text_muted};font-size:{size}pt;")
+    label.setStyleSheet(f"color:{p.text_muted};font-size:{pt(size)}pt;")
     return label
 
 
@@ -475,7 +487,7 @@ def help_button(text: str, palette: Palette | None = None):
     button.setFixedSize(20, 20)
     button.setStyleSheet(
         f"QToolButton{{color:{p.text_muted};border:1px solid {p.separator};"
-        f"border-radius:10px;font-size:9pt;font-weight:700;padding:0;}}"
+        f"border-radius:10px;font-size:{pt(9)}pt;font-weight:700;padding:0;}}"
         f"QToolButton:hover{{color:{p.text};background:{p.surface_alt};}}")
     return button
 
@@ -503,7 +515,7 @@ class SettingsGroup:
         if title:
             self.title = QLabel(title)
             self.title.setStyleSheet(
-                f"color:{self._p.text};font-size:10pt;font-weight:600;"
+                f"color:{self._p.text};font-size:{pt(10)}pt;font-weight:600;"
                 f"padding:{SPACING // 2}px 0 0 2px;background:transparent;border:none;")
             outer.addWidget(self.title)
         self.frame = QFrame()
@@ -595,7 +607,7 @@ def card(kind: str = "info", palette: Palette | None = None) -> str:
         "plain": (p.surface, p.text),
     }.get(kind, (p.info_surface, p.text))
     return (f"background:{surface};color:{colour};border-radius:{RADIUS}px;"
-            f"padding:{SPACING}px {SPACING + 2}px;font-size:9pt;")
+            f"padding:{SPACING}px {SPACING + 2}px;font-size:{pt(9)}pt;")
 
 
 def plain_buttons(box) -> None:

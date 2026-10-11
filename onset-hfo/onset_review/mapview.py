@@ -35,7 +35,7 @@ from qtpy.QtWidgets import (
 from onset_review import contactmap, theme
 from onset_review.anatomy import ARCHIVE_ORIGIN, layout_caption
 from onset_review.brainview import ZONE_EDGES
-from onset_review.theme import card
+from onset_review.theme import card, pt
 
 __all__ = ["ContactMapPanel", "WHERE_QUESTION"]
 
@@ -122,7 +122,7 @@ class ContactMapPanel(QWidget):
         self.headline.setObjectName("onset_map_headline")
         self.headline.setWordWrap(True)
         self.headline.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
-        self.headline.setStyleSheet(f"font-size:10pt;padding:1px 4px;color:{tokens.text};")
+        self.headline.setStyleSheet(f"font-size:{pt(10)}pt;padding:1px 4px;color:{tokens.text};")
         self.caption = QLabel("")
         self.caption.setObjectName("onset_map_caption")
         self.caption.setWordWrap(True)

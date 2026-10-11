@@ -76,6 +76,7 @@ from onset_agent.backends import make_backend
 from onset_review import studies, theme
 from onset_review.assistant import ANSWER_TIMEOUT, SMALL_PT, _run
 from onset_review.assistant_config import load_defaults
+from onset_review.theme import pt
 
 __all__ = ["StudyPage", "ReadingView", "set_markdown", "annotate_terms", "style_tables",
            "READING_WIDTH"]
@@ -87,9 +88,9 @@ _IMAGE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)\)")
 #: rendered at print width and would otherwise push the page sideways.
 IMAGE_MAX_WIDTH = 1100
 
-#: The reading column, in pixels: about 85 characters of 11 pt type. Past
-#: that the eye loses the line on the way back.
-READING_WIDTH = 880
+#: The reading column, in pixels: about 85 characters of the reading type.
+#: Past that the eye loses the line on the way back.
+READING_WIDTH = round(880 * theme.TEXT_SCALE)
 
 #: Glossary definitions are looked up once per process.
 _GLOSSARY: dict[str, str] | None = None
@@ -112,9 +113,9 @@ def document_stylesheet(palette=None) -> str:
     rules, quiet captions. Qt's rich text honours this subset of CSS."""
     p = palette or theme.current()
     return (
-        f"h1 {{ font-size: 19pt; font-weight: 600; margin-bottom: 6px; }} "
-        f"h2 {{ font-size: 14pt; font-weight: 600; margin-top: 18px; margin-bottom: 4px; }} "
-        f"h3 {{ font-size: 12pt; font-weight: 600; margin-top: 14px; margin-bottom: 2px; }} "
+        f"h1 {{ font-size: {pt(19)}pt; font-weight: 600; margin-bottom: 6px; }} "
+        f"h2 {{ font-size: {pt(14)}pt; font-weight: 600; margin-top: 18px; margin-bottom: 4px; }} "
+        f"h3 {{ font-size: {pt(12)}pt; font-weight: 600; margin-top: 14px; margin-bottom: 2px; }} "
         f"p, li {{ margin-top: 3px; margin-bottom: 7px; }} "
         f"table {{ border-collapse: collapse; margin-top: 6px; margin-bottom: 10px; }} "
         f"th {{ padding: 4px 10px; border-bottom: 2px solid {p.separator}; "
@@ -122,7 +123,7 @@ def document_stylesheet(palette=None) -> str:
         f"td {{ padding: 4px 10px; border-bottom: 1px solid {p.surface_alt}; }} "
         f"blockquote {{ color: {p.text_muted}; }} "
         f"a {{ color: {p.accent}; }} "
-        f"code {{ font-size: 10pt; }}")
+        f"code {{ font-size: {pt(10)}pt; }}")
 
 
 def set_markdown(browser: QTextBrowser, text: str) -> None:
@@ -251,7 +252,7 @@ class ReadingView(QTextBrowser):
         self.setOpenExternalLinks(True)
         self.setOpenLinks(True)
         font = QFont(self.font())
-        font.setPointSizeF(11.0)
+        font.setPointSizeF(pt(11))
         self.document().setDefaultFont(font)
         self.document().setDefaultStyleSheet(document_stylesheet())
         self.document().setDocumentMargin(theme.SPACING + 4)
@@ -430,7 +431,7 @@ class StudyPage(QWidget):
         self.lead.setObjectName(f"onset_key_{key}")
         self.lead.setWordWrap(True)
         self.lead.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.lead.setStyleSheet(f"color:{tokens.text};font-size:11pt;"
+        self.lead.setStyleSheet(f"color:{tokens.text};font-size:{pt(11)}pt;"
                                 "background:transparent;border:none;")
         # The tiles and the row of choices wrap, so a page is never wider
         # than its widest tile or control, and neither is the window.
@@ -524,7 +525,7 @@ class StudyPage(QWidget):
             self.note = QLabel("")
             self.note.setObjectName(f"onset_study_{key}_note")
             self.note.setWordWrap(True)
-            self.note.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;")
+            self.note.setStyleSheet(f"color:{tokens.text_muted};font-size:{pt(9)}pt;")
             self.note.hide()
             above.addWidget(theme.flow_widget(row))
             above.addWidget(self.note)
@@ -612,8 +613,8 @@ class StudyPage(QWidget):
                 item.widget().deleteLater()
         tokens = theme.current()
         for value, caption in message.get("tiles", []):
-            tile = QLabel(f"<div style='font-size:17pt;font-weight:700;'>{html.escape(str(value))}"
-                          f"</div><div style='font-size:9pt;color:{tokens.text_muted};'>"
+            tile = QLabel(f"<div style='font-size:{pt(17)}pt;font-weight:700;'>{html.escape(str(value))}"
+                          f"</div><div style='font-size:{pt(9)}pt;color:{tokens.text_muted};'>"
                           f"{html.escape(str(caption))}</div>")
             tile.setObjectName("onset_tile")
             tile.setStyleSheet(f"background:{tokens.surface_alt};border-radius:{theme.RADIUS}px;"

@@ -59,7 +59,7 @@ from qtpy.QtWidgets import (
 
 from onset_hfo.quality import REASONS, SET_ASIDE, quality_summary
 from onset_review import compact
-from onset_review.theme import SPACING, card, current, muted, scrolled, section_label
+from onset_review.theme import SPACING, card, current, muted, pt, scrolled, section_label
 
 __all__ = ["QualityPanel", "COLUMNS", "REASONS", "SET_ASIDE"]
 
@@ -284,7 +284,7 @@ class QualityPanel(QWidget):
                 f"<a href='{chip['channel']}' title='{label}: {reason}' "
                 f"style='text-decoration:none;color:{self.tokens.text};'>"
                 f"<span style='background:{back};color:{fore};"
-                f"border-radius:3px;padding:1px 5px;font-size:8pt;'>&nbsp;{chip['channel']}"
+                f"border-radius:3px;padding:1px 5px;font-size:{pt(8)}pt;'>&nbsp;{chip['channel']}"
                 f"&nbsp;</span></a>")
         self.strip.setText(" ".join(parts))
         counts = compact.counts_by_kind(chips)
@@ -367,7 +367,7 @@ class QualityPanel(QWidget):
         wrong reads as if something were."""
         kind = self._summary_kind()
         if kind == "info":
-            return (f"color:{self.tokens.good};font-size:9pt;"
+            return (f"color:{self.tokens.good};font-size:{pt(9)}pt;"
                     f"padding:2px 0 {SPACING}px 0;")
         return card(kind, self.tokens)
 

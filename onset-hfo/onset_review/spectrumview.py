@@ -23,7 +23,7 @@ from qtpy.QtWidgets import (
 )
 
 from onset_review import spectrum, theme
-from onset_review.theme import card
+from onset_review.theme import card, pt
 
 __all__ = ["SpectrumPanel"]
 
@@ -74,7 +74,7 @@ class SpectrumPanel(QWidget):
         self.headline.setObjectName("onset_spectrum_headline")
         self.headline.setWordWrap(True)
         self.headline.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
-        self.headline.setStyleSheet(f"font-size:10pt;padding:1px 4px;color:{tokens.text};")
+        self.headline.setStyleSheet(f"font-size:{pt(10)}pt;padding:1px 4px;color:{tokens.text};")
         self.caption = QLabel(
             "Welch's estimate of the signal as the detectors saw it: high-passed, "
             "notched, re-referenced. The shaded band is the one being analysed; "

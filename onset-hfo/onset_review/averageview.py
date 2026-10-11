@@ -14,7 +14,7 @@ from qtpy.QtWidgets import QComboBox, QHBoxLayout, QLabel, QSizePolicy, QVBoxLay
 
 from onset_review import average, theme
 from onset_review.eventview import DB_RANGE
-from onset_review.theme import card
+from onset_review.theme import card, pt
 
 __all__ = ["AveragePanel"]
 
@@ -59,7 +59,7 @@ class AveragePanel(QWidget):
         self.headline.setObjectName("onset_average_headline")
         self.headline.setWordWrap(True)
         self.headline.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
-        self.headline.setStyleSheet(f"font-size:9pt;padding:1px 4px;color:{tokens.text};")
+        self.headline.setStyleSheet(f"font-size:{pt(9)}pt;padding:1px 4px;color:{tokens.text};")
         self.caption = QLabel("")
         self.caption.setWordWrap(True)
         self.caption.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)

@@ -49,6 +49,7 @@ from qtpy.QtWidgets import (
 )
 
 from onset_review import batchresults, batchreview, theme
+from onset_review.theme import pt
 
 __all__ = ["BatchWindow"]
 
@@ -87,7 +88,7 @@ class BatchResultsView(QWidget):
         self.outliers_title = QLabel("<b>Recordings that differ from the rest</b>")
         for note in (self.leaders_note, self.agreement_note):
             note.setWordWrap(True)
-            note.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;")
+            note.setStyleSheet(f"color:{tokens.text_muted};font-size:{pt(9)}pt;")
         self.leaders_host = QVBoxLayout()
         self.agreement_host = QVBoxLayout()
         self.outliers = QTableWidget(0, 5)
@@ -99,7 +100,7 @@ class BatchResultsView(QWidget):
         self.outliers.horizontalHeader().setStretchLastSection(True)
         self.outliers_note = QLabel("")
         self.outliers_note.setWordWrap(True)
-        self.outliers_note.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;")
+        self.outliers_note.setStyleSheet(f"color:{tokens.text_muted};font-size:{pt(9)}pt;")
         for widget in (self.leaders_title, self.leaders_note):
             self._box.addWidget(widget)
         self._box.addLayout(self.leaders_host)
@@ -352,7 +353,7 @@ class BatchWindow(QWidget):
                            "file's channels instead of the confirmation each file gets when "
                            "opened alone. Check one file with File → Open a file first.")
         rule_note.setWordWrap(True)
-        rule_note.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;")
+        rule_note.setStyleSheet(f"color:{tokens.text_muted};font-size:{pt(9)}pt;")
         how = QVBoxLayout()
         how.addWidget(QLabel("<b>How</b>"))
         how.addWidget(self.settings_line)

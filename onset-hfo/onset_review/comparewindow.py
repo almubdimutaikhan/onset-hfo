@@ -37,6 +37,7 @@ from qtpy.QtWidgets import (
 )
 
 from onset_review import comparison, theme
+from onset_review.theme import pt
 
 __all__ = ["CompareWindow", "OtherSettingsDialog"]
 
@@ -204,7 +205,7 @@ class CompareWindow(QWidget):
                       f"in time (within {comparison.TOLERANCE_S * 1000:g} ms) on the same "
                       + ("contact." if unit == "contact" else "channel."))
         note.setWordWrap(True)
-        note.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;")
+        note.setStyleSheet(f"color:{tokens.text_muted};font-size:{pt(9)}pt;")
         events_box.addWidget(note)
         events_box.addWidget(self.events, 1)
         self.verdicts = _table(["Channel", f"Verdict {c.a_label}", f"Verdict {c.b_label}"])
@@ -218,7 +219,7 @@ class CompareWindow(QWidget):
         verdict_box = QVBoxLayout(verdict_page)
         verdict_note = QLabel("Channels judged differently in the two reads." if rows else
                               "The two reads judge every channel alike (or judge none).")
-        verdict_note.setStyleSheet(f"color:{tokens.text_muted};font-size:9pt;")
+        verdict_note.setStyleSheet(f"color:{tokens.text_muted};font-size:{pt(9)}pt;")
         verdict_box.addWidget(verdict_note)
         verdict_box.addWidget(self.verdicts, 1)
 
