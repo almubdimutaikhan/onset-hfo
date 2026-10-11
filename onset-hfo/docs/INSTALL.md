@@ -216,8 +216,9 @@ a file…*. Each pane can be dragged to any edge of the window, tabbed with the
 other or apart, floated as a window of its own, or closed; **View → Workspace**
 (`Ctrl+Shift+W`) and **View → Files** (`Ctrl+Shift+F`) bring them back, and
 the arrangement is remembered. On a screen narrower than 1600 px a loaded
-window starts with them hidden, and a pane shown there opens as its own
-window: beside the Recording page on a 1366 px laptop there is no room.
+window starts with them hidden. A pane shown there docks beside the page when
+the window still fits the screen, as on a 1366 px laptop, and opens as its own
+window when it would not.
 
 ![The Workspace and Files panes beside the Recording page](images/onset-review-workspace.png)
 
