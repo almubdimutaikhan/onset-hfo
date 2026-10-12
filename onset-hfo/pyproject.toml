@@ -103,7 +103,7 @@ onset-orchestrate = "onset_agent.orchestrate:main"
 onset-review = "onset_review.app:main"
 
 [project.urls]
-"Homepage" = "https://berdakh.github.io/onset/"
+"Homepage" = "https://berdakh.github.io/onset-hfo/"
 "Source" = "https://github.com/berdakh/onset-hfo"
 "Documentation" = "https://github.com/berdakh/onset-hfo/tree/master/onset-hfo/docs"
 "Issues" = "https://github.com/berdakh/onset-hfo/issues"
