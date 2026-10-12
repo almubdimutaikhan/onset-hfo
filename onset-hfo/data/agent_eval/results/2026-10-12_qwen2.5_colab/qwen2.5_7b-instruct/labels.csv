@@ -1,0 +1,11 @@
+id,label,reason
+ds003029_sub-pt01/top_line_length,wrong,"names PST2-PST3 at 85 (its line_length rate, rank 6); the leader is AD1-AD2 at 103"
+ds003029_sub-pt01/disagreement,incomplete,empty answer shown (agent took a tool call written before the answer)
+ds003498_sub-01/window,right,'the first 60 seconds' is 0-60 s
+ds003498_sub-08/top_line_length,wrong,"right channel, but 100.678/min is its rms rate; line_length is 91.5254"
+ds003498_sub-08/disagreement,incomplete,empty answer shown (tool calls written as text)
+ds003498_sub-08/evidence,incomplete,empty answer shown (tool call written before the answer)
+ds003498_sub-10/top_line_length,wrong,names the rms leader GR23-GR24 at its rms rate 62; line_length leaders are at 38
+ds003498_sub-10/disagreement,incomplete,empty answer shown (tool calls written as text)
+ds003498_sub-10/evidence,incomplete,empty answer shown (tool call written before the answer)
+ds003498_sub-17/top_line_length,wrong,"right channel, but 52 is FPR5-FPR6's line_length rate; FPR1-FPR2's is 62"

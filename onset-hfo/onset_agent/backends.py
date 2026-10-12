@@ -112,15 +112,15 @@ def parse_tool_calls_from_text(text: str) -> list[ToolCall]:
     return calls
 
 
-def extract_json_object(text: str) -> dict | None:
-    """Find the JSON object in a model's final message, tolerating chatter."""
-    if not text:
-        return None
+def _json_objects(text: str):
+    """Every JSON object in ``text``, fenced ones first, in order."""
     for candidate in (_FENCE.findall(text) or []):
         try:
-            return json.loads(candidate)
+            value = json.loads(candidate)
         except json.JSONDecodeError:
-            pass
+            continue
+        if isinstance(value, dict):
+            yield value
     depth, start = 0, None
     for i, ch in enumerate(text):
         if ch == "{":
@@ -131,10 +131,33 @@ def extract_json_object(text: str) -> dict | None:
             depth -= 1
             if depth == 0 and start is not None:
                 try:
-                    return json.loads(text[start:i + 1])
+                    value = json.loads(text[start:i + 1])
                 except json.JSONDecodeError:
-                    start = None
-    return None
+                    value = None
+                start = None
+                if isinstance(value, dict):
+                    yield value
+
+
+def extract_json_object(text: str, prefer: tuple[str, ...] = ()) -> dict | None:
+    """Find the JSON object in a model's final message, tolerating chatter.
+
+    With ``prefer``, the first object carrying one of those keys wins over an
+    earlier one that does not. Qwen 2.5 was seen writing a tool call and then
+    its answer in one message (``<tool_call> {"name": ...} {"answer": ...}``);
+    taking the first object turned a good answer into an empty one.
+    """
+    if not text:
+        return None
+    first = None
+    for value in _json_objects(text):
+        if not prefer:
+            return value
+        if any(key in value for key in prefer):
+            return value
+        if first is None:
+            first = value
+    return first
 
 
 # --------------------------------------------------------------------------

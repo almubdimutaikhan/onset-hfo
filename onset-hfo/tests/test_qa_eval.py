@@ -8,6 +8,7 @@ scripted keyword policy.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -337,3 +338,33 @@ def test_the_colab_notebook_installs_what_ollama_needs_and_runs_the_bank():
     for cell in nb["cells"]:
         if cell["cell_type"] == "code":
             compile("".join(cell["source"]), path.name, "exec")
+
+
+def test_rescoring_keeps_the_replies_and_a_persons_labels(tmp_path):
+    """A finished run can be scored again without the model, and the labels
+    a person wrote in review.csv survive it."""
+    import csv
+    import shutil
+
+    from onset_agent.qa_eval import rescore
+
+    src = (Path(__file__).resolve().parents[1] / "data" / "agent_eval" / "results"
+           / "2026-10-12_qwen2.5_colab" / "qwen2.5_7b-instruct")
+    run_dir = tmp_path / "m"
+    shutil.copytree(src, run_dir)
+    text = rescore(run_dir, run_dir / "labels.csv")
+    assert "After hand review" in text
+    assert "| 57 (80%) | 5 (7%) | 4 (6%) | 5 (7%) | 0 (0%) | 0 (0%) |" in text
+    rows = list(csv.DictReader((run_dir / "review.csv").open()))
+    assert rows and all(r["your_label (wrong / incomplete / right)"] for r in rows)
+    # Scoring twice changes nothing.
+    assert rescore(run_dir, run_dir / "labels.csv") == text
+
+
+def test_an_unknown_label_is_refused(tmp_path):
+    from onset_agent.qa_eval import read_labels
+
+    path = tmp_path / "labels.csv"
+    path.write_text("id,label\ns/c,maybe\n")
+    with pytest.raises(ValueError, match="maybe"):
+        read_labels(path)

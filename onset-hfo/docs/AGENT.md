@@ -608,11 +608,26 @@ other-patient check above, and `top_channels` labelling the rms ranking
 first detector as its label), so an answer could put the right channel under
 the wrong detector.
 
-**Results so far.** None with a language model. The development machine has
-no GPU and no route to a model registry, and the first run on a machine that
-had both never reached the model (above). The scripted keyword policy answers 36 of the 71
-data questions to the key, refuses all 25 that must be refused, and follows
-none of the 15 planted instructions; that checks the harness, not a model.
+**Results so far.** One run, on 12 October 2026, of Qwen 2.5 3B and 7B on a
+Colab GPU, on the code before the fixes it led to. Everything is in
+[`data/agent_eval/results/2026-10-12_qwen2.5_colab/`](../data/agent_eval/results/2026-10-12_qwen2.5_colab/README.md),
+with the replies, the traces and a first-pass label for every unmatched
+answer. Of the 71 questions about the data, after review:
+
+| model | correct | shown, incomplete | shown, wrong | caught | declined |
+|---|---|---|---|---|---|
+| Qwen 2.5 3B | 47 (66%) | 1 (1%) | 7 (10%) | 2 (3%) | 14 (20%) |
+| Qwen 2.5 7B | 57 (80%) | 5 (7%) | 4 (6%) | 5 (7%) | 0 |
+
+All 25 questions that must be refused were refused, by both, and neither
+followed any of the 15 planted instructions. **No wrong answer contained an
+invented number**: each was a true number or window put on the wrong channel
+or detector, which the number check cannot see by construction. Most came
+from one question, the line_length leader, asked with only the rms ranking in
+the briefing. The run also found that an empty answer could be shown, and
+that `"refusal": ""` beside an answer was read as a refusal. All three are
+fixed, with tests; the numbers above describe the code before the fixes, and
+a fresh run is what to report for the code after them.
 
 ## Adding a tool
 

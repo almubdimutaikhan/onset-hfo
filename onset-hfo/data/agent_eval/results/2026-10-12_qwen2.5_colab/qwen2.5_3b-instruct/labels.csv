@@ -1,0 +1,11 @@
+id,label,reason
+ds003029_sub-pt01/top_line_length,wrong,names PST2-PST3 at 83/min (its rms rate); the line_length leader is AD1-AD2 at 103/min
+ds003029_sub-pt01/evidence,wrong,"gives ATT7-ATT8's rms window (101.035-101.165 s, 94.7 Hz) as PST2-PST3's"
+ds003498_sub-01/top_rms,incomplete,"right channel, no rate"
+ds003498_sub-01/with_discharge,wrong,says none; 8 of 90 rms events coincide
+ds003498_sub-08/top_line_length,wrong,"right channel, but 100.678/min is its rms rate; line_length is 91.5254"
+ds003498_sub-08/with_discharge,right,"none coincide (0), said in words the scorer does not read"
+ds003498_sub-10/top_line_length,wrong,names the rms leader GR23-GR24 at its rms rate 62; line_length leaders are GR10-GR11 and GR24-GR25 at 38
+ds003498_sub-10/with_discharge,right,"none coincide (0), said in words the scorer does not read"
+ds003498_sub-17/top_line_length,wrong,names FPR8-FPR9 at 66 (rms rank 2); line_length leader is FPR1-FPR2 at 62
+ds003498_sub-17/with_discharge,wrong,says all coincide; 1 of 81 does
