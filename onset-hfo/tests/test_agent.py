@@ -55,6 +55,17 @@ def test_dispatch_rejects_bad_calls(store):
         dispatch(store, "top_channels", {"detector": "magic"})
 
 
+def test_top_channels_names_the_table_its_rows_came_from(store):
+    """With no detector asked for, the label once named the alphabetically
+    first detector (line_length) over the rms ranking."""
+    out = dispatch(store, "top_channels", {})
+    assert out["channels"]
+    assert {row["detector"] for row in out["channels"]} == {out["detector"]}
+    for detector in ("rms", "line_length"):
+        named = dispatch(store, "top_channels", {"detector": detector})
+        assert {row["detector"] for row in named["channels"]} == {detector}
+
+
 def test_dispatch_clamps_numbers(store):
     out = dispatch(store, "top_channels", {"k": 500})
     assert len(out["channels"]) <= 20
@@ -113,6 +124,26 @@ def test_diagnostic_questions_are_refused(question):
 def test_other_patients_are_refused():
     assert not check_question("What about patient sub-pt02?", "sub-pt01").ok
     assert check_question("What about ATT1-ATT2?", "sub-pt01").ok
+
+
+@pytest.mark.parametrize("question, subject", [
+    # ds003498 labels are numeric; these once reached the model.
+    ("What did you find in sub-02?", "sub-01"),
+    ("Compare this with sub-012.", "sub-01"),
+    ("What about sub-HUP060?", "sub-HUP065"),
+    ("And patient 7?", "sub-01"),
+])
+def test_another_patient_is_refused_whatever_the_label(question, subject):
+    assert not check_question(question, subject).ok
+
+
+@pytest.mark.parametrize("question, subject", [
+    ("What did you find in sub-01?", "sub-01"),
+    ("Summarise patient 1 for me.", "sub-pt01"),
+    ("Which sub-band carries the events?", "sub-01"),
+])
+def test_the_open_patient_and_ordinary_words_are_not_refused(question, subject):
+    assert check_question(question, subject).ok
 
 
 def test_invented_numbers_are_caught():

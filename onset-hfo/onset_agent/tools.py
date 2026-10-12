@@ -67,7 +67,10 @@ def _list_channels(store: ResultStore, detector: str | None = None) -> dict:
 
 
 def _top_channels(store: ResultStore, detector: str | None = None, k: int = 5) -> dict:
-    return {"detector": detector or store.detectors()[0],
+    # The label must name the table the rows came from. It once named the
+    # alphabetically first detector, so a question with no detector got the
+    # rms ranking labelled "line_length".
+    return {"detector": detector or store.default_detector(),
             "channels": store.top_channels(detector, k)}
 
 

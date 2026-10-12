@@ -1,0 +1,144 @@
+{
+  "pipeline_version": "0.1.0",
+  "config": {
+    "preprocess": {
+      "line_freq": null,
+      "notch": true,
+      "bipolar": true,
+      "highpass": 1.0,
+      "lowpass": null,
+      "notch_width": 2.0,
+      "notch_harmonics": true,
+      "average_reference": false,
+      "resample": null,
+      "drop_bads": true,
+      "exclude": [],
+      "filter_method": "fir",
+      "iir_order": 4,
+      "filter_phase": "zero",
+      "transition_bandwidth": null,
+      "reference": null,
+      "modality": "auto",
+      "grid_columns": [],
+      "annotate_muscle": false,
+      "muscle_z": 4.0,
+      "regress_channels": [],
+      "ica": false,
+      "ica_n_components": null,
+      "ica_method": "fastica",
+      "ica_exclude": [],
+      "ica_seed": 97,
+      "annotate_amplitude": false,
+      "amplitude_ptp_uv": null
+    },
+    "rms": {
+      "band": [
+        80.0,
+        250.0
+      ],
+      "rms_window_ms": 3.0,
+      "threshold_sd": 2.0,
+      "extend_sd": 2.0,
+      "peak_threshold_sd": 2.0,
+      "min_peaks": 6,
+      "min_duration_ms": 6.0,
+      "max_duration_ms": 200.0,
+      "merge_gap_ms": 10.0,
+      "baseline": "robust"
+    },
+    "line_length": {
+      "band": [
+        80.0,
+        250.0
+      ],
+      "rms_window_ms": 3.0,
+      "threshold_sd": 2.0,
+      "extend_sd": 2.0,
+      "peak_threshold_sd": 2.0,
+      "min_peaks": 6,
+      "min_duration_ms": 6.0,
+      "max_duration_ms": 200.0,
+      "merge_gap_ms": 10.0,
+      "baseline": "robust"
+    },
+    "hilbert": {
+      "band": [
+        80.0,
+        250.0
+      ],
+      "rms_window_ms": 3.0,
+      "threshold_sd": 5.0,
+      "extend_sd": 2.0,
+      "peak_threshold_sd": 2.0,
+      "min_peaks": 6,
+      "min_duration_ms": 6.0,
+      "max_duration_ms": 200.0,
+      "merge_gap_ms": 10.0,
+      "baseline": "robust"
+    },
+    "short_time_energy": {
+      "band": [
+        80.0,
+        250.0
+      ],
+      "rms_window_ms": 3.0,
+      "threshold_sd": 5.0,
+      "extend_sd": 2.0,
+      "peak_threshold_sd": 2.0,
+      "min_peaks": 6,
+      "min_duration_ms": 6.0,
+      "max_duration_ms": 200.0,
+      "merge_gap_ms": 10.0,
+      "baseline": "robust"
+    },
+    "spikes": {
+      "band": [
+        5.0,
+        60.0
+      ],
+      "threshold_sd": 6.0,
+      "slope_sd": 5.0,
+      "min_duration_ms": 10.0,
+      "max_duration_ms": 200.0,
+      "refractory_ms": 200.0,
+      "max_raw_jump_sd": 10.0
+    },
+    "validation": {
+      "min_peak_prominence_db": 4.0,
+      "max_low_band_sd": 8.0,
+      "min_cycles": 2.0,
+      "scalp_max_concurrent_fraction": 0.0
+    },
+    "quality": {
+      "flat_uv": 0.5,
+      "max_clipped_fraction": 0.01,
+      "max_line_fraction": 0.3,
+      "max_hf_ratio_sd": 6.0,
+      "bursty_ratio": 1.2,
+      "max_amplitude_sd": 6.0,
+      "amplitude_outlier_ratio": 3.0,
+      "segment_s": 1.0,
+      "segment_jump_sd": 100.0,
+      "segment_ceiling_uv": 5000.0,
+      "max_bad_segment_fraction": 0.5
+    },
+    "check_quality": true,
+    "rate_window_s": 60.0,
+    "top_k": 5,
+    "disagreement_ranks": 5
+  },
+  "preprocessing": [
+    "kept 40 intracranial channels; dropped 0 non-brain channels (DC/trigger/ECG/misc)",
+    "high-pass 1 Hz (windowed FIR of 6601 taps (3.30 s), zero phase, MNE's automatic transition band)",
+    "notch 50 Hz (from the dataset) + harmonics (50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850 Hz, 2 Hz wide)",
+    "bipolar montage: 37 pairs of neighbouring contacts"
+  ],
+  "timings_s": {
+    "preprocess": 1.2614080700000159,
+    "bandpass": 0.17628381300005458,
+    "quality": 2.0215616259999933,
+    "detect_rms": 2.23209531100008,
+    "detect_line_length": 1.3648834150000084,
+    "detect_spikes": 1.0176554259999193
+  }
+}

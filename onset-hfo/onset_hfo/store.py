@@ -303,6 +303,11 @@ class ResultStore:
                 "peak_frequency_hz", "spectral_prominence_db", "peak_amplitude_uv", "accepted"]
         return _record(hit.iloc[0], keys)
 
+    def default_detector(self) -> str:
+        """The detector a query without one is answered from: ``rms`` when it
+        ran, else ``line_length``, else whatever there is."""
+        return self._default_detector()
+
     def _default_detector(self) -> str:
         for name in ("rms", "line_length"):
             if name in self.rates:

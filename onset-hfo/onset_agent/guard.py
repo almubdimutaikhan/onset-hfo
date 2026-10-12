@@ -39,7 +39,11 @@ DIAGNOSIS = re.compile(
     r"seizure onset zone|soz|epileptogenic zone)\b",
     re.IGNORECASE)
 
-OTHER_SUBJECT = re.compile(r"\b(sub-[a-z]{2,4}\d{1,3}|patient\s+\d{1,3}|pt\s?\d{1,3})\b",
+#: Another patient named in a question: a BIDS subject label (letters and
+#: digits, at least one digit, so "sub-band" is not a patient), "patient 3"
+#: or "pt3". It once required letters after "sub-", so the numeric labels of
+#: ds003498 ("sub-02") went straight past it to the model.
+OTHER_SUBJECT = re.compile(r"\b(sub-(?=[a-z0-9]*\d)[a-z0-9]{1,16}|patient\s+\d{1,3}|pt\s?\d{1,3})\b",
                            re.IGNORECASE)
 
 #: A number followed by one of these units must be traceable to a tool result.
@@ -86,6 +90,17 @@ class GuardResult:
     problems: list[str] = field(default_factory=list)
 
 
+def _same_subject(named: str, subject: str) -> bool:
+    """Whether a subject named in a question is the one whose analysis is open.
+    A full label must match exactly ("sub-01" is not "sub-012"); "patient 1"
+    and "pt1" are compared by number, so they match sub-pt01 and sub-01."""
+    token = named.lower().replace(" ", "")
+    if token.startswith("sub-"):
+        return token == subject.lower()
+    digits = re.findall(r"\d+", subject)
+    return bool(digits) and int(re.findall(r"\d+", token)[0]) == int(digits[-1])
+
+
 def check_question(question: str, subject: str) -> GuardResult:
     """Refuse out-of-scope questions before the model sees them."""
     if DIRECTIVE.search(question):
@@ -99,9 +114,7 @@ def check_question(question: str, subject: str) -> GuardResult:
                            "A high event rate is a measurement, not a seizure-onset zone. I can "
                            "tell you what the detectors measured and where they disagree.")
     for match in OTHER_SUBJECT.finditer(question):
-        token = match.group(0).lower().replace(" ", "")
-        if token.replace("patient", "sub-pt").replace("pt", "pt") not in subject.lower() \
-                and token not in subject.lower():
+        if not _same_subject(match.group(0), subject):
             return GuardResult(False,
                                f"I can only see the saved analysis of {subject}. Open that "
                                "patient's results to ask about their channels.")
