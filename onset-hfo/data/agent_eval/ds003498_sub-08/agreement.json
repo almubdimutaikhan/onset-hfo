@@ -1,0 +1,11 @@
+{
+  "detector_a": "rms",
+  "detector_b": "line_length",
+  "n_rms": 1115,
+  "n_line_length": 876,
+  "n_matched": 606,
+  "n_only_rms": 509,
+  "n_only_line_length": 270,
+  "jaccard": 0.4375451263537906,
+  "tolerance_s": 0.02
+}

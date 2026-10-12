@@ -1,0 +1,791 @@
+{
+  "recording": {
+    "source": "openneuro:ds003498",
+    "dataset": "ds003498",
+    "subject": "sub-01",
+    "task": null,
+    "run": "01",
+    "sfreq_hz": 2000.0,
+    "n_channels": 50,
+    "slice_start_s": 0.0,
+    "slice_stop_s": 60.0,
+    "seizure_onset_s": null,
+    "seizure_offset_s": null,
+    "seizure_marker": "none",
+    "bad_channels": [],
+    "line_freq_hz": 50.0,
+    "n_expert_events": 856,
+    "reviewed_channels": [
+      "AHR1-AHR2",
+      "AHR2-AHR3",
+      "AHR3-AHR4",
+      "AL1-AL2",
+      "AL2-AL3",
+      "AL3-AL4",
+      "AR1-AR2",
+      "AR2-AR3",
+      "AR3-AR4",
+      "HL1-HL2",
+      "HL2-HL3",
+      "HL3-HL4",
+      "IAR1-IAR2",
+      "IAR2-IAR3",
+      "IAR3-IAR4",
+      "IAR4-IAR5",
+      "IAR5-IAR6",
+      "IPR1-IPR2",
+      "IPR2-IPR3",
+      "IPR3-IPR4",
+      "PHR1-PHR2",
+      "PHR2-PHR3",
+      "PHR3-PHR4"
+    ],
+    "citation": "Fedele T, Burnos S, Boran E, Krayenbuehl N, Hilfiker P, Grunwald T, Sarnthein J. Resection of high frequency oscillations predicts seizure outcome in the individual patient. Scientific Reports 7:13836 (2017). doi:10.1038/s41598-017-13064-1 -- BIDS conversion by A. Zhang (mne-hfo), OpenNeuro ds003498, CC0.",
+    "notes": [
+      "slice 0-60 s of the original recording; all times reported by this pipeline are in original-recording seconds",
+      "0 channels flagged bad in channels.tsv (white matter, CSF, outside brain, or noisy) and excluded",
+      "mains frequency 50 Hz (ds003498)",
+      "expert HFO markings: 856 events on 23 reviewed channels (AHR1-AHR2, AHR2-AHR3, AHR3-AHR4, AL1-AL2, AL2-AL3, AL3-AL4, ...)",
+      "only those channels were annotated, so a detection elsewhere is unjudged rather than wrong; evaluation is restricted to them"
+    ]
+  },
+  "version": 1,
+  "pipeline_version": "0.1.0",
+  "generated_at": "2026-10-12T03:40:26+00:00",
+  "summary": "2 detectors ran on sub-01 (None, run 01), 60 s of recording, 50 channels. Highest event rate: AR2-AR3 (rms 90.0/min, line_length 65.0/min). 1 of the leading channels are ranked very differently by the two detectors. This report presents evidence windows and rates; it contains no diagnosis and no recommendation.",
+  "findings": [
+    {
+      "channel": "AR2-AR3",
+      "contacts": [
+        "AR2",
+        "AR3"
+      ],
+      "ranks": {
+        "rms": 1,
+        "line_length": 1
+      },
+      "rates_per_min": {
+        "rms": 90.0,
+        "line_length": 65.0
+      },
+      "rate_ci": {
+        "rms": [
+          72.34070684812426,
+          109.58002256312429
+        ],
+        "line_length": [
+          50.12827109271461,
+          81.79245831853392
+        ]
+      },
+      "n_events": {
+        "rms": 90,
+        "line_length": 65
+      },
+      "spike_rate_per_min": 15.0,
+      "fraction_with_spike": 0.1032258064516129,
+      "evidence": [
+        {
+          "evidence_id": "sub-01|AR2-AR3|rms|3.483",
+          "channel": "AR2-AR3",
+          "detector": "rms",
+          "start": 3.484,
+          "stop": 3.603,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 8.5,
+          "amplitude_uv": 38.9,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR2-AR3|line_length|3.510",
+          "channel": "AR2-AR3",
+          "detector": "line_length",
+          "start": 3.51,
+          "stop": 3.593,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 8.5,
+          "amplitude_uv": 38.9,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR2-AR3|rms|11.783",
+          "channel": "AR2-AR3",
+          "detector": "rms",
+          "start": 11.783,
+          "stop": 11.848,
+          "peak_frequency_hz": 86.4,
+          "spectral_prominence_db": 6.1,
+          "amplitude_uv": 34.8,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR2-AR3|line_length|11.787",
+          "channel": "AR2-AR3",
+          "detector": "line_length",
+          "start": 11.786,
+          "stop": 11.843,
+          "peak_frequency_hz": 85.9,
+          "spectral_prominence_db": 5.9,
+          "amplitude_uv": 34.8,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR2-AR3|line_length|54.093",
+          "channel": "AR2-AR3",
+          "detector": "line_length",
+          "start": 54.092,
+          "stop": 54.176,
+          "peak_frequency_hz": 87.9,
+          "spectral_prominence_db": 12.0,
+          "amplitude_uv": 39.0,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR2-AR3|rms|54.093",
+          "channel": "AR2-AR3",
+          "detector": "rms",
+          "start": 54.093,
+          "stop": 54.18,
+          "peak_frequency_hz": 87.9,
+          "spectral_prominence_db": 11.9,
+          "amplitude_uv": 39.0,
+          "co_occurs_with_spike": false
+        }
+      ],
+      "note": ""
+    },
+    {
+      "channel": "AR1-AR2",
+      "contacts": [
+        "AR1",
+        "AR2"
+      ],
+      "ranks": {
+        "rms": 2,
+        "line_length": 2
+      },
+      "rates_per_min": {
+        "rms": 83.0,
+        "line_length": 63.0
+      },
+      "rate_ci": {
+        "rms": [
+          66.07737147258631,
+          101.84335793866222
+        ],
+        "line_length": [
+          48.37279688627091,
+          79.54793252497763
+        ]
+      },
+      "n_events": {
+        "rms": 83,
+        "line_length": 63
+      },
+      "spike_rate_per_min": 22.0,
+      "fraction_with_spike": 0.1780821917808219,
+      "evidence": [
+        {
+          "evidence_id": "sub-01|AR1-AR2|rms|3.484",
+          "channel": "AR1-AR2",
+          "detector": "rms",
+          "start": 3.484,
+          "stop": 3.604,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 7.8,
+          "amplitude_uv": 47.6,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR1-AR2|line_length|3.504",
+          "channel": "AR1-AR2",
+          "detector": "line_length",
+          "start": 3.504,
+          "stop": 3.583,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 7.9,
+          "amplitude_uv": 47.6,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR1-AR2|rms|10.606",
+          "channel": "AR1-AR2",
+          "detector": "rms",
+          "start": 10.606,
+          "stop": 10.791,
+          "peak_frequency_hz": 80.8,
+          "spectral_prominence_db": 10.8,
+          "amplitude_uv": 40.5,
+          "co_occurs_with_spike": true
+        },
+        {
+          "evidence_id": "sub-01|AR1-AR2|line_length|10.607",
+          "channel": "AR1-AR2",
+          "detector": "line_length",
+          "start": 10.607,
+          "stop": 10.706,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 13.1,
+          "amplitude_uv": 40.5,
+          "co_occurs_with_spike": true
+        },
+        {
+          "evidence_id": "sub-01|AR1-AR2|rms|54.047",
+          "channel": "AR1-AR2",
+          "detector": "rms",
+          "start": 54.046,
+          "stop": 54.18,
+          "peak_frequency_hz": 88.9,
+          "spectral_prominence_db": 11.1,
+          "amplitude_uv": 43.9,
+          "co_occurs_with_spike": true
+        },
+        {
+          "evidence_id": "sub-01|AR1-AR2|line_length|54.074",
+          "channel": "AR1-AR2",
+          "detector": "line_length",
+          "start": 54.074,
+          "stop": 54.151,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 11.6,
+          "amplitude_uv": 43.9,
+          "co_occurs_with_spike": true
+        }
+      ],
+      "note": ""
+    },
+    {
+      "channel": "HL3-HL4",
+      "contacts": [
+        "HL3",
+        "HL4"
+      ],
+      "ranks": {
+        "rms": 3,
+        "line_length": 7
+      },
+      "rates_per_min": {
+        "rms": 55.0,
+        "line_length": 29.0
+      },
+      "rate_ci": {
+        "rms": [
+          41.391885033985105,
+          70.52884437726344
+        ],
+        "line_length": [
+          19.360238736653923,
+          40.560490674594625
+        ]
+      },
+      "n_events": {
+        "rms": 55,
+        "line_length": 29
+      },
+      "spike_rate_per_min": 1.0,
+      "fraction_with_spike": 0.023809523809523808,
+      "evidence": [
+        {
+          "evidence_id": "sub-01|HL3-HL4|line_length|12.146",
+          "channel": "HL3-HL4",
+          "detector": "line_length",
+          "start": 12.146,
+          "stop": 12.264,
+          "peak_frequency_hz": 106.9,
+          "spectral_prominence_db": 9.3,
+          "amplitude_uv": 25.8,
+          "co_occurs_with_spike": true
+        },
+        {
+          "evidence_id": "sub-01|HL3-HL4|rms|12.154",
+          "channel": "HL3-HL4",
+          "detector": "rms",
+          "start": 12.154,
+          "stop": 12.262,
+          "peak_frequency_hz": 106.9,
+          "spectral_prominence_db": 9.4,
+          "amplitude_uv": 25.8,
+          "co_occurs_with_spike": true
+        },
+        {
+          "evidence_id": "sub-01|HL3-HL4|line_length|23.754",
+          "channel": "HL3-HL4",
+          "detector": "line_length",
+          "start": 23.754,
+          "stop": 23.824,
+          "peak_frequency_hz": 93.3,
+          "spectral_prominence_db": 13.0,
+          "amplitude_uv": 17.0,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL3-HL4|rms|45.033",
+          "channel": "HL3-HL4",
+          "detector": "rms",
+          "start": 45.034,
+          "stop": 45.092,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 13.9,
+          "amplitude_uv": 18.4,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL3-HL4|rms|52.055",
+          "channel": "HL3-HL4",
+          "detector": "rms",
+          "start": 52.055,
+          "stop": 52.127,
+          "peak_frequency_hz": 84.0,
+          "spectral_prominence_db": 9.1,
+          "amplitude_uv": 22.8,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL3-HL4|line_length|52.056",
+          "channel": "HL3-HL4",
+          "detector": "line_length",
+          "start": 52.056,
+          "stop": 52.125,
+          "peak_frequency_hz": 84.0,
+          "spectral_prominence_db": 9.2,
+          "amplitude_uv": 22.8,
+          "co_occurs_with_spike": false
+        }
+      ],
+      "note": ""
+    },
+    {
+      "channel": "HL1-HL2",
+      "contacts": [
+        "HL1",
+        "HL2"
+      ],
+      "ranks": {
+        "rms": 4,
+        "line_length": 4
+      },
+      "rates_per_min": {
+        "rms": 53.0,
+        "line_length": 35.0
+      },
+      "rate_ci": {
+        "rms": [
+          39.657998387494615,
+          68.26273102375391
+        ],
+        "line_length": [
+          24.323723287542244,
+          47.597006123706294
+        ]
+      },
+      "n_events": {
+        "rms": 53,
+        "line_length": 35
+      },
+      "spike_rate_per_min": 0.0,
+      "fraction_with_spike": 0.0,
+      "evidence": [
+        {
+          "evidence_id": "sub-01|HL1-HL2|rms|12.133",
+          "channel": "HL1-HL2",
+          "detector": "rms",
+          "start": 12.134,
+          "stop": 12.231,
+          "peak_frequency_hz": 92.3,
+          "spectral_prominence_db": 14.6,
+          "amplitude_uv": 30.0,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL1-HL2|line_length|12.136",
+          "channel": "HL1-HL2",
+          "detector": "line_length",
+          "start": 12.136,
+          "stop": 12.233,
+          "peak_frequency_hz": 92.3,
+          "spectral_prominence_db": 14.6,
+          "amplitude_uv": 30.0,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL1-HL2|rms|28.363",
+          "channel": "HL1-HL2",
+          "detector": "rms",
+          "start": 28.363,
+          "stop": 28.412,
+          "peak_frequency_hz": 89.8,
+          "spectral_prominence_db": 17.0,
+          "amplitude_uv": 33.2,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL1-HL2|line_length|28.365",
+          "channel": "HL1-HL2",
+          "detector": "line_length",
+          "start": 28.365,
+          "stop": 28.412,
+          "peak_frequency_hz": 89.8,
+          "spectral_prominence_db": 16.9,
+          "amplitude_uv": 33.2,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL1-HL2|rms|51.989",
+          "channel": "HL1-HL2",
+          "detector": "rms",
+          "start": 51.99,
+          "stop": 52.103,
+          "peak_frequency_hz": 94.7,
+          "spectral_prominence_db": 12.2,
+          "amplitude_uv": 33.2,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL1-HL2|line_length|51.994",
+          "channel": "HL1-HL2",
+          "detector": "line_length",
+          "start": 51.994,
+          "stop": 52.104,
+          "peak_frequency_hz": 94.7,
+          "spectral_prominence_db": 12.3,
+          "amplitude_uv": 33.2,
+          "co_occurs_with_spike": false
+        }
+      ],
+      "note": ""
+    },
+    {
+      "channel": "AR7-AR8",
+      "contacts": [
+        "AR7",
+        "AR8"
+      ],
+      "ranks": {
+        "rms": 6,
+        "line_length": 3
+      },
+      "rates_per_min": {
+        "rms": 48.0,
+        "line_length": 36.0
+      },
+      "rate_ci": {
+        "rms": [
+          35.3460197641486,
+          62.57470964709994
+        ],
+        "line_length": [
+          25.1598188574222,
+          48.76091055382634
+        ]
+      },
+      "n_events": {
+        "rms": 48,
+        "line_length": 36
+      },
+      "spike_rate_per_min": 1.0,
+      "fraction_with_spike": 0.0,
+      "evidence": [
+        {
+          "evidence_id": "sub-01|AR7-AR8|rms|5.631",
+          "channel": "AR7-AR8",
+          "detector": "rms",
+          "start": 5.632,
+          "stop": 5.756,
+          "peak_frequency_hz": 113.3,
+          "spectral_prominence_db": 14.2,
+          "amplitude_uv": 22.8,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR7-AR8|line_length|5.658",
+          "channel": "AR7-AR8",
+          "detector": "line_length",
+          "start": 5.658,
+          "stop": 5.758,
+          "peak_frequency_hz": 113.8,
+          "spectral_prominence_db": 14.4,
+          "amplitude_uv": 22.8,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR7-AR8|rms|29.198",
+          "channel": "AR7-AR8",
+          "detector": "rms",
+          "start": 29.198,
+          "stop": 29.332,
+          "peak_frequency_hz": 82.0,
+          "spectral_prominence_db": 15.0,
+          "amplitude_uv": 20.4,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR7-AR8|line_length|29.218",
+          "channel": "AR7-AR8",
+          "detector": "line_length",
+          "start": 29.218,
+          "stop": 29.333,
+          "peak_frequency_hz": 81.5,
+          "spectral_prominence_db": 14.6,
+          "amplitude_uv": 20.4,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR7-AR8|rms|34.502",
+          "channel": "AR7-AR8",
+          "detector": "rms",
+          "start": 34.502,
+          "stop": 34.612,
+          "peak_frequency_hz": 137.2,
+          "spectral_prominence_db": 13.7,
+          "amplitude_uv": 24.2,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AR7-AR8|line_length|34.505",
+          "channel": "AR7-AR8",
+          "detector": "line_length",
+          "start": 34.504,
+          "stop": 34.609,
+          "peak_frequency_hz": 136.7,
+          "spectral_prominence_db": 13.6,
+          "amplitude_uv": 24.2,
+          "co_occurs_with_spike": false
+        }
+      ],
+      "note": ""
+    },
+    {
+      "channel": "AHR7-AHR8",
+      "contacts": [
+        "AHR7",
+        "AHR8"
+      ],
+      "ranks": {
+        "rms": 9,
+        "line_length": 5
+      },
+      "rates_per_min": {
+        "rms": 43.0,
+        "line_length": 32.0
+      },
+      "rate_ci": {
+        "rms": [
+          31.070714048100665,
+          56.850015363147875
+        ],
+        "line_length": [
+          21.829908873739807,
+          44.09082053750873
+        ]
+      },
+      "n_events": {
+        "rms": 43,
+        "line_length": 32
+      },
+      "spike_rate_per_min": 2.0,
+      "fraction_with_spike": 0.05333333333333334,
+      "evidence": [
+        {
+          "evidence_id": "sub-01|AHR7-AHR8|rms|42.928",
+          "channel": "AHR7-AHR8",
+          "detector": "rms",
+          "start": 42.928,
+          "stop": 43.03,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 9.9,
+          "amplitude_uv": 21.6,
+          "co_occurs_with_spike": true
+        },
+        {
+          "evidence_id": "sub-01|AHR7-AHR8|line_length|42.929",
+          "channel": "AHR7-AHR8",
+          "detector": "line_length",
+          "start": 42.93,
+          "stop": 43.024,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 9.9,
+          "amplitude_uv": 21.6,
+          "co_occurs_with_spike": true
+        },
+        {
+          "evidence_id": "sub-01|AHR7-AHR8|rms|54.044",
+          "channel": "AHR7-AHR8",
+          "detector": "rms",
+          "start": 54.044,
+          "stop": 54.164,
+          "peak_frequency_hz": 104.0,
+          "spectral_prominence_db": 7.7,
+          "amplitude_uv": 18.8,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AHR7-AHR8|line_length|54.062",
+          "channel": "AHR7-AHR8",
+          "detector": "line_length",
+          "start": 54.062,
+          "stop": 54.162,
+          "peak_frequency_hz": 104.0,
+          "spectral_prominence_db": 7.8,
+          "amplitude_uv": 18.8,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AHR7-AHR8|rms|55.674",
+          "channel": "AHR7-AHR8",
+          "detector": "rms",
+          "start": 55.674,
+          "stop": 55.756,
+          "peak_frequency_hz": 91.3,
+          "spectral_prominence_db": 7.4,
+          "amplitude_uv": 15.9,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|AHR7-AHR8|line_length|55.681",
+          "channel": "AHR7-AHR8",
+          "detector": "line_length",
+          "start": 55.68,
+          "stop": 55.758,
+          "peak_frequency_hz": 91.8,
+          "spectral_prominence_db": 7.0,
+          "amplitude_uv": 15.9,
+          "co_occurs_with_spike": false
+        }
+      ],
+      "note": ""
+    }
+  ],
+  "disagreements": [
+    {
+      "channel": "HL4-HL5",
+      "contacts": [
+        "HL4",
+        "HL5"
+      ],
+      "ranks": {
+        "rms": 5,
+        "line_length": 11
+      },
+      "rates_per_min": {
+        "rms": 49.0,
+        "line_length": 22.0
+      },
+      "rate_ci": {
+        "rms": [
+          36.205661982265205,
+          63.715067428983325
+        ],
+        "line_length": [
+          13.715233078624031,
+          32.2054963326245
+        ]
+      },
+      "n_events": {
+        "rms": 49,
+        "line_length": 22
+      },
+      "spike_rate_per_min": 0.0,
+      "fraction_with_spike": 0.0,
+      "evidence": [
+        {
+          "evidence_id": "sub-01|HL4-HL5|line_length|12.171",
+          "channel": "HL4-HL5",
+          "detector": "line_length",
+          "start": 12.171,
+          "stop": 12.244,
+          "peak_frequency_hz": 109.9,
+          "spectral_prominence_db": 12.9,
+          "amplitude_uv": 15.3,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL4-HL5|rms|12.171",
+          "channel": "HL4-HL5",
+          "detector": "rms",
+          "start": 12.172,
+          "stop": 12.244,
+          "peak_frequency_hz": 109.9,
+          "spectral_prominence_db": 12.9,
+          "amplitude_uv": 15.3,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL4-HL5|rms|13.382",
+          "channel": "HL4-HL5",
+          "detector": "rms",
+          "start": 13.382,
+          "stop": 13.446,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 9.4,
+          "amplitude_uv": 10.2,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL4-HL5|line_length|13.383",
+          "channel": "HL4-HL5",
+          "detector": "line_length",
+          "start": 13.383,
+          "stop": 13.427,
+          "peak_frequency_hz": 80.1,
+          "spectral_prominence_db": 8.9,
+          "amplitude_uv": 10.2,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL4-HL5|line_length|28.366",
+          "channel": "HL4-HL5",
+          "detector": "line_length",
+          "start": 28.366,
+          "stop": 28.412,
+          "peak_frequency_hz": 120.6,
+          "spectral_prominence_db": 9.1,
+          "amplitude_uv": 8.2,
+          "co_occurs_with_spike": false
+        },
+        {
+          "evidence_id": "sub-01|HL4-HL5|rms|39.667",
+          "channel": "HL4-HL5",
+          "detector": "rms",
+          "start": 39.667,
+          "stop": 39.712,
+          "peak_frequency_hz": 80.6,
+          "spectral_prominence_db": 12.0,
+          "amplitude_uv": 10.0,
+          "co_occurs_with_spike": false
+        }
+      ],
+      "note": "the two detectors' ranks differ by 6 places; the report states both and resolves neither"
+    }
+  ],
+  "rate_change": [],
+  "data_quality": [
+    "slice 0-60 s of the original recording; all times reported by this pipeline are in original-recording seconds",
+    "0 channels flagged bad in channels.tsv (white matter, CSF, outside brain, or noisy) and excluded",
+    "mains frequency 50 Hz (ds003498)",
+    "expert HFO markings: 856 events on 23 reviewed channels (AHR1-AHR2, AHR2-AHR3, AHR3-AHR4, AL1-AL2, AL2-AL3, AL3-AL4, ...)",
+    "only those channels were annotated, so a detection elsewhere is unjudged rather than wrong; evaluation is restricted to them",
+    "rms: 82 of 1121 accepted events (7%) coincide with an interictal discharge on the same channel \u2014 82.0/min against 1039.0/min for the rest, summed over all channels. The two are reported separately because nothing here can tell a physiological ripple from an epileptic one, and merging them hides that.",
+    "line_length: 78 of 641 accepted events (12%) coincide with an interictal discharge on the same channel \u2014 78.0/min against 563.0/min for the rest, summed over all channels. The two are reported separately because nothing here can tell a physiological ripple from an epileptic one, and merging them hides that.",
+    "Discharge co-occurrence is a proxy for the physiological/epileptic distinction, not a label for it: no public archive marks which ripples were physiological, so neither sub-population should be read as one or the other.",
+    "All 43 contacts passed the quality checks.",
+    "rms: 1353 candidate events, 232 rejected by artifact validation (in-band spectral peak only 3.4 dB above the 1/f background (< 4 dB): 16, in-band spectral peak only 3.3 dB above the 1/f background (< 4 dB): 11, in-band spectral peak only 3.5 dB above the 1/f background (< 4 dB): 10, in-band spectral peak only 2.3 dB above the 1/f background (< 4 dB): 8, in-band spectral peak only 2.8 dB above the 1/f background (< 4 dB): 8, in-band spectral peak only 1.4 dB above the 1/f background (< 4 dB): 7, in-band spectral peak only 0.5 dB above the 1/f background (< 4 dB): 7, in-band spectral peak only 3.8 dB above the 1/f background (< 4 dB): 6, in-band spectral peak only 2.1 dB above the 1/f background (< 4 dB): 6, in-band spectral peak only 3.2 dB above the 1/f background (< 4 dB): 6, in-band spectral peak only 1.9 dB above the 1/f background (< 4 dB): 6, in-band spectral peak only 2.2 dB above the 1/f background (< 4 dB): 6, in-band spectral peak only 1.3 dB above the 1/f background (< 4 dB): 6, in-band spectral peak only -0.8 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 2.6 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 3.7 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 3.1 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 2.5 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 3.6 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 3.0 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 0.8 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 3.9 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 2.9 dB above the 1/f background (< 4 dB): 4, in-band spectral peak only 1.2 dB above the 1/f background (< 4 dB): 4, in-band spectral peak only -0.5 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only -0.1 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 2.0 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 2.4 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 1.5 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only -2.4 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 2.7 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 0.7 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 0.4 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only -4.2 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -1.4 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 0.9 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -1.0 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 0.0 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 1.6 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -0.6 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -0.7 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -1.3 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 1.0 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 0.2 dB above the 1/f background (< 4 dB): 2, only 1.8 cycles (< 2): 2, in-band spectral peak only 1.7 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -0.4 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 0.6 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -2.7 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -2.0 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -2.6 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -1.2 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -0.2 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -2.2 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -0.9 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 1.8 dB above the 1/f background (< 4 dB): 1, only 1.9 cycles (< 2): 1, in-band spectral peak only 4.0 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -1.8 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -2.1 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -3.7 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -1.7 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -0.0 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -1.5 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 1.1 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -0.3 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -3.0 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 0.3 dB above the 1/f background (< 4 dB): 1)",
+    "line_length: 753 candidate events, 112 rejected by artifact validation (in-band spectral peak only 3.3 dB above the 1/f background (< 4 dB): 7, in-band spectral peak only 2.6 dB above the 1/f background (< 4 dB): 6, in-band spectral peak only 3.4 dB above the 1/f background (< 4 dB): 5, in-band spectral peak only 2.3 dB above the 1/f background (< 4 dB): 4, in-band spectral peak only 0.5 dB above the 1/f background (< 4 dB): 4, in-band spectral peak only 2.9 dB above the 1/f background (< 4 dB): 4, in-band spectral peak only 1.4 dB above the 1/f background (< 4 dB): 4, in-band spectral peak only 3.8 dB above the 1/f background (< 4 dB): 4, in-band spectral peak only -0.9 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 2.0 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 2.7 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 2.5 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 2.1 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 3.6 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 3.5 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only -0.3 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 3.1 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 3.2 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 2.8 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 3.9 dB above the 1/f background (< 4 dB): 3, in-band spectral peak only 1.0 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -0.1 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -2.1 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 3.0 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 4.0 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 1.3 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 0.4 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only 2.2 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -1.3 dB above the 1/f background (< 4 dB): 2, in-band spectral peak only -2.8 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -4.1 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 1.5 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 0.7 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -0.4 dB above the 1/f background (< 4 dB): 1, only 1.8 cycles (< 2): 1, in-band spectral peak only 1.9 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 1.7 dB above the 1/f background (< 4 dB): 1, only 1.6 cycles (< 2): 1, in-band spectral peak only -2.5 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 1.6 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 0.3 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 2.4 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 0.1 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -1.2 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -3.0 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only -0.5 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 0.0 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 0.9 dB above the 1/f background (< 4 dB): 1, in-band spectral peak only 1.8 dB above the 1/f background (< 4 dB): 1)",
+    "rates are events per minute over the analysed window; confidence intervals assume a Poisson process"
+  ],
+  "methods": [
+    "kept 50 intracranial channels; dropped 0 non-brain channels (DC/trigger/ECG/misc)",
+    "high-pass 1 Hz (windowed FIR of 6601 taps (3.30 s), zero phase, MNE's automatic transition band)",
+    "notch 50 Hz (from the dataset) + harmonics (50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850 Hz, 2 Hz wide)",
+    "bipolar montage: 43 pairs of neighbouring contacts",
+    "detectors: rms, line_length (see docs/METHODS.md)",
+    "configuration: {\"preprocess\": {\"line_freq\": null, \"notch\": true, \"bipolar\": true, \"highpass\": 1.0, \"lowpass\": null, \"notch_width\": 2.0, \"notch_harmonics\": true, \"average_reference\": false, \"resample\": null, \"drop_bads\": true, \"exclude\": [], \"filter_method\": \"fir\", \"iir_order\": 4, \"filter_phase\": \"zero\", \"transition_bandwidth\": null, \"reference\": null, \"modality\": \"auto\", \"grid_columns\": [], \"annotate_muscle\": false, \"muscle_z\": 4.0, \"regress_channels\": [], \"ica\": false, \"ica_n_components\": null, \"ica_method\": \"fastica\", \"ica_exclude\": [], \"ica_seed\": 97, \"annotate_amplitude\": false, \"amplitude_ptp_uv\": null}, \"rms\": {\"band\": [80.0, 250.0], \"rms_window_ms\": 3.0, \"threshold_sd\": 2.0, \"extend_sd\": 2.0, \"peak_threshold_sd\": 2.0, \"min_peaks\": 6, \"min_duration_ms\": 6.0, \"max_duration_ms\": 200.0, \"merge_gap_ms\": 10.0, \"baseline\": \"robust\"}, \"line_length\": {\"band\": [80.0, 250.0], \"rms_window_ms\": 3.0, \"threshold_sd\": 2.0, \"extend_sd\": 2.0, \"peak_threshold_sd\": 2.0, \"min_peaks\": 6, \"min_duration_ms\": 6.0, \"max_duration_ms\": 200.0, \"merge_gap_ms\": 10.0, \"baseline\": \"robust\"}, \"hilbert\": {\"band\": [80.0, 250.0], \"rms_window_ms\": 3.0, \"threshold_sd\": 5.0, \"extend_sd\": 2.0, \"peak_threshold_sd\": 2.0, \"min_peaks\": 6, \"min_duration_ms\": 6.0, \"max_duration_ms\": 200.0, \"merge_gap_ms\": 10.0, \"baseline\": \"robust\"}, \"short_time_energy\": {\"band\": [80.0, 250.0], \"rms_window_ms\": 3.0, \"threshold_sd\": 5.0, \"extend_sd\": 2.0, \"peak_threshold_sd\": 2.0, \"min_peaks\": 6, \"min_duration_ms\": 6.0, \"max_duration_ms\": 200.0, \"merge_gap_ms\": 10.0, \"baseline\": \"robust\"}, \"spikes\": {\"band\": [5.0, 60.0], \"threshold_sd\": 6.0, \"slope_sd\": 5.0, \"min_duration_ms\": 10.0, \"max_duration_ms\": 200.0, \"refractory_ms\": 200.0, \"max_raw_jump_sd\": 10.0}, \"validation\": {\"min_peak_prominence_db\": 4.0, \"max_low_band_sd\": 8.0, \"min_cycles\": 2.0, \"scalp_max_concurrent_fraction\": 0.0}, \"quality\": {\"flat_uv\": 0.5, \"max_clipped_fraction\": 0.01, \"max_line_fraction\": 0.3, \"max_hf_ratio_sd\": 6.0, \"bursty_ratio\": 1.2, \"max_amplitude_sd\": 6.0, \"amplitude_outlier_ratio\": 3.0, \"segment_s\": 1.0, \"segment_jump_sd\": 100.0, \"segment_ceiling_uv\": 5000.0, \"max_bad_segment_fraction\": 0.5}, \"check_quality\": true, \"rate_window_s\": 60.0, \"top_k\": 5, \"disagreement_ranks\": 5}"
+  ],
+  "limitations": [
+    "prototype: thresholds come from the literature, checked on synthetic data and against expert markings on 20 subjects of ds003498; not validated on a clinical cohort",
+    "this recording carries expert HFO markings, so the detectors can be scored on it (python -m onset_hfo.cli benchmark); agreement with those markings is not accuracy, because the reference is another detector's validated output",
+    "event rate is not a diagnosis: physiological ripples occur in healthy tissue, particularly in mesial temporal and occipital regions",
+    "a single short window of a single patient; nothing here generalises",
+    "bipolar pairs are formed from consecutive contact numbers, which on a grid is not always spatial adjacency"
+  ],
+  "citation": "Fedele T, Burnos S, Boran E, Krayenbuehl N, Hilfiker P, Grunwald T, Sarnthein J. Resection of high frequency oscillations predicts seizure outcome in the individual patient. Scientific Reports 7:13836 (2017). doi:10.1038/s41598-017-13064-1 -- BIDS conversion by A. Zhang (mne-hfo), OpenNeuro ds003498, CC0."
+}
