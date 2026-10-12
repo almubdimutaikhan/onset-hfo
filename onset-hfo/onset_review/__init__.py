@@ -30,7 +30,7 @@ __version__ = "0.3.15"
 #: in every exported report.
 DEVELOPER = "Berdakh Abibullaev"
 __author__ = DEVELOPER
-HOMEPAGE = "https://berdakh.github.io/onset/"
+HOMEPAGE = "https://berdakh.github.io/onset-hfo/"
 
 
 def credit() -> str:
