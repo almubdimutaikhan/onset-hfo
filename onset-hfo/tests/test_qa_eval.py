@@ -277,3 +277,46 @@ def test_failures_recorded_before_the_error_outcome_existed_are_asked_again(tmp_
     first = next(r for r in rows if r["id"] == stale["id"])
     assert not first["reason"].startswith("error:")
     assert len(rows) == len(build_bank(stores))
+
+
+class _DropsOnce:
+    """A server that restarts its runner once, mid-run, as Ollama did on a
+    CPU when a long first prompt outlasted the client."""
+
+    name = "drops-once"
+    is_language_model = True
+
+    def __init__(self):
+        from onset_agent.backends import ScriptedBackend
+
+        self.inner = ScriptedBackend()
+        self.calls = 0
+
+    def chat(self, messages, tools):
+        self.calls += 1
+        if self.calls == 2:     # the first question's first request
+            raise RuntimeError("Could not reach the model server at http://127.0.0.1:11434/v1 "
+                               "(Remote end closed connection without response).")
+        if self.calls == 1:
+            from onset_agent.backends import AssistantMessage
+            return AssistantMessage(content="OK")
+        return self.inner.chat(messages, tools)
+
+    def abort(self):
+        pass
+
+
+def test_a_dropped_connection_is_retried_once(tmp_path):
+    notes = []
+    out = run(_DropsOnce, "m", store_dirs(["ds003498_sub-01"]), tmp_path / "m",
+              limit=1, echo=notes.append, retry_wait=0)
+    rows = [json.loads(line) for line in (out / "answers.jsonl").read_text().splitlines()]
+    assert rows[0]["outcome"] != "error"
+    assert any("retrying" in n for n in notes)
+
+
+def test_the_command_line_timeout_reaches_a_served_backend():
+    from onset_agent.backends import make_backend
+
+    backend = make_backend("ollama", model="qwen2.5:7b-instruct", timeout=900.0)
+    assert backend.timeout == 900.0

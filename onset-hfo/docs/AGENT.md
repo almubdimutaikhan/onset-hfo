@@ -533,6 +533,16 @@ sudo systemctl restart ollama
 ollama list                       # the model is listed
 ```
 
+**On a CPU, give it time.** The first question on each analysis carried
+3,405 tokens of prompt on the first machine it ran on (4 CPU threads, no
+GPU), which Ollama read at 13.8 tokens a second: about four minutes before
+the first word. The backend's usual 180 s cut that off. The run therefore
+waits 900 s per reply (`--timeout`), and retries once after a pause when the
+server drops a connection, as Ollama does while it restarts a runner. Later
+questions on the same analysis reuse the cached opening of the prompt and are
+much faster. Expect hours for the whole bank on such a machine; it resumes
+where it stopped.
+
 **A request that fails is not an answer.** The run asks the model one trivial
 thing first and stops, saying why, if that fails. A request that fails during
 the run is recorded as `error`, kept out of every table, and asked again the

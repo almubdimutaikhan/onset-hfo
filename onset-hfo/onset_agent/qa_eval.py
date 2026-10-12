@@ -388,7 +388,8 @@ def _slug(text: str) -> str:
 
 def run(backend_factory, label: str, stores: dict[str, Path] | None = None,
         out_dir: Path | None = None, limit: int | None = None,
-        resume: bool = True, max_steps: int = 6, echo=print) -> Path:
+        resume: bool = True, max_steps: int = 6, echo=print,
+        retry_wait: float = 15.0) -> Path:
     """Ask every question in the bank, score the replies and write the results.
 
     ``backend_factory`` returns a fresh backend; one agent is built per store,
@@ -434,14 +435,23 @@ def run(backend_factory, label: str, stores: dict[str, Path] | None = None,
                 agent = agents[q.store] = OnsetAgent(ResultStore(stores[q.store]), backend,
                                                      max_steps=max_steps)
             t0 = time.perf_counter()
-            try:
-                answer = agent.ask(q.text)
-                reply = {**answer.as_dict(), "mode": answer.mode}
-                failed = ""
-            except Exception as error:   # noqa: BLE001 - recorded, never scored
-                reply = {"answer": "", "refused": True, "reason": f"error: {error}",
-                         "evidence_ids": [], "trace": [], "mode": "data"}
-                failed = str(error)
+            for attempt in (1, 2):
+                try:
+                    answer = agent.ask(q.text)
+                    reply = {**answer.as_dict(), "mode": answer.mode}
+                    failed = ""
+                except Exception as error:   # noqa: BLE001 - recorded, never scored
+                    reply = {"answer": "", "refused": True, "reason": f"error: {error}",
+                             "evidence_ids": [], "trace": [], "mode": "data"}
+                    failed = str(error)
+                # A server that dropped the connection is usually restarting its
+                # runner (Ollama does, after a request it gave up on); one
+                # retry after a pause, then the failure stands.
+                if not failed or attempt == 2 or "could not reach" not in failed.lower():
+                    break
+                echo(f"[{i}/{len(bank)}] {q.id}: the server dropped the request; "
+                     f"retrying in {retry_wait:.0f} s")
+                time.sleep(retry_wait)
             seconds = time.perf_counter() - t0
             outcome, notes = ("error", [failed]) if failed else score(q, reply)
             row = {"id": q.id, "store": q.store, "category": q.category, "kind": q.kind,
@@ -598,6 +608,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default=None, help=f"output directory (default {OUT}/<model>)")
     p.add_argument("--fresh", action="store_true", help="start again instead of resuming")
     p.add_argument("--max-steps", type=int, default=6)
+    p.add_argument("--timeout", type=float, default=900.0,
+                   help="seconds to wait for one reply from the model (default 900). "
+                        "On a CPU the model reads a 3,400-token prompt at about 14 tokens "
+                        "a second before it writes, so the backend's usual 180 s is too short")
     p.add_argument("--list", action="store_true", help="print the question bank and exit")
     p.add_argument("--build-stores", action="store_true",
                    help="(maintainer) re-analyse the ds003498 recordings the bank uses")
@@ -623,6 +637,9 @@ def main(argv: list[str] | None = None) -> int:
         backend_label = f"{args.backend}:{model}" if model else args.backend
 
         def factory(model=model):
+            if args.backend in ("ollama", "openai_compat"):
+                return make_backend(args.backend, model=model, base_url=args.base_url,
+                                    timeout=args.timeout)
             return make_backend(args.backend, model=model, base_url=args.base_url)
 
         print(f"[qa-eval] {backend_label}")
