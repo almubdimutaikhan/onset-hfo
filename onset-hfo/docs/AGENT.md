@@ -517,7 +517,10 @@ python -m onset_agent.qa_eval --backend scripted   # the harness, no model
 ```
 
 Run it from a source checkout: the analyses it asks about are in the
-repository, not in the release bundle.
+repository, not in the release bundle. Without a GPU, run it on Colab's free
+T4 instead: [`notebooks/08_assistant_evaluation.ipynb`](../notebooks/08_assistant_evaluation.ipynb)
+installs Ollama, pulls the models, runs the bank and hands back a zip of the
+results, in minutes per model rather than hours.
 
 **Before a run, give the server enough context, on the server that has the
 model.** Ollama installed as a system service keeps its models in

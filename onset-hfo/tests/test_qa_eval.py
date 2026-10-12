@@ -320,3 +320,20 @@ def test_the_command_line_timeout_reaches_a_served_backend():
 
     backend = make_backend("ollama", model="qwen2.5:7b-instruct", timeout=900.0)
     assert backend.timeout == 900.0
+
+
+def test_the_colab_notebook_installs_what_ollama_needs_and_runs_the_bank():
+    """Colab has no zstd, which the Ollama installer now needs to unpack
+    itself: the first attempt there stopped at `No such file: 'ollama'`."""
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "notebooks" / "08_assistant_evaluation.ipynb"
+    nb = json.loads(path.read_text())
+    text = "".join("".join(c["source"]) for c in nb["cells"])
+    assert "colab-badge" in text
+    assert "zstd" in text
+    assert "OLLAMA_CONTEXT_LENGTH" in text
+    assert "onset_agent.qa_eval" in text
+    for cell in nb["cells"]:
+        if cell["cell_type"] == "code":
+            compile("".join(cell["source"]), path.name, "exec")
