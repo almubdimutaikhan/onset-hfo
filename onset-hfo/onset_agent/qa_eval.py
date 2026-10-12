@@ -62,7 +62,7 @@ from onset_agent.guard import CHANNEL_TOKEN, EVIDENCE_TOKEN
 from onset_hfo.store import ResultStore
 
 __all__ = ["Question", "STORES", "store_dirs", "build_bank", "score", "run",
-           "summarise", "build_stores", "main"]
+           "summarise", "build_stores", "preflight", "BackendFailed", "main"]
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
@@ -83,7 +83,12 @@ STORES: dict[str, Path] = {
     "ds003498_sub-17": EVAL_DATA / "ds003498_sub-17",
 }
 
-#: Outcomes, in the order the summary lists them.
+#: Consecutive failed requests after which a run stops rather than recording
+#: a failure for every remaining question.
+MAX_CONSECUTIVE_ERRORS = 3
+
+#: Outcomes, in the order the summary lists them. ``error`` (the request to
+#: the model failed) is none of them: it is reported apart and never scored.
 ANSWERABLE = ("correct", "unmatched", "caught", "declined", "misrouted")
 MUST_REFUSE = ("refused", "answered")
 INJECTION = ("resisted", "complied")
@@ -341,13 +346,50 @@ def score(question: Question, reply: dict) -> tuple[str, list[str]]:
 # Running the bank
 # --------------------------------------------------------------------------
 
+class BackendFailed(RuntimeError):
+    """The model could not be asked at all: no server, no such model, or a
+    request it rejected. A run that meets this stops and says why; it does
+    not score the failure as an answer."""
+
+
+def preflight(backend) -> None:
+    """Ask the model one trivial thing before the bank, so a server that is
+    not running, or is running without the model, stops the run at once.
+
+    The first run under a real model recorded every request that failed
+    against Ollama as a refusal ("declined"), and the questions where a
+    refusal is the right reply as passes, all in 0.0 s. A failed request is
+    not an answer, and the run now refuses to pretend it is.
+    """
+    if not getattr(backend, "is_language_model", False):
+        return
+    try:
+        backend.chat([{"role": "user", "content": "Reply with the word OK."}], [])
+    except Exception as error:   # noqa: BLE001 - every failure is reported the same way
+        raise BackendFailed(str(error)) from error
+
+
+def _hint(message: str) -> str:
+    text = message.lower()
+    if "not found" in text or "404" in text:
+        return ("The server answered but does not have that model. `ollama list` shows "
+                "what the running server has. A server started by hand (`ollama serve`) "
+                "keeps its models in ~/.ollama, the system service in /usr/share/ollama, "
+                "so a model pulled through one is missing from the other.")
+    if "could not reach" in text or "refused" in text:
+        return "Nothing answered at that address: start Ollama (`ollama serve`)."
+    if "context" in text:
+        return "Give the server a larger context window (OLLAMA_CONTEXT_LENGTH=8192)."
+    return ""
+
 def _slug(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "_", text).strip("_") or "model"
 
 
 def run(backend_factory, label: str, stores: dict[str, Path] | None = None,
         out_dir: Path | None = None, limit: int | None = None,
-        resume: bool = True, max_steps: int = 6, echo=print) -> Path:
+        resume: bool = True, max_steps: int = 6, echo=print,
+        retry_wait: float = 15.0) -> Path:
     """Ask every question in the bank, score the replies and write the results.
 
     ``backend_factory`` returns a fresh backend; one agent is built per store,
@@ -366,14 +408,24 @@ def run(backend_factory, label: str, stores: dict[str, Path] | None = None,
         for line in answers.read_text().splitlines():
             if line.strip():
                 row = json.loads(line)
-                done[row["id"]] = row
+                # A failed request is asked again; only answers are kept. Rows
+                # from before failures had their own outcome carry the reason.
+                failed = row.get("outcome") == "error" or \
+                    str(row.get("reason", "")).startswith("error:")
+                if not failed:
+                    done[row["id"]] = row
+        # Rewrite without the failures, so the file holds one row per question.
+        answers.write_text("".join(json.dumps(r, default=str) + "\n" for r in done.values()))
     elif answers.exists():
         answers.unlink()
     bank = build_bank(stores)
     if limit:
         bank = bank[:limit]
     backend = backend_factory()
+    preflight(backend)
     agents: dict[str, OnsetAgent] = {}
+    failures = 0
+    last_error = ""
     with answers.open("a") as sink:
         for i, q in enumerate(bank, 1):
             if q.id in done:
@@ -383,14 +435,25 @@ def run(backend_factory, label: str, stores: dict[str, Path] | None = None,
                 agent = agents[q.store] = OnsetAgent(ResultStore(stores[q.store]), backend,
                                                      max_steps=max_steps)
             t0 = time.perf_counter()
-            try:
-                answer = agent.ask(q.text)
-                reply = {**answer.as_dict(), "mode": answer.mode}
-            except Exception as error:   # noqa: BLE001 - a crash is an outcome to record
-                reply = {"answer": "", "refused": True, "reason": f"error: {error}",
-                         "evidence_ids": [], "trace": [], "mode": "data"}
+            for attempt in (1, 2):
+                try:
+                    answer = agent.ask(q.text)
+                    reply = {**answer.as_dict(), "mode": answer.mode}
+                    failed = ""
+                except Exception as error:   # noqa: BLE001 - recorded, never scored
+                    reply = {"answer": "", "refused": True, "reason": f"error: {error}",
+                             "evidence_ids": [], "trace": [], "mode": "data"}
+                    failed = str(error)
+                # A server that dropped the connection is usually restarting its
+                # runner (Ollama does, after a request it gave up on); one
+                # retry after a pause, then the failure stands.
+                if not failed or attempt == 2 or "could not reach" not in failed.lower():
+                    break
+                echo(f"[{i}/{len(bank)}] {q.id}: the server dropped the request; "
+                     f"retrying in {retry_wait:.0f} s")
+                time.sleep(retry_wait)
             seconds = time.perf_counter() - t0
-            outcome, notes = score(q, reply)
+            outcome, notes = ("error", [failed]) if failed else score(q, reply)
             row = {"id": q.id, "store": q.store, "category": q.category, "kind": q.kind,
                    "model_dependent": q.model_dependent, "question": q.text,
                    "expected": {"channels": q.channels, "numbers": q.numbers,
@@ -406,16 +469,29 @@ def run(backend_factory, label: str, stores: dict[str, Path] | None = None,
             sink.write(json.dumps(row, default=str) + "\n")
             sink.flush()
             done[q.id] = row
-            echo(f"[{i}/{len(bank)}] {q.id}: {outcome} ({seconds:.1f} s)")
+            echo(f"[{i}/{len(bank)}] {q.id}: {outcome} ({seconds:.1f} s)"
+                 + (f" -- {failed}" if failed else ""))
+            failures = failures + 1 if failed else 0
+            last_error = failed or last_error
+            if failures >= MAX_CONSECUTIVE_ERRORS:
+                break
     rows = [done[q.id] for q in bank if q.id in done]
     (out / "summary.md").write_text(summarise(rows, label))
     _write_review(rows, out / "review.csv")
+    if failures >= MAX_CONSECUTIVE_ERRORS:
+        raise BackendFailed(f"{failures} requests in a row failed; stopped. Last: {last_error}")
     return out
 
 
 def summarise(rows: list[dict], label: str = "") -> str:
     """The summary table: outcomes per kind of question, then per category."""
     lines = [f"# Assistant evaluation: {label}".rstrip(": "), ""]
+    errors = [r for r in rows if r["outcome"] == "error"]
+    rows = [r for r in rows if r["outcome"] != "error"]
+    if errors:
+        lines += [f"**{len(errors)} question(s) could not be asked: the request to the model "
+                  "failed. They are not in the tables below, and a run with any is not "
+                  "complete.** First failure: " + "; ".join(errors[0].get("notes") or []), ""]
     by_kind: dict[str, list[dict]] = {}
     for row in rows:
         by_kind.setdefault(row["kind"], []).append(row)
@@ -532,6 +608,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default=None, help=f"output directory (default {OUT}/<model>)")
     p.add_argument("--fresh", action="store_true", help="start again instead of resuming")
     p.add_argument("--max-steps", type=int, default=6)
+    p.add_argument("--timeout", type=float, default=900.0,
+                   help="seconds to wait for one reply from the model (default 900). "
+                        "On a CPU the model reads a 3,400-token prompt at about 14 tokens "
+                        "a second before it writes, so the backend's usual 180 s is too short")
     p.add_argument("--list", action="store_true", help="print the question bank and exit")
     p.add_argument("--build-stores", action="store_true",
                    help="(maintainer) re-analyse the ds003498 recordings the bank uses")
@@ -557,14 +637,27 @@ def main(argv: list[str] | None = None) -> int:
         backend_label = f"{args.backend}:{model}" if model else args.backend
 
         def factory(model=model):
+            if args.backend in ("ollama", "openai_compat"):
+                return make_backend(args.backend, model=model, base_url=args.base_url,
+                                    timeout=args.timeout)
             return make_backend(args.backend, model=model, base_url=args.base_url)
 
         print(f"[qa-eval] {backend_label}")
         if args.backend == "scripted":
             print("[qa-eval] NOTE: the scripted backend is a keyword policy, not a language "
                   "model. This is a dry run of the harness, not a measurement.")
-        out = run(factory, label, stores, Path(args.out) / _slug(label) if args.out else None,
-                  limit=args.limit, resume=not args.fresh, max_steps=args.max_steps)
+        try:
+            out = run(factory, label, stores,
+                      Path(args.out) / _slug(label) if args.out else None,
+                      limit=args.limit, resume=not args.fresh, max_steps=args.max_steps)
+        except BackendFailed as failure:
+            print(f"[qa-eval] could not ask {backend_label}: {failure}")
+            hint = _hint(str(failure))
+            if hint:
+                print(f"[qa-eval] {hint}")
+            print("[qa-eval] Nothing was scored for the failed questions; run the same "
+                  "command again once the model answers, and it resumes.")
+            return 2
         print((out / "summary.md").read_text())
         print(f"[qa-eval] results in {out}")
     return 0

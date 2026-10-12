@@ -196,3 +196,127 @@ def test_the_summary_counts_each_kind_separately():
     assert "| 1 (50%) | 1 (50%) | 0 (0%) | 0 (0%) | 0 (0%) |" in text
     assert "| 1 (100%) | 0 (0%) |" in text
     assert "review.csv" in text
+
+
+# -- a model that cannot be asked ------------------------------------------------
+
+class _Unreachable:
+    """What the first real run met: every request failed at once (a server
+    without the model). It was scored as 66 refusals and 20 passes."""
+
+    name = "unreachable"
+    is_language_model = True
+
+    def chat(self, messages, tools):
+        raise RuntimeError("The model server rejected the request (HTTP 404): "
+                           "model 'qwen2.5:7b-instruct' not found")
+
+    def abort(self):
+        pass
+
+
+class _FailsAfterPreflight(_Unreachable):
+    def __init__(self):
+        self.calls = 0
+
+    def chat(self, messages, tools):
+        self.calls += 1
+        if self.calls == 1:
+            from onset_agent.backends import AssistantMessage
+            return AssistantMessage(content="OK")
+        return super().chat(messages, tools)
+
+
+def test_a_model_that_cannot_be_asked_stops_the_run_before_any_question(tmp_path):
+    from onset_agent.qa_eval import BackendFailed
+
+    with pytest.raises(BackendFailed, match="not found"):
+        run(_Unreachable, "m", store_dirs(["ds003498_sub-01"]), tmp_path / "m",
+            echo=lambda *_: None)
+    answers = tmp_path / "m" / "answers.jsonl"
+    assert not answers.exists() or not answers.read_text().strip()
+
+
+def test_failed_requests_are_not_scored_and_are_asked_again(tmp_path):
+    from onset_agent.qa_eval import MAX_CONSECUTIVE_ERRORS, BackendFailed
+
+    stores = store_dirs(["ds003498_sub-01"])
+    with pytest.raises(BackendFailed):
+        run(_FailsAfterPreflight, "m", stores, tmp_path / "m", echo=lambda *_: None)
+    rows = [json.loads(line) for line in
+            (tmp_path / "m" / "answers.jsonl").read_text().splitlines()]
+    errors = [r for r in rows if r["outcome"] == "error"]
+    assert len(errors) == MAX_CONSECUTIVE_ERRORS
+    summary = (tmp_path / "m" / "summary.md").read_text()
+    assert "could not be asked" in summary
+    assert "declined" not in summary.split("## By category")[-1]
+
+    # Once the model answers, the same command resumes and asks them again.
+    from onset_agent.backends import ScriptedBackend
+
+    out = run(ScriptedBackend, "m", stores, tmp_path / "m", echo=lambda *_: None)
+    rows = [json.loads(line) for line in (out / "answers.jsonl").read_text().splitlines()]
+    assert not [r for r in rows if r["outcome"] == "error"]
+    assert len(rows) == len(build_bank(stores))
+
+
+def test_failures_recorded_before_the_error_outcome_existed_are_asked_again(tmp_path):
+    """The first real run wrote its failed requests as 'declined' with the
+    error in the reason. Re-running the same command must not keep them."""
+    from onset_agent.backends import ScriptedBackend
+
+    stores = store_dirs(["ds003498_sub-01"])
+    out = tmp_path / "m"
+    out.mkdir()
+    stale = {"id": build_bank(stores)[0].id, "outcome": "declined", "kind": "answerable",
+             "category": "top_any", "reason": "error: model not found", "seconds": 0.0,
+             "model_dependent": True}
+    (out / "answers.jsonl").write_text(json.dumps(stale) + "\n")
+    run(ScriptedBackend, "m", stores, out, echo=lambda *_: None)
+    rows = [json.loads(line) for line in (out / "answers.jsonl").read_text().splitlines()]
+    first = next(r for r in rows if r["id"] == stale["id"])
+    assert not first["reason"].startswith("error:")
+    assert len(rows) == len(build_bank(stores))
+
+
+class _DropsOnce:
+    """A server that restarts its runner once, mid-run, as Ollama did on a
+    CPU when a long first prompt outlasted the client."""
+
+    name = "drops-once"
+    is_language_model = True
+
+    def __init__(self):
+        from onset_agent.backends import ScriptedBackend
+
+        self.inner = ScriptedBackend()
+        self.calls = 0
+
+    def chat(self, messages, tools):
+        self.calls += 1
+        if self.calls == 2:     # the first question's first request
+            raise RuntimeError("Could not reach the model server at http://127.0.0.1:11434/v1 "
+                               "(Remote end closed connection without response).")
+        if self.calls == 1:
+            from onset_agent.backends import AssistantMessage
+            return AssistantMessage(content="OK")
+        return self.inner.chat(messages, tools)
+
+    def abort(self):
+        pass
+
+
+def test_a_dropped_connection_is_retried_once(tmp_path):
+    notes = []
+    out = run(_DropsOnce, "m", store_dirs(["ds003498_sub-01"]), tmp_path / "m",
+              limit=1, echo=notes.append, retry_wait=0)
+    rows = [json.loads(line) for line in (out / "answers.jsonl").read_text().splitlines()]
+    assert rows[0]["outcome"] != "error"
+    assert any("retrying" in n for n in notes)
+
+
+def test_the_command_line_timeout_reaches_a_served_backend():
+    from onset_agent.backends import make_backend
+
+    backend = make_backend("ollama", model="qwen2.5:7b-instruct", timeout=900.0)
+    assert backend.timeout == 900.0
