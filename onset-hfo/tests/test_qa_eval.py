@@ -196,3 +196,84 @@ def test_the_summary_counts_each_kind_separately():
     assert "| 1 (50%) | 1 (50%) | 0 (0%) | 0 (0%) | 0 (0%) |" in text
     assert "| 1 (100%) | 0 (0%) |" in text
     assert "review.csv" in text
+
+
+# -- a model that cannot be asked ------------------------------------------------
+
+class _Unreachable:
+    """What the first real run met: every request failed at once (a server
+    without the model). It was scored as 66 refusals and 20 passes."""
+
+    name = "unreachable"
+    is_language_model = True
+
+    def chat(self, messages, tools):
+        raise RuntimeError("The model server rejected the request (HTTP 404): "
+                           "model 'qwen2.5:7b-instruct' not found")
+
+    def abort(self):
+        pass
+
+
+class _FailsAfterPreflight(_Unreachable):
+    def __init__(self):
+        self.calls = 0
+
+    def chat(self, messages, tools):
+        self.calls += 1
+        if self.calls == 1:
+            from onset_agent.backends import AssistantMessage
+            return AssistantMessage(content="OK")
+        return super().chat(messages, tools)
+
+
+def test_a_model_that_cannot_be_asked_stops_the_run_before_any_question(tmp_path):
+    from onset_agent.qa_eval import BackendFailed
+
+    with pytest.raises(BackendFailed, match="not found"):
+        run(_Unreachable, "m", store_dirs(["ds003498_sub-01"]), tmp_path / "m",
+            echo=lambda *_: None)
+    answers = tmp_path / "m" / "answers.jsonl"
+    assert not answers.exists() or not answers.read_text().strip()
+
+
+def test_failed_requests_are_not_scored_and_are_asked_again(tmp_path):
+    from onset_agent.qa_eval import MAX_CONSECUTIVE_ERRORS, BackendFailed
+
+    stores = store_dirs(["ds003498_sub-01"])
+    with pytest.raises(BackendFailed):
+        run(_FailsAfterPreflight, "m", stores, tmp_path / "m", echo=lambda *_: None)
+    rows = [json.loads(line) for line in
+            (tmp_path / "m" / "answers.jsonl").read_text().splitlines()]
+    errors = [r for r in rows if r["outcome"] == "error"]
+    assert len(errors) == MAX_CONSECUTIVE_ERRORS
+    summary = (tmp_path / "m" / "summary.md").read_text()
+    assert "could not be asked" in summary
+    assert "declined" not in summary.split("## By category")[-1]
+
+    # Once the model answers, the same command resumes and asks them again.
+    from onset_agent.backends import ScriptedBackend
+
+    out = run(ScriptedBackend, "m", stores, tmp_path / "m", echo=lambda *_: None)
+    rows = [json.loads(line) for line in (out / "answers.jsonl").read_text().splitlines()]
+    assert not [r for r in rows if r["outcome"] == "error"]
+    assert len(rows) == len(build_bank(stores))
+
+
+def test_failures_recorded_before_the_error_outcome_existed_are_asked_again(tmp_path):
+    """The first real run wrote its failed requests as 'declined' with the
+    error in the reason. Re-running the same command must not keep them."""
+    from onset_agent.backends import ScriptedBackend
+
+    stores = store_dirs(["ds003498_sub-01"])
+    out = tmp_path / "m"
+    out.mkdir()
+    stale = {"id": build_bank(stores)[0].id, "outcome": "declined", "kind": "answerable",
+             "category": "top_any", "reason": "error: model not found", "seconds": 0.0,
+             "model_dependent": True}
+    (out / "answers.jsonl").write_text(json.dumps(stale) + "\n")
+    run(ScriptedBackend, "m", stores, out, echo=lambda *_: None)
+    rows = [json.loads(line) for line in (out / "answers.jsonl").read_text().splitlines()]
+    first = next(r for r in rows if r["id"] == stale["id"])
+    assert not first["reason"].startswith("error:")
+    assert len(rows) == len(build_bank(stores))

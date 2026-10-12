@@ -507,7 +507,6 @@ asks a fixed bank of 111 questions about five committed analyses and sorts
 every reply by what a reader would have seen:
 
 ```bash
-ollama serve                                   # in another terminal
 ollama pull qwen2.5:7b-instruct
 python -m onset_agent.qa_eval --backend ollama --model qwen2.5:7b-instruct
 # several sizes, one after another; a stopped run resumes where it stopped
@@ -519,6 +518,27 @@ python -m onset_agent.qa_eval --backend scripted   # the harness, no model
 
 Run it from a source checkout: the analyses it asks about are in the
 repository, not in the release bundle.
+
+**Before a run, give the server enough context, on the server that has the
+model.** Ollama installed as a system service keeps its models in
+`/usr/share/ollama`; `ollama serve` started by hand keeps them in `~/.ollama`.
+Stopping the service and starting a server by hand therefore gives a server
+without the model you pulled. Set the context on the service instead:
+
+```bash
+sudo systemctl edit ollama        # add the two lines below, save
+#   [Service]
+#   Environment="OLLAMA_CONTEXT_LENGTH=8192"
+sudo systemctl restart ollama
+ollama list                       # the model is listed
+```
+
+**A request that fails is not an answer.** The run asks the model one trivial
+thing first and stops, saying why, if that fails. A request that fails during
+the run is recorded as `error`, kept out of every table, and asked again the
+next time the same command runs; three in a row stop the run. The first run
+under a real model, before this existed, scored 86 failed requests as 66
+refusals and 20 passes in 0.0 s each: it measured nothing, and is not a result.
 
 **The analyses.** The worked example (ds003029 sub-pt01, 60 s around a marked
 seizure, in `data/example_analysis/`) and four interictal recordings from the
@@ -575,8 +595,9 @@ other-patient check above, and `top_channels` labelling the rms ranking
 first detector as its label), so an answer could put the right channel under
 the wrong detector.
 
-**Results so far.** None with a language model: this machine has no GPU and
-no route to a model registry. The scripted keyword policy answers 36 of the 71
+**Results so far.** None with a language model. The development machine has
+no GPU and no route to a model registry, and the first run on a machine that
+had both never reached the model (above). The scripted keyword policy answers 36 of the 71
 data questions to the key, refuses all 25 that must be refused, and follows
 none of the 15 planted instructions; that checks the harness, not a model.
 
