@@ -608,26 +608,31 @@ other-patient check above, and `top_channels` labelling the rms ranking
 first detector as its label), so an answer could put the right channel under
 the wrong detector.
 
-**Results so far.** One run, on 12 October 2026, of Qwen 2.5 3B and 7B on a
-Colab GPU, on the code before the fixes it led to. Everything is in
-[`data/agent_eval/results/2026-10-12_qwen2.5_colab/`](../data/agent_eval/results/2026-10-12_qwen2.5_colab/README.md),
-with the replies, the traces and a first-pass label for every unmatched
-answer. Of the 71 questions about the data, after review:
+**Results so far.** Two runs of Qwen 2.5 3B and 7B on a Colab GPU: one on
+the code before the fixes it led to, and one after. Everything, with the
+replies, the traces and a first-pass label for every unmatched answer, is in
+[`data/agent_eval/results/`](../data/agent_eval/results/2026-10-13_qwen2.5_colab/README.md).
+Of the 71 questions about the data, after review:
 
-| model | correct | shown, incomplete | shown, wrong | caught | declined |
-|---|---|---|---|---|---|
-| Qwen 2.5 3B | 47 (66%) | 1 (1%) | 7 (10%) | 2 (3%) | 14 (20%) |
-| Qwen 2.5 7B | 57 (80%) | 5 (7%) | 4 (6%) | 5 (7%) | 0 |
+| model | run | correct | shown, incomplete | shown, wrong | caught | declined |
+|---|---|---|---|---|---|---|
+| Qwen 2.5 3B | before fixes | 47 (66%) | 1 | 7 (10%) | 2 | 14 |
+| Qwen 2.5 3B | after fixes | 51 (72%) | 3 | 2 (3%) | 2 | 13 |
+| Qwen 2.5 7B | before fixes | 57 (80%) | 5 | 4 (6%) | 5 | 0 |
+| Qwen 2.5 7B | after fixes | 65 (92%) | 0 | 0 | 5 | 1 |
 
-All 25 questions that must be refused were refused, by both, and neither
-followed any of the 15 planted instructions. **No wrong answer contained an
-invented number**: each was a true number or window put on the wrong channel
-or detector, which the number check cannot see by construction. Most came
-from one question, the line_length leader, asked with only the rms ranking in
-the briefing. The run also found that an empty answer could be shown, and
-that `"refusal": ""` beside an answer was read as a refusal. All three are
-fixed, with tests; the numbers above describe the code before the fixes, and
-a fresh run is what to report for the code after them.
+All 25 questions that must be refused were refused in every run. **No wrong
+answer in either run contained an invented number.** All but two put a true
+number or window on the wrong channel or detector, which the number check
+cannot see by construction; the two (3B, first run) said "none" and "all" for
+discharge overlaps of 8 of 90 and 1 of 81 events. The first run found three faults (an empty answer shown as
+verified, `"refusal": ""` read as a refusal, and the line_length leader asked
+with only the rms ranking briefed), fixed with tests before the second. On the
+fixed code the 7B showed no wrong answer; the 3B showed two, plus one more
+under a planted instruction (another channel's rate, not a remembered one).
+In every answer the 7B had refused as "caught", its final draft was right and
+was refused for an evidence id the model made up: the citation rule costs
+refusals, not errors.
 
 ## Adding a tool
 

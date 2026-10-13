@@ -38,8 +38,9 @@ memory). No question was answered from the documents instead of the data.
 
 ## What the wrong answers were
 
-Every wrong answer shown was a true number or window put on the wrong
-channel or detector. None was an invented number: the number check held.
+No wrong answer contained an invented number: the number check held. All but
+two were a true number or window put on the wrong channel or detector; the
+two (3B) were the words "none" and "all", below.
 
 - **The line_length leader** (4 of 5 analyses, both models): the briefing
   carried only the rms ranking, and the model named the rms leader or quoted
