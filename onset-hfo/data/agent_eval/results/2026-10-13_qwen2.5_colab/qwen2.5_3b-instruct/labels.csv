@@ -1,0 +1,6 @@
+id,label,reason
+ds003029_sub-pt01/evidence,wrong,"gives ATT7-ATT8's rms window (101.035-101.165 s, 94.7 Hz, 82/min) as PST2-PST3's"
+ds003498_sub-01/with_discharge,incomplete,says no information is provided; 8 of 90 rms events coincide (channel_summary n_with_spike)
+ds003498_sub-08/with_discharge,incomplete,says no information is provided; the answer is 0
+ds003498_sub-10/top_line_length,wrong,names the rms leader GR23-GR24 at its line_length rate 31; the line_length leaders are GR10-GR11 and GR24-GR25 at 38
+ds003498_sub-10/with_discharge,incomplete,says no information is provided; the answer is 0
