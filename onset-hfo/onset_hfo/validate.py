@@ -31,6 +31,7 @@ why the pipeline disagreed.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 
 import numpy as np
@@ -39,7 +40,7 @@ from onset_hfo.config import BANDS, ValidationConfig
 from onset_hfo.detectors.base import Event, bandpass, robust_scale
 from onset_hfo.preprocess import Prepared
 
-__all__ = ["validate_events", "flag_spike_cooccurrence", "rejection_summary"]
+__all__ = ["validate_events", "flag_spike_cooccurrence", "rejection_summary", "reason_kind"]
 
 
 def validate_events(events: list[Event], prep: Prepared,
@@ -134,8 +135,34 @@ def flag_spike_cooccurrence(hfo_events: list[Event], spike_events: list[Event],
     return hfo_events
 
 
+#: The kind of each rejection reason, for counting. A reason carries the value
+#: it was measured at ("only 1.7 dB above the 1/f background"), and counting
+#: the reasons themselves gave one group per value: about thirty groups for one
+#: kind, and a data-quality line of over 2,000 characters.
+_REASON_KINDS = (
+    (re.compile(r"^only \S+ cycles"), "too few cycles"),
+    (re.compile(r"^in-band spectral peak only"), "no clear spectral peak (probable filter ringing)"),
+    (re.compile(r"^spectrum not measurable"), "low-frequency transient (probable filter ringing)"),
+    (re.compile(r"other channels at once"),
+     "on too many channels at once (probable muscle or movement)"),
+    (re.compile(r"^on a channel set aside"), "on a channel set aside by the quality checks"),
+    (re.compile(r"^inside a rejected segment"), "inside a rejected segment"),
+)
+_NUMBER = re.compile(r"-?\d+(?:\.\d+)?%?")
+
+
+def reason_kind(reason: str | None) -> str:
+    """What kind of rejection a reason is, without the values it was measured
+    at. A reason no rule knows keeps its words with its numbers taken out."""
+    if not reason:
+        return "accepted"
+    for pattern, kind in _REASON_KINDS:
+        if pattern.search(reason):
+            return kind
+    return re.sub(r"\s+", " ", _NUMBER.sub("#", reason)).strip()
+
+
 def rejection_summary(events: list[Event]) -> dict[str, int]:
-    """Count of rejection reasons -- printed in the report's data-quality block."""
-    counts = Counter(e.reject_reason.split(":")[0] if e.reject_reason else "accepted"
-                     for e in events)
+    """Count of rejections by kind -- printed in the report's data-quality block."""
+    counts = Counter(reason_kind(e.reject_reason) for e in events)
     return dict(sorted(counts.items(), key=lambda kv: -kv[1]))
