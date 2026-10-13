@@ -802,3 +802,64 @@ def test_a_question_that_names_its_subject_is_routed_by_itself_mid_conversation(
     assert any(entry.get("type") == "routed" for entry in definition.trace)
     follow = OnsetAgent(store, ScriptedBackend()).ask("And the second one?", history=history)
     assert follow.mode == "data"
+
+
+# -- what the first real-model evaluation found ------------------------------
+
+class _Replies(Backend):
+    """A model that says exactly these things, in order, then refuses."""
+
+    name = "replies"
+
+    def __init__(self, *contents):
+        self.contents = list(contents)
+        self.seen = []
+
+    def chat(self, messages, tools):
+        self.seen.append(list(messages))
+        if self.contents:
+            return AssistantMessage(content=self.contents.pop(0))
+        return AssistantMessage(content=json.dumps({"refusal": "no more"}))
+
+
+def test_the_answer_object_wins_over_a_tool_call_written_before_it(store):
+    """Qwen 2.5 7B wrote `<tool_call> {"name": ...} {"answer": ...}`; the agent
+    took the first object and showed an empty answer, marked verified."""
+    top = store.top_channels(k=1)[0]
+    rate = top["rate_per_min"]
+    reply = ('<tool_call>\n{"name": "top_channels", "arguments": {}}\n'
+             + json.dumps({"answer": f"{top['channel']} leads at {rate} events per minute.",
+                           "evidence_ids": []}))
+    answer = OnsetAgent(store, _Replies(reply), brief=True).ask("Which channel leads?")
+    assert not answer.refused
+    assert top["channel"] in answer.text
+
+
+def test_an_empty_answer_is_never_shown(store):
+    backend = _Replies(json.dumps({"answer": "", "evidence_ids": []}),
+                       '<tool_call>\n{"name": "get_evidence", "arguments": {}}')
+    answer = OnsetAgent(store, backend, brief=True, max_retries=1).ask("Which channel leads?")
+    assert answer.refused or answer.text.strip()
+    assert any(step.get("type") == "format_error" for step in answer.trace)
+
+
+def test_an_empty_refusal_beside_an_answer_is_not_a_refusal(store):
+    """Qwen 2.5 3B wrote {"answer": "...", "refusal": ""}."""
+    top = store.top_channels(k=1)[0]
+    reply = json.dumps({"answer": f"{top['channel']} leads at {top['rate_per_min']} "
+                                  "events per minute.", "refusal": ""})
+    answer = OnsetAgent(store, _Replies(reply), brief=True).ask("Which channel leads?")
+    assert not answer.refused
+    assert top["channel"] in answer.text
+
+
+def test_a_question_naming_a_detector_is_briefed_with_that_detectors_ranking(store):
+    """Asked for the line_length leader with only the rms ranking in hand, Qwen
+    2.5 named the rms leader in 4 of 5 analyses; every number checked out."""
+    from onset_agent.agent import briefing_extras
+
+    extras = briefing_extras(store, "Which channel has the highest rate on the line_length "
+                                    "detector?")
+    assert ("top_channels", {"detector": "line_length", "k": 5}) in extras
+    assert not [c for c in briefing_extras(store, "Which channel leads?")
+                if c[0] == "top_channels"]

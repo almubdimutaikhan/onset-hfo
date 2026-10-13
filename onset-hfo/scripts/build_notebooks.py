@@ -1791,6 +1791,128 @@ survive a second pair of reviewers.
 ]
 
 
+# =========================================================================
+# 8. The assistant, measured on a free GPU
+# =========================================================================
+
+NB8 = "08_assistant_evaluation.ipynb"
+nb8 = [
+    md(f"""
+# Onset-HFO 8 — Measure the assistant under Qwen, on a free GPU
+
+{badge(NB8)}
+
+The assistant's guards are tested in CI; what a real model does inside them is
+measured by `onset_agent.qa_eval`: 111 questions about five committed
+analyses, every reply sorted by what a reader would have seen (correct,
+unmatched, caught by the number check, declined, refused, resisted). See
+`docs/AGENT.md`, *Measuring it with a real model*.
+
+On a laptop CPU the bank takes hours, because the model reads a 3,400-token
+prompt at about 14 tokens a second. **On Colab's free T4 GPU it takes
+minutes per model.**
+
+**Before you start:** Runtime → Change runtime type → **T4 GPU**. Then run
+the cells top to bottom.
+
+**What to keep:** the zip the last cell downloads. It holds, per model,
+`summary.md`, `review.csv` (the answers to read and label by hand) and
+`answers.jsonl` (every question, reply and trace).
+
+The times it records are a Colab T4's, not a clinical workstation's; the
+answers do not depend on the speed.
+"""),
+    code("""# Which accelerator this runtime has. No GPU: the run still works, slowly.
+import shutil, subprocess
+if shutil.which("nvidia-smi"):
+    print(subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv"],
+                         capture_output=True, text=True).stdout)
+else:
+    print("No GPU on this runtime. Runtime -> Change runtime type -> T4 GPU, "
+          "then run this notebook again from the top.")"""),
+    md("""
+## 1. Ollama, with a context window large enough for the assistant
+
+The installer now needs `zstd` to unpack itself, which Colab does not have.
+Ollama's default context (2,048 tokens) is too small for the assistant's
+first turn, so the server is started with 8,192.
+"""),
+    code("""import os, subprocess, time, urllib.request
+
+subprocess.run("apt-get -qq update && apt-get -qq install -y zstd pciutils lshw > /dev/null",
+               shell=True, check=True)
+if not shutil.which("ollama"):
+    subprocess.run("curl -fsSL https://ollama.com/install.sh | sh", shell=True, check=True)
+
+env = dict(os.environ, OLLAMA_CONTEXT_LENGTH="8192")
+server = subprocess.Popen(["ollama", "serve"], env=env,
+                          stdout=open("/content/ollama.log", "w"), stderr=subprocess.STDOUT)
+for _ in range(60):
+    try:
+        urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=2)
+        print("Ollama is running")
+        break
+    except OSError:
+        time.sleep(1)
+else:
+    raise RuntimeError("Ollama did not start; see /content/ollama.log")"""),
+    md("""
+## 2. The models
+
+The 3B and 7B sizes fit a T4 easily; the 14B (about 9 GB) fits too, and makes
+the size comparison worth reporting. Remove what you do not want.
+"""),
+    code("""MODELS = ["qwen2.5:3b-instruct", "qwen2.5:7b-instruct"]
+# MODELS.append("qwen2.5:14b-instruct")      # about 9 GB more; fits a T4
+
+for model in MODELS:
+    subprocess.run(["ollama", "pull", model], check=True)"""),
+    md("""
+## 3. The code and the five analyses the questions are about
+"""),
+    code(SETUP),
+    md("""
+## 4. Run the bank
+
+Each line is one question, its outcome and its time. A Colab session that
+disconnects loses its files; set `SAVE_TO_DRIVE = True` to write the results
+to your Google Drive instead, and a run cut short picks up where it stopped
+when you run the notebook again.
+"""),
+    code("""SAVE_TO_DRIVE = False
+
+OUT = "artifacts/agent_eval"
+if SAVE_TO_DRIVE and IN_COLAB:
+    from google.colab import drive
+    drive.mount("/content/drive")
+    OUT = "/content/drive/MyDrive/onset-agent-eval"
+
+subprocess.run([sys.executable, "-m", "onset_agent.qa_eval", "--backend", "ollama",
+                "--model", ",".join(MODELS), "--out", OUT], check=False)"""),
+    md("""
+## 5. The summaries, and the file to keep
+"""),
+    code("""from pathlib import Path
+from IPython.display import Markdown, display
+
+for summary in sorted(Path(OUT).glob("*/summary.md")):
+    display(Markdown(summary.read_text()))
+
+archive = shutil.make_archive("/content/agent_eval", "zip", OUT)
+print("results:", archive)
+if IN_COLAB:
+    from google.colab import files
+    files.download(archive)"""),
+    md("""
+**Before any number from this run is reported**, open `review.csv` for each
+model and label every row *wrong*, *incomplete* or *right*. An answer that
+did not match the key is not necessarily wrong ("2 kHz" for 2000 Hz), and
+the count that matters — answers that were wrong and shown to the reader —
+comes only from that reading.
+"""),
+]
+
+
 def execute(path: Path, timeout: int = 5400) -> None:
     """Run a notebook in place and keep its outputs.
 
@@ -1818,7 +1940,7 @@ def main(argv: list[str] | None = None) -> None:
     NOTEBOOK_DIR.mkdir(parents=True, exist_ok=True)
     for number, (name, cells) in enumerate(
             [(NB1, nb1), (NB2, nb2), (NB3, nb3), (NB4, nb4), (NB5, nb5),
-             (None, None), (NB7, nb7)], 1):
+             (None, None), (NB7, nb7), (NB8, nb8)], 1):
         if name is None:
             # 06_agent_benchmark.ipynb is committed but was never added here.
             # Numbering is kept aligned so `--execute 7` means notebook 7.

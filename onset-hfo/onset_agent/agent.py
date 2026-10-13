@@ -138,6 +138,13 @@ class AgentAnswer:
 # --------------------------------------------------------------------------
 
 _SEIZURE = re.compile(r"seizure|ictal|before|during|change over time", re.IGNORECASE)
+#: A detector named in a question. The base briefing ranks by the default
+#: detector only; asked for the line_length leader, Qwen 2.5 (3B and 7B) read
+#: the rms ranking it had been given and named its leader, or its rate, in 4
+#: of 5 analyses. Every number was in the tool results, so the number check
+#: could not see it. The detector's own ranking is now fetched.
+_DETECTOR = ((re.compile(r"line[\s_-]?length", re.IGNORECASE), "line_length"),
+             (re.compile(r"\brms\b|root[\s-]mean", re.IGNORECASE), "rms"))
 #: Words that mean the question needs an analysis run, not a table read.
 #: When the window has given the agent analysis tools, these put the tool
 #: schemas on the first call, so the model can ask for the run at once.
@@ -237,6 +244,11 @@ def briefing_extras(store: ResultStore, question: str,
         if evidence not in already:
             calls.append(evidence)
         calls.append(("channel_summary", {"channel": channel}))
+    for pattern, detector in _DETECTOR:
+        ranking = ("top_channels", {"detector": detector, "k": 5})
+        if pattern.search(question) and detector in store.detectors() \
+                and ranking not in already:
+            calls.append(ranking)
     if _SEIZURE.search(question):
         calls.append(("rate_change", {}))
     if _WHERE.search(question):
@@ -564,7 +576,22 @@ class OnsetAgent:
                 continue
 
             content = message.content or ""
-            parsed = extract_json_object(content)
+            parsed = extract_json_object(content, prefer=("answer", "refusal"))
+            # An object that is neither an answer nor a refusal (a tool call
+            # written as text, say) is not an answer; nor is an empty one.
+            # Both were seen from Qwen 2.5 7B, and an empty reply went out
+            # marked verified.
+            if parsed is not None and not (str(parsed.get("answer") or "").strip()
+                                           or str(parsed.get("refusal") or "").strip()):
+                note({"type": "format_error", "step": step, "content": content[:400]})
+                if retries >= self.max_retries:
+                    break
+                retries += 1
+                messages.append({"role": "user", "content":
+                                 "That was not an answer. Reply with exactly "
+                                 '{"answer": "...", "evidence_ids": [...]} or '
+                                 '{"refusal": "..."} and nothing else.'})
+                continue
             if parsed is None:
                 prose = _as_prose(content)
                 # Prose that names no channel of this analysis and states no
@@ -590,7 +617,10 @@ class OnsetAgent:
                 note({"type": "model", "step": step, "asked_for": [],
                       "content": content[:400]})
 
-            if "refusal" in parsed:
+            # A refusal only when it says something and there is no answer
+            # beside it: Qwen 2.5 3B wrote {"answer": "...", "refusal": ""}.
+            if str(parsed.get("refusal") or "").strip() and \
+                    not str(parsed.get("answer") or "").strip():
                 note({"type": "model_refusal", "step": step, "text": str(parsed["refusal"])[:400]})
                 return AgentAnswer(question=question, text=str(parsed["refusal"]), refused=True,
                                    reason="the model declined", trace=trace,
