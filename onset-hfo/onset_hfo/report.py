@@ -290,18 +290,30 @@ def build_report(*, provenance: dict, rates: dict[str, pd.DataFrame], comparison
     ]
 
     has_markings = bool(provenance.get("n_expert_events"))
+    # A synthetic recording's known events travel in the same field as an
+    # archive's expert markings; the report once called them expert markings.
+    synthetic = str(provenance.get("source", "")).lower() == "synthetic"
+    if synthetic:
+        reference = ("this is a synthetic recording with known, implanted events, so precision "
+                     "and recall can be computed exactly; they measure the detectors against "
+                     "the simulator, which can only test what it simulates, not against experts")
+    elif has_markings:
+        reference = ("this recording carries expert HFO markings, so the detectors can be "
+                     "scored on it (python -m onset_hfo.cli benchmark); agreement with those "
+                     "markings is not accuracy, because the reference is another detector's "
+                     "validated output")
+    else:
+        reference = ("this recording carries no HFO markings, so precision and recall cannot "
+                     "be computed on it; they are measured on ds003498 and on synthetic data "
+                     "-- see docs/EVALUATION.md")
     limitations = [
         "prototype: thresholds come from the literature, checked on synthetic data and "
         "against expert markings on 20 subjects of ds003498; not validated on a clinical cohort",
-        ("this recording carries expert HFO markings, so the detectors can be scored on it "
-         "(python -m onset_hfo.cli benchmark); agreement with those markings is not accuracy, "
-         "because the reference is another detector's validated output"
-         if has_markings else
-         "this recording carries no HFO markings, so precision and recall cannot be computed "
-         "on it; they are measured on ds003498 and on synthetic data -- see docs/EVALUATION.md"),
+        reference,
         "event rate is not a diagnosis: physiological ripples occur in healthy tissue, "
         "particularly in mesial temporal and occipital regions",
-        "a single short window of a single patient; nothing here generalises",
+        ("a single short window of a simulated recording; nothing here describes a patient"
+         if synthetic else "a single short window of a single patient; nothing here generalises"),
         "bipolar pairs are formed from consecutive contact numbers, which on a grid is not "
         "always spatial adjacency",
     ]
