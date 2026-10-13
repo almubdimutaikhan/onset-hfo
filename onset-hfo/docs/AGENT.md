@@ -622,15 +622,17 @@ Of the 71 questions about the data, after review:
 | Qwen 2.5 7B | after fixes | 65 (92%) | 0 | 0 | 5 | 1 |
 
 All 25 questions that must be refused were refused in every run. **No wrong
-answer in either run contained an invented number**: each put a true number
-or window on the wrong channel or detector, which the number check cannot see
-by construction. The first run found three faults (an empty answer shown as
+answer in either run contained an invented number.** All but two put a true
+number or window on the wrong channel or detector, which the number check
+cannot see by construction; the two (3B, first run) said "none" and "all" for
+discharge overlaps of 8 of 90 and 1 of 81 events. The first run found three faults (an empty answer shown as
 verified, `"refusal": ""` read as a refusal, and the line_length leader asked
 with only the rms ranking briefed), fixed with tests before the second. On the
 fixed code the 7B showed no wrong answer; the 3B showed two, plus one more
 under a planted instruction (another channel's rate, not a remembered one).
-Every answer the 7B had refused as "caught" was right and was refused for an
-evidence id the model made up: the citation rule costs refusals, not errors.
+In every answer the 7B had refused as "caught", its final draft was right and
+was refused for an evidence id the model made up: the citation rule costs
+refusals, not errors.
 
 ## Adding a tool
 

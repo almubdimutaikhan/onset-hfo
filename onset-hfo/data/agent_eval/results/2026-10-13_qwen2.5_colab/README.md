@@ -43,8 +43,9 @@ PST2-PST3's (the same answer as in the first run), and the rms leader named as
 the line_length leader in one analysis. The number check cannot see these by
 construction; they are the residual risk to state.
 
-**Caught (7B 5, 3B 2):** in every case the drafted answer was right, and the
-citation check refused it because the model cited an evidence id that does
+**Caught (7B 5, 3B 2):** in every case the model's final draft was right (one
+7B first draft named the second-largest disagreement), and the citation check
+refused it because the model cited an evidence id that does
 not exist, mostly for the sampling rate, which has no evidence window to
 cite. That is the price of the strict citation rule, paid in refusals, not
 in wrong answers.
