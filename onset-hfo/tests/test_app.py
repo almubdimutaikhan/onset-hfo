@@ -403,9 +403,10 @@ def test_a_thin_resection_produces_a_caveat_naming_the_coverage():
 
 
 def test_the_worst_tie_in_the_cohort_produces_a_caveat_naming_its_size():
-    """sub-12's expert arm had 24 tied channels — the documented worst case."""
+    """sub-12's expert arm has 27 tied channels — the documented worst case
+    (24 under the approximate interval used before 0.3.17)."""
     notes = panels.subject_caveats("sub-12")
-    assert any("24" in note and "expert" in note for note in notes), notes
+    assert any("27" in note and "expert" in note for note in notes), notes
     assert any("RMS arm" in note for note in notes), "the RMS arm must be named as RMS"
 
 

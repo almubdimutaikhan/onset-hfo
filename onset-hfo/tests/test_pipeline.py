@@ -65,6 +65,21 @@ def test_poisson_interval_brackets_the_rate():
     assert (wide_hi - wide_lo) / 3 > (hi - lo) / 12   # fewer events, relatively wider
 
 
+def test_poisson_interval_is_the_exact_garwood_interval():
+    """chi2 bounds, not the sqrt(k + 1/4) normal approximation used before 0.3.17,
+    which was too narrow for small counts and ignored alpha."""
+    from scipy.stats import chi2
+    for k in (1, 2, 5, 52, 300):
+        lo, hi = poisson_ci(k, duration_min=2.0)
+        assert lo == pytest.approx(chi2.ppf(0.025, 2 * k) / 2 / 2.0)
+        assert hi == pytest.approx(chi2.ppf(0.975, 2 * k + 2) / 2 / 2.0)
+    lo, hi = poisson_ci(0, duration_min=1.0)
+    assert lo == 0.0 and hi == pytest.approx(3.689, abs=1e-3)   # the approximation gave 1.94
+    assert poisson_ci(52, 1.0) == pytest.approx((38.84, 68.19), abs=0.01)
+    narrow, wide = poisson_ci(10, 1.0, alpha=0.10), poisson_ci(10, 1.0, alpha=0.05)
+    assert wide[0] < narrow[0] and narrow[1] < wide[1]
+
+
 # -- preprocessing ---------------------------------------------------------
 
 def test_preprocessing_produces_bipolar_microvolts(prepared, recording):

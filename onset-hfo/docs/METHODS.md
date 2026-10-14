@@ -231,10 +231,13 @@ reports alongside HFO rate.
 
 * **Rate** = accepted events per minute per channel. Channels with zero events
   are kept in the table: "we looked and found nothing" is information.
-* **Confidence interval**: a Poisson interval on the count. Sixty seconds
-  turns a rate into a small count — 30/min *is* 30 events — and two channels
-  whose intervals overlap are tied, not ranked. Every rate in the report
-  carries one.
+* **Confidence interval**: the exact (Garwood 1936) 95% Poisson interval on
+  the count, `[χ²(0.025; 2k)/2, χ²(0.975; 2k+2)/2] / T`. Sixty seconds turns a
+  rate into a small count — 30/min *is* 30 events — and two channels whose
+  intervals overlap are tied, not ranked. Every rate in the report carries
+  one. Before 0.3.17 this was a normal approximation on `sqrt(k + 1/4)`,
+  which is too narrow for small counts (0–1.9 events for a count of zero,
+  against the exact 0–3.7).
 * **Rank**: position by rate, ties share a rank.
 * **Detector agreement**: events are matched one-to-one by time overlap
   (20 ms tolerance) on the same channel; the report gives matched, only-A,

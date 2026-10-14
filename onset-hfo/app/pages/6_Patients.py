@@ -53,7 +53,7 @@ if (band, scope) != (panels.PRIMARY["band"], panels.PRIMARY["scope"]):
     st.warning(f"You are looking at **{band} / {scope}**, which is not the arm the "
                f"study pre-specified (fast_ripple / reviewed). Every number on the "
                f"Outcome page comes from the pre-specified arm; these are among the "
-               f"same 36 comparisons, none of which survives correction.")
+               f"same 35 comparisons, none of which survives correction.")
 
 cohort = overview(band, scope)
 if cohort.empty:
@@ -93,7 +93,7 @@ with tab_cohort:
     # there may this tab claim to be showing the same number twice.
     provenance = ("*is* the AUC on [the Outcome page](/Outcome), written out as "
                   "patients" if primary else
-                  "is one of the study's 36 comparisons; the Outcome page reports "
+                  "is one of the study's 35 comparisons; the Outcome page reports "
                   "the pre-specified fast-ripple arm, not this one")
     st.markdown(f"""
 That gap — **{counts[0][2]} of the seizure-free patients against
@@ -243,7 +243,7 @@ with tab_limits:
 **This screen cannot tell you anything about a patient.** It is a per-patient
 *view of a group result*, and the group result does not reach significance:
 13 seizure-free against 7 recurrences, `min_detectable_auc(13, 7) = 0.85`, and
-nothing among the study's 36 comparisons survives Bonferroni correction. A row
+nothing among the study's 35 comparisons survives Bonferroni correction. A row
 here is one observation from a cohort too small to have established the effect
 it is an observation of.
 """)

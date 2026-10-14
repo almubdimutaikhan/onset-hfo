@@ -5,7 +5,7 @@ with every measurement in a column of its own. A clinician reading a window
 wants four things from the ranking -- which channel, how busy, how sure, what
 the annotators said -- and the other eleven columns behind a toggle. This
 module decides what "compact" means for each table, and formats the cells
-that put two numbers in one ("52 (39–67)"), so that the panels and the
+that put two numbers in one ("52 (39–68)"), so that the panels and the
 exported report say the same thing in the same words.
 
 Qt-free: the panels call these, the report calls these, and the tests read
@@ -46,7 +46,7 @@ FULL_COLUMNS = {
 
 
 def rate_cell(rate, low=None, high=None) -> str:
-    """"52 (39–67)": the rate and its interval in one cell, whole numbers,
+    """"52 (39–68)": the rate and its interval in one cell, whole numbers,
     because a reader comparing channels does not need the second decimal
     and a column of them hides the one digit that matters."""
     if rate is None or (isinstance(rate, float) and math.isnan(rate)):

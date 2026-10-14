@@ -367,3 +367,26 @@ def test_compare_groups_splits_on_published_outcome():
     row = groups.query("metric == 'share_in_rz'").iloc[0]
     assert row["n_seizure_free"] == 2 and row["n_recurrence"] == 2
     assert row["auc"] == 1.0
+
+
+def test_comparisons_are_counted_once_per_distinct_test_not_per_summary():
+    """Two arms with the same per-patient values are one test; two arms that merely
+    share an AUC and p are two. Bonferroni divides by the first, not the second."""
+    participants = pd.DataFrame({"subject": [f"sub-0{i}" for i in range(1, 5)],
+                                 "outcome": ["S", "S", "F", "F"]})
+
+    def arm(source, scope, values):
+        return pd.DataFrame({
+            "subject": participants["subject"], "source": source, "scope": scope,
+            "band": "ripple", "top_channel_resected": values})
+
+    metrics = ("top_channel_resected",)
+    same = pd.concat([arm("rms", "all", [1.0, 0.0, 0.0, 0.0]),
+                      arm("rms", "reviewed", [1.0, 0.0, 0.0, 0.0])])
+    assert compare_groups(same, participants, metrics=metrics)["n_comparisons"].iloc[0] == 1
+    # Same AUC and p, different patients: sub-01 in one arm, sub-02 in the other.
+    tied_summary = pd.concat([arm("rms", "all", [1.0, 0.0, 0.0, 0.0]),
+                              arm("rms", "reviewed", [0.0, 1.0, 0.0, 0.0])])
+    groups = compare_groups(tied_summary, participants, metrics=metrics)
+    assert groups["auc"].nunique() == 1 and groups["p_permutation"].nunique() == 1
+    assert groups["n_comparisons"].iloc[0] == 2

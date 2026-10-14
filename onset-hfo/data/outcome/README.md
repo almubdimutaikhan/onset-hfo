@@ -137,6 +137,19 @@ from each source. This is the row-level evidence under any per-patient claim;
 a `partial` channel is the one to look at hardest before believing either
 answer.
 
+## Which rate interval
+
+`subjects.csv` and `../stability/outcome_groups_300s.csv` use the exact
+(Garwood) Poisson interval of 0.3.17: `python scripts/rederive_outcome_tables.py`
+rebuilt them from `channels.csv.gz`, after first reproducing the 0.3.16 files
+exactly with the old interval. The tied-set columns (`n_candidates`,
+`candidates_resected`, `candidates_all_resected`, `leader_alone`) of the
+per-window screens here -- `subpopulation_*`, `robustness_*`, `montage_*` --
+were computed with the normal approximation used before 0.3.17. Their
+per-window channel counts are not committed, so they cannot be re-derived
+without re-running the screens on the archive. Every other column is
+unaffected.
+
 ## What was deliberately left out
 
 The archive's `participants.tsv` also carries **age, sex and handedness**.

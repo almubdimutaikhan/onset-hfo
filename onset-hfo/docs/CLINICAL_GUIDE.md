@@ -230,7 +230,7 @@ barcode.
 Sorted by events per minute, busiest first. The columns that matter:
 
 Five columns to start with: the rank, the channel, the rate with its 95 %
-interval in one cell (*52 (39–67)*), what the annotators marked on that
+interval in one cell (*52 (39–68)*), what the annotators marked on that
 channel, or *not reviewed* where they never looked, which is a different
 thing from zero, and your own verdict on the contact. *All columns* adds the
 counts, the intervals as numbers, mean frequency, duration, prominence,

@@ -14,7 +14,6 @@ the disagreements between them.
 
 from __future__ import annotations
 
-import math
 from collections.abc import Mapping
 
 import numpy as np
@@ -45,15 +44,20 @@ def poisson_ci(count: int, duration_min: float, alpha: float = 0.05) -> tuple[fl
     events, whose intervals overlap almost completely. The interval is printed
     next to every rate in the report so that nobody over-reads a small count.
 
-    Uses the Wilson-style normal approximation on sqrt(count), which is
-    adequate here and has no SciPy dependency.
+    The exact (Garwood 1936) interval, ``[chi2(alpha/2; 2k)/2,
+    chi2(1-alpha/2; 2k+2)/2] / T``, which never covers less than ``1-alpha``.
+    Until 0.3.17 this was a normal approximation on ``sqrt(k + 1/4)``: close
+    from about five events up, but too narrow for the small counts where an
+    interval matters most -- 0 to 1.9 events for a count of zero, against 0 to
+    3.7 here -- and it ignored ``alpha``.
     """
+    from scipy.stats import chi2
+
     if duration_min <= 0:
         return (float("nan"), float("nan"))
-    z = 1.959963985 if abs(alpha - 0.05) < 1e-9 else 1.959963985
-    root = math.sqrt(max(count, 0) + 0.25)
-    lo = max(0.0, (root - z / 2) ** 2 - 0.25)
-    hi = (root + z / 2) ** 2 - 0.25
+    k = max(int(count), 0)
+    lo = 0.0 if k == 0 else float(chi2.ppf(alpha / 2, 2 * k)) / 2
+    hi = float(chi2.ppf(1 - alpha / 2, 2 * k + 2)) / 2
     return (lo / duration_min, hi / duration_min)
 
 

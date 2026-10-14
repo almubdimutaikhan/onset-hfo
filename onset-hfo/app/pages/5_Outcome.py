@@ -51,7 +51,7 @@ with tab_result:
 The direction is the one [Fedele et al. 2017](https://www.nature.com/articles/s41598-017-13064-1)
 predicts — the study this dataset comes from — and with **13 seizure-free
 patients against 7 recurrences it does not reach significance**. Nothing in the
-whole study survives correction for its 36 comparisons, and
+whole study survives correction for its 35 distinct comparisons, and
 `min_detectable_auc(13, 7)` is **0.85**, so this cohort could not have
 established either number.
 
@@ -62,9 +62,10 @@ this patient's HFOs were inside the resection" is largely a statement about how
 big the resection was.
 
 **And the pipeline stopped picking a winner.** The data picks a single channel
-in fewer than half the patients — worst case, 24 tied channels out of 37 — so
+in fewer than half the patients — worst case, 27 tied channels out of 37 — so
 `candidates_resected` reports the share of the *tied set* that was removed.
-Being honest about ties costs 0.017 AUC.
+Being honest about ties costs 0.022 AUC for the experts and 0.071 for our
+detector, whose fast-ripple leader is tied in 14 of 20 patients.
 """)
 
 
@@ -208,10 +209,10 @@ more useful to know than either "no signal" or "promising". Full tables:
 
 with tab_honesty:
     st.error("""
-**Nothing here survives correction.** One of the study's 36 comparisons reaches
+**Nothing here survives correction.** One of the study's 35 comparisons reaches
 p < 0.05 uncorrected — our detector, *ripple* band (not the pre-specified
-fast-ripple one), `candidates_resected`, AUC 0.786, p = 0.034, **Bonferroni
-1.00**. In 36 uncorrected tests chance alone produces about two such rows, so
+fast-ripple one), `candidates_resected`, AUC 0.786, p = 0.032, **Bonferroni
+1.00**. In 35 uncorrected tests chance alone produces about two such rows, so
 one is *fewer* than expected. It is on this page because leaving it out would
 be the same sin as quoting it.
 """)
@@ -219,7 +220,7 @@ be the same sin as quoting it.
 - **Thirteen against seven is a very small study.** Only a very large separation
   (AUC ≥ 0.85) could reach 80% power. A p above 0.05 here means *underpowered*,
   not *no effect*.
-- **Thirty-six comparisons, uncorrected.** The Bonferroni column is in
+- **Thirty-five comparisons, uncorrected.** The Bonferroni column is in
   `groups.csv`; nothing survives it.
 - **The published headline changed once already** (0.82 → 0.71). Treat that as
   the calibration for how much weight any single number here can carry.
