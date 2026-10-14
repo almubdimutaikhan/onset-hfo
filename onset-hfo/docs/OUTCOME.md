@@ -149,9 +149,12 @@ surviving preprocessing.
 | rms | ripple | reviewed | 0.48 | 0.38 | 0.52 (0.24–0.79) | 0.94 |
 
 `top3_resected` sits between the two (expert fast ripple AUC 0.63, p = 0.35).
-Of the 36 comparisons in the full table, **one** reaches p < 0.05 — our
-detector, ripple band, `candidates_resected`, p = 0.034, Bonferroni 1.00 — and
-chance alone would produce about two. Every metric, source, scope and band is
+Of the 35 distinct comparisons in the full table, **one** reaches p < 0.05 —
+our detector, ripple band, `candidates_resected`, p = 0.032, Bonferroni 1.00 —
+and chance alone would produce about two. (The table has 36 rows of arms, but
+under the exact rate interval of 0.3.17 the detector's
+`candidates_all_resected` fast-ripple values are identical patient for patient
+on reviewed and on all channels, so that test counts once.) Every metric, source, scope and band is
 in `groups.csv`.
 
 ---
@@ -291,7 +294,8 @@ the leader — rather than a winner. `metrics.leader_separation` already uses
 exactly that rule to decide whether a recording has a leader at all;
 `_top_channel_resected` took a bare argmax and did not. The next section is
 what happened when that was fixed: the data picks a single channel in fewer
-than half the patients, and reporting the tied set instead costs 0.017 AUC.
+than half the patients, and reporting the tied set instead costs 0.022 AUC for
+the experts and 0.071 for our detector.
 
 ---
 
@@ -312,35 +316,43 @@ itself as the window grows and needed no tuning.
 
 | | expert | rms |
 |---|---|---|
-| patients where the leader stands alone | **9/20** | **8/20** |
-| median candidate-set size | 2 | 2 |
-| largest candidate set | 24 of 37 channels (sub-12) | 10 of 37 |
+| patients where the leader stands alone | **9/20** | **6/20** |
+| median candidate-set size | 2 | 2.5 |
+| largest candidate set | 27 of 37 channels (sub-12) | 10 of 37 |
 
 So `top_channel_resected` was reporting a winner the data had chosen in fewer
-than half the patients. For sub-12 it named one channel out of **24 that
+than half the patients. For sub-12 it named one channel out of **27 that
 cannot be told apart from it**.
 
-### It costs almost nothing at the group level
+*These are the numbers under the exact (Garwood) rate interval of 0.3.17. The
+normal approximation used before gave 9/20 and 8/20, median 2 and 2, and 24
+tied channels for sub-12: it was too narrow for the small counts that decide
+whether a fast-ripple channel ties with the leader.*
+
+### What it costs at the group level
 
 Fast-ripple band, reviewed channels, whole runs:
 
 | source | metric | seizure-free | recurrence | AUC (95% CI) | p |
 |---|---|---|---|---|---|
 | expert | `top_channel_resected` | 0.85 | 0.43 | 0.709 (0.50–0.92) | 0.12 |
-| expert | `candidates_resected` | 0.78 | 0.52 | 0.692 (0.45–0.91) | 0.15 |
+| expert | `candidates_resected` | 0.78 | 0.52 | 0.687 (0.44–0.91) | 0.16 |
 | rms | `top_channel_resected` | 0.77 | 0.43 | 0.670 (0.45–0.89) | 0.17 |
-| rms | `candidates_resected` | 0.77 | 0.50 | 0.670 (0.41–0.91) | 0.20 |
+| rms | `candidates_resected` | 0.65 | 0.50 | 0.599 (0.31–0.88) | 0.47 |
 
-AUC moves by 0.017 for the experts and not at all for us in the fast-ripple
+AUC moves by 0.022 for the experts and by 0.071 for us in the fast-ripple
 band. (In the *ripple* band the same metric is our detector's best row in the
-whole study, p = 0.034 uncorrected — see the caution above: one hit in 36
-comparisons is what chance produces.) **Being honest about ties is nearly
-free**, which is the argument for doing it: the per-patient
-statement becomes true without the cohort-level claim getting weaker.
+whole study, p = 0.032 uncorrected — see the caution above: one hit in 35
+comparisons is what chance produces.) **Being honest about ties costs little
+for the expert markings and visibly for our detector**, whose fast-ripple
+leader is tied with others in 14 of 20 patients: part of the detector's 0.670
+came from naming a single channel the data had not chosen. That is the
+argument for reporting the set: the per-patient statement becomes true, and
+the cohort-level number stops borrowing confidence it did not have.
 
 `candidates_all_resected` — was the *whole* tied set removed? — is the more
-demanding question and does worse (expert 0.665, p = 0.35; rms 0.593,
-p = 0.64), which is what you would expect of a stricter criterion on twenty
+demanding question and does worse (expert 0.665, p = 0.35; rms 0.478,
+p = 1.00), which is what you would expect of a stricter criterion on twenty
 patients.
 
 ### It makes the per-patient number steadier, and the group number no steadier
@@ -435,6 +447,11 @@ document.
 | largest set, expert | 24 channels | **5** |
 | largest set, rms | 37 channels | **5** |
 | patients where the leader stands alone, expert | 48% of runs | **13/20** |
+
+*This table, the window study and the screens in `data/outcome/` were computed
+with the approximate rate interval used before 0.3.17 and have not been re-run
+(they need the archive). Only the whole-run tables above were re-derived with
+the exact interval, from the committed per-channel counts.*
 
 This is what more recording was supposed to buy and, unlike the window study,
 it delivers: the Poisson intervals narrow, ties resolve, and the worst case
@@ -564,10 +581,10 @@ zone above the rest on a second archive.
   reaches 80% power. A p above 0.05 here means "underpowered", not "no
   effect". Every row carries an effect size and a bootstrap CI for that
   reason.
-- **Thirty-six comparisons, uncorrected.** The Bonferroni column is in the
+- **Thirty-five comparisons, uncorrected.** The Bonferroni column is in the
   table and **nothing survives it**. One row reaches p < 0.05 uncorrected (our
-  detector, ripple band, `candidates_resected`, p = 0.034), which is fewer than
-  the ~2 that 36 tests produce by chance. Read every row as
+  detector, ripple band, `candidates_resected`, p = 0.032), which is fewer than
+  the ~2 that 35 tests produce by chance. Read every row as
   hypothesis-generating.
 - **The published headline changed once already.** The 60-second version of
   this analysis reported AUC 0.82, p = 0.007 and it reached the project's

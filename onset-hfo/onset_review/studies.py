@@ -837,7 +837,7 @@ only reference standard in epilepsy surgery that is not another opinion.
 The direction is the one [Fedele et al. 2017](https://www.nature.com/articles/s41598-017-13064-1)
 predicts — the study this dataset comes from — and with **13 seizure-free
 patients against 7 recurrences it does not reach significance**. Nothing in the
-whole study survives correction for its 36 comparisons, and
+whole study survives correction for its 35 distinct comparisons, and
 `min_detectable_auc(13, 7)` is **0.85**, so this cohort could not have
 established either number.
 
@@ -848,9 +848,10 @@ this patient's HFOs were inside the resection" is largely a statement about how
 big the resection was.
 
 **And the pipeline stopped picking a winner.** The data picks a single channel
-in fewer than half the patients — worst case, 24 tied channels out of 37 — so
+in fewer than half the patients — worst case, 27 tied channels out of 37 — so
 `candidates_resected` reports the share of the *tied set* that was removed.
-Being honest about ties costs 0.017 AUC.
+Being honest about ties costs 0.022 AUC for the experts and 0.071 for our
+detector, whose fast-ripple leader is tied in 14 of 20 patients.
 """)
     out.append("## Does the window matter? The result that did not hold up\n")
     figure = _image("window_stability.png")
@@ -937,16 +938,16 @@ each, pooled by subject mean.
         out.append(second)
     out.append("## What it cannot support\n")
     out.append(note("bad", """
-**Nothing here survives correction.** One of the study's 36 comparisons reaches
+**Nothing here survives correction.** One of the study's 35 comparisons reaches
 p < 0.05 uncorrected — our detector, *ripple* band, `candidates_resected`, AUC
-0.786, p = 0.034, **Bonferroni 1.00**. In 36 uncorrected tests chance alone
+0.786, p = 0.032, **Bonferroni 1.00**. In 35 uncorrected tests chance alone
 produces about two such rows, so one is *fewer* than expected.
 """))
     out.append("""
 - **Thirteen against seven is a very small study.** Only a very large separation
   (AUC ≥ 0.85) could reach 80% power. A p above 0.05 here means *underpowered*,
   not *no effect*.
-- **Thirty-six comparisons, uncorrected.** Nothing survives the Bonferroni column.
+- **Thirty-five comparisons, uncorrected.** Nothing survives the Bonferroni column.
 - **The published headline changed once already** (0.82 → 0.71). Treat that as
   the calibration for how much weight any single number here can carry.
 - **Resected contacts that were never recorded cannot be scored.** In five
@@ -1076,7 +1077,7 @@ def _patients(band: str = "fast_ripple", scope: str = "reviewed",
         "among recurrence", "patients with no single busiest channel"])))
     agree = int((cohort["top_resected_expert"] == cohort["top_resected_rms"]).sum())
     provenance = ("*is* the AUC on the Outcome page, written out as patients" if primary
-                  else "is one of the study's 36 comparisons; the Outcome page reports "
+                  else "is one of the study's 35 comparisons; the Outcome page reports "
                        "the pre-specified fast-ripple arm, not this one")
     out.append(f"""
 That gap — **{counts[0][2]} of the seizure-free patients against {counts[0][3]}
@@ -1174,7 +1175,7 @@ mostly disagree about *rates*, and mostly agree about *which channel is busiest*
 **This screen cannot tell you anything about a patient.** It is a per-patient
 *view of a group result*, and the group result does not reach significance:
 13 seizure-free against 7 recurrences, `min_detectable_auc(13, 7) = 0.85`, and
-nothing among the study's 36 comparisons survives Bonferroni correction.
+nothing among the study's 35 comparisons survives Bonferroni correction.
 """))
     out.append("""
 - **No confidence interval on a single patient's answer.** `top_channel_resected`
@@ -1341,7 +1342,7 @@ against a reference someone else published.
 |---|---|
 | Detects HFOs in real interictal recordings | **Yes** — agreement with expert markings, ρ ≈ 0.66 on channel ranking |
 | Beats a published detector | **No, and not claimed.** The reference *is* a published detector; these are agreement numbers |
-| The map relates to surgical outcome | **Direction yes, significance no.** AUC 0.71, p = 0.12 on 13 vs 7 patients; nothing in the study survives correction for its 36 comparisons |
+| The map relates to surgical outcome | **Direction yes, significance no.** AUC 0.71, p = 0.12 on 13 vs 7 patients; nothing in the study survives correction for its 35 comparisons |
 | The measurement is stable | **Across nights yes** (18/20 patients), **within a minute no** — a 60 s window changed the headline once |
 | Distinguishes epileptic from physiological ripples | **No.** Nothing in the pipeline tries. The one available proxy — whether a ripple rides a discharge — was screened against outcome and does **not** localise better than the merged rate |
 | The choice of detector is the limiting factor | **No, measured.** Four features, each swept on real data, rank channels within 0.003 ρ of one another |

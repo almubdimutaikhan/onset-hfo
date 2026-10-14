@@ -759,10 +759,13 @@ exactly when the set has one member. What it found:
 
 * **The data picks a single channel in fewer than half the patients**: 9/20
   for the experts, 8/20 for us, median set size 2, worst case 24 tied
-  channels out of 37. `top_channel_resected` was naming a winner that had not
+  channels out of 37. (With the exact interval of 0.3.17: 9/20 and 6/20,
+  worst case 27; see `OUTCOME.md`.) `top_channel_resected` was naming a winner that had not
   been chosen.
 * **Honesty is nearly free at the group level**: AUC 0.709 -> 0.692 for the
-  experts, unchanged at 0.670 for us.
+  experts, unchanged at 0.670 for us. (With the exact interval of 0.3.17 it is
+  not free for us: 0.709 -> 0.687 for the experts, 0.670 -> 0.599 for the
+  detector; see `OUTCOME.md`.)
 * **Per-patient values move less** across disjoint windows (mean movement
   0.55 -> 0.30 expert, 0.20 -> 0.18 ours), **but the group statistic is not
   thereby stabilised** -- its spread halves for the experts and more than
@@ -944,7 +947,8 @@ which this software does not know.
   **Answered, and the answer was yes**: `metrics.candidate_channels` and
   `leader_separation` report the set of channels that cannot be told apart
   from the leader, and [`OUTCOME.md`](OUTCOME.md) measures what reporting the
-  set instead of a winner costs (0.017 AUC).
+  set instead of a winner costs (0.022 AUC for the experts and 0.071 for our
+  detector, with the exact interval of 0.3.17).
 * ~~**Threshold choice.**~~ **Answered by the ds003498 benchmark, not by the
   hand-annotated one this entry used to point at.** On the simulator 3–4 robust
   SDs beat the published 5 on F1; against the expert markings the optimum is

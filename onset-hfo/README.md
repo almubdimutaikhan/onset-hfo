@@ -249,8 +249,8 @@ The direction is the one [Fedele et al. 2017](https://www.nature.com/articles/s4
 predicts — the study this dataset comes from — and with 13 patients against 7
 it does not reach significance. `min_detectable_auc(13, 7)` is **0.85**, so
 this cohort could not have established either number. Nothing in the study
-survives correction for the 36 comparisons the study runs: one row reaches
-p = 0.034 uncorrected, and chance alone produces about two.
+survives correction for the 35 distinct comparisons the study runs: one row
+reaches p = 0.032 uncorrected, and chance alone produces about two.
 
 **The most useful result is that an earlier version of this table said
 something stronger.** On the first 60 seconds of the same recordings, the same
@@ -280,8 +280,9 @@ python -m onset_hfo.cli stability          # 11 windows: does any of it hold?
 **So the pipeline stopped picking a winner.** `candidates_resected` reports
 the share of the channels that *cannot be told apart from the busiest one*
 (overlapping Poisson rate intervals) which the surgeon removed. On whole runs
-the data picks a single channel in only 9 of 20 patients — worst case, 24 tied
-channels out of 37 — and reporting the set instead of a winner costs 0.017 AUC.
+the data picks a single channel in only 9 of 20 patients — worst case, 27 tied
+channels out of 37 — and reporting the set instead of a winner costs 0.022 AUC
+for the expert markings and 0.071 for our detector.
 Never quote the single-channel number without `n_candidates` beside it.
 
 **And the reassuring one.** Across five *different nights* the per-patient

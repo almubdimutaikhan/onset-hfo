@@ -662,10 +662,23 @@ def compare_groups(subjects: pd.DataFrame, participants: pd.DataFrame,
     # impossible to quote the raw p without seeing what a table this size
     # does to it. The expert arm duplicates across scopes (the annotators
     # only marked reviewed channels), so those duplicates are not counted
-    # twice.
-    unique = table.drop_duplicates(
-        subset=["source", "band", "metric", "auc", "p_permutation"])
-    n = int(len(unique))
+    # twice. A duplicate is the same metric on the same per-patient values,
+    # which is the same test however the arm is labelled -- under 0.3.17's
+    # exact interval the detector's whole-tied-set-resected values happen to
+    # agree patient for patient across the two scopes in the fast-ripple band,
+    # so that pair counts once too. Matching on the AUC and p alone, as this
+    # used to, would also merge two different arms whose summaries tied.
+    per_arm = merged.set_index(["subject", *keys])
+    seen: set[tuple] = set()
+    n = 0
+    for metric in metrics:
+        for (source, scope, band), _ in merged.groupby(keys, dropna=False):
+            values = per_arm.xs((source, scope, band), level=("source", "scope", "band"))[metric]
+            signature = (source, band, metric,
+                         tuple(np.round(values.sort_index().to_numpy(float), 12)))
+            if signature not in seen:
+                seen.add(signature)
+                n += 1
     table["n_comparisons"] = n
     table["p_bonferroni"] = (table["p_permutation"] * n).clip(upper=1.0)
     return table

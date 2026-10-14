@@ -209,7 +209,7 @@ anyone claiming otherwise.
 - Never "validated". Nothing here is validated on patients.
 - Never imply the assistant could support a clinical decision. It is refused
   from doing so by design, and that refusal is the demo.
-- Do not oversell the one uncorrected p = 0.034 in the table. Thirty-six
+- Do not oversell the one uncorrected p = 0.032 in the table. Thirty-five
   comparisons produce about two such rows by chance.
 
 ---
