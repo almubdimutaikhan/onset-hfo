@@ -47,8 +47,8 @@ WINDOW_S = 0.2
 OUT = RESULTS_DIR / "eventnet"
 #: Training: class-balanced loss, early stopping on held-out training
 #: patients, an epoch capped so that the large patients do not dominate it.
-EPOCHS = 12
-PATIENCE = 3
+EPOCHS = 20
+PATIENCE = 4
 BATCH = 256
 PER_EPOCH = 60_000
 VALIDATION_PATIENTS = 3
