@@ -52,7 +52,7 @@ Each clause of the claim, and exactly what backs it.
 | "the single significant p-value was the most favourable of five minutes" | expert arm p ranges 0.007–0.613 across the five minutes; 0.007 is the minimum | [`OUTCOME.md` § But which minute you pick matters](OUTCOME.md) |
 | the detector is the more reproducible of the two at short windows | same busiest channel in all five minutes: 12/20 (rms) vs 7/20 (expert); same inside/outside answer 16/20 vs 9/20; AUC spread 0.09 vs 0.25 | [`OUTCOME.md` § Our detector is more stable](OUTCOME.md) |
 | the outcome estimate itself is settled on a whole run | AUC identical from 180 s to 300 s — identical, not merely close | [`OUTCOME.md` § The estimate settles](OUTCOME.md) |
-| the headline outcome numbers | expert 11/13 vs 3/7, AUC 0.71 (0.50–0.92), p = 0.12; rms 10/13 vs 3/7, AUC 0.67 (0.45–0.89), p = 0.17 | [`OUTCOME.md`](OUTCOME.md) primary table |
+| the headline outcome numbers | expert 11/13 vs 3/7, AUC 0.71 (0.49–0.92), p = 0.12; rms 10/13 vs 3/7, AUC 0.67 (0.45–0.89), p = 0.17 | [`OUTCOME.md`](OUTCOME.md) primary table |
 | the power floor | 13 vs 7 detects AUC ≥ 0.85 at 80% power | `onset_hfo.outcome.min_detectable_auc` |
 | multiplicity | 35 distinct comparisons; one at p = 0.032 uncorrected, Bonferroni 1.00; chance alone gives ~2 | [`OUTCOME.md`](OUTCOME.md), [`LIMITATIONS.md`](LIMITATIONS.md) |
 | detector agreement with expert markings | ripple 2.0 SD: precision 0.51, recall 0.38, channel-rank ρ 0.66. fast ripple 5.0 SD: 0.54 / 0.20 / 0.61, over 41,187 marked events | [`EVALUATION.md`](EVALUATION.md) |
@@ -103,7 +103,7 @@ Printed small on the board, and said out loud when asked:
 >
 > On whole recordings the busiest channel lay inside the resection in 11 of 13
 > seizure-free patients against 3 of 7 with recurrence (AUC 0.71, 95% CI
-> 0.50–0.92, p = 0.12) using expert markings, and 10 of 13 against 3 of 7 (AUC
+> 0.49–0.92, p = 0.12) using expert markings, and 10 of 13 against 3 of 7 (AUC
 > 0.67, 0.45–0.89, p = 0.17) using a threshold-crossing RMS detector. Neither
 > reaches significance; these group sizes detect only AUC ≥ 0.85 at 80% power.
 >

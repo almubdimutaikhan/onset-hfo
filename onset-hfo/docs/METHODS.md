@@ -178,8 +178,8 @@ Three checks per event:
    against single transients.
 2. **Spectral peak** ≥ `min_peak_prominence_db = 4` dB above the fitted
    background. This is the check that does the work: ringing has no peak of
-   its own. A clean implanted ripple scores above 20 dB; on the real ictal
-   recording the median accepted event scores 8.9 dB.
+   its own. Implanted ripples score a median of about 15 dB on the bipolar
+   signal; on the real ictal recording the median accepted event scores 8.9 dB.
 3. **Unmeasurable spectrum + large transient** → reject. When the window is
    too short to fit a background, an event coinciding with a very large
    low-frequency deflection is treated as probable ringing.

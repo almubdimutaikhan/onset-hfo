@@ -1314,7 +1314,7 @@ here it structurally cannot.
 
 1. **Every score carries the window it looked at.** An event's evidence id is
    `subject|channel|detector|start`, and it resolves or the answer is discarded.
-2. **The agent cannot compute.** Eight read-only tools over one saved analysis.
+2. **The agent cannot compute.** Nine read-only tools over one saved analysis.
    No tool runs a detector, writes a file, or takes another patient's id.
 3. **Scope refusals happen before the model runs.** Treatment and diagnosis
    questions never reach a model that could be persuaded.

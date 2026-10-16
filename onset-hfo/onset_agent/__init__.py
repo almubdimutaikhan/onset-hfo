@@ -3,7 +3,7 @@
 Two halves, which can be used separately.
 
 **The evidence assistant** (:class:`~onset_agent.agent.OnsetAgent`) answers
-questions about a *saved* analysis through eight read-only tools. It must cite
+questions about a *saved* analysis through nine read-only tools. It must cite
 the evidence windows it used, every number it states is checked against what
 the tools returned, and treatment, diagnosis and other-patient questions are
 refused before the model is called at all::

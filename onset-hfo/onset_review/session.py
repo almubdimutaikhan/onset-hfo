@@ -254,9 +254,11 @@ class ReviewRequest:
         the screen shows the fast-ripple one would have it quoting numbers that
         are nowhere on the display.
 
-        Each detector keeps its own measured threshold unless the reviewer set
+        Each detector keeps its own default threshold unless the reviewer set
         one, because they are not interchangeable -- line length runs at 3.0 SD
-        and the energy detectors at 2.0.
+        and the energy detectors at 5.0, the literature value, in both bands.
+        The thresholds measured against ds003498 (2.0 for ripples, 5.0 for fast
+        ripples, ``config.THRESHOLDS``) are used by the outcome study, not here.
         """
         cfg = PipelineConfig()
         if self.preprocess is not None:

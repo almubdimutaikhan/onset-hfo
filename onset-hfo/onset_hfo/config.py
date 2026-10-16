@@ -291,9 +291,10 @@ class ValidationConfig:
 
     #: Minimum prominence (dB) of the in-band spectral peak over the local
     #: 1/f background for the event to be accepted. 4 dB was chosen on
-    #: synthetic data, where it lifts precision from 0.63 to 0.97 at a cost of
-    #: 0.01 recall (docs/EVALUATION.md has the full sweep). A clean implanted
-    #: ripple scores above 20 dB, so this is a floor, not a tight filter.
+    #: synthetic data, where the validation stage lifts precision from 0.63 to
+    #: 0.97 at a cost of 0.01 recall (docs/EVALUATION.md has the full sweep).
+    #: Implanted ripples score a median of about 15 dB on the bipolar signal
+    #: (5th percentile about 7 dB), so this is a floor, not a tight filter.
     min_peak_prominence_db: float = 4.0
     #: Reject if the raw low-band (1-30 Hz) amplitude in the window exceeds
     #: this many robust SDs -- the signature of a spike-induced false ripple,
@@ -306,8 +307,8 @@ class ValidationConfig:
     #: here than a reviewer would count by eye. Two is therefore a floor that
     #: removes single transients without discarding short real ripples; the
     #: oscillation-count criterion (``min_peaks``) does the finer work.
-    #: Measured on synthetic data: raising it to 3 costs 17 percentage points
-    #: of recall and buys no precision (see docs/EVALUATION.md).
+    #: Measured on synthetic data (seed 7, 60 s, RMS at 5 SD): raising it to 3
+    #: lowers recall from 0.605 to 0.500 and buys no precision.
     min_cycles: float = 2.0
     #: Scalp EEG only: reject an HFO that coincides with HFO candidates on more
     #: than this fraction of the other channels. Muscle and movement reach the

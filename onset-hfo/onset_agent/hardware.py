@@ -16,14 +16,16 @@ want different answers:
 * **What fits?** :func:`choose` -- a pure function of a :class:`Machine`, so it
   is tested against a 6 GB card and an Apple laptop and a tiny VM without
   owning any of them.
-* **Is it any good at this job?** *Not answered here, and not answerable yet.*
-  See the warning :func:`choose` attaches to every small model, and
-  :mod:`onset_agent.benchmark`, which exists to measure it and has never been
-  run under a real model.
+* **Is it any good at this job?** *Not answered here.* Only Qwen2.5-3B and
+  -7B, at Ollama's 4-bit default, have been measured on this task
+  (:mod:`onset_agent.qa_eval`, results in ``data/agent_eval/``); see the
+  warning :func:`choose` attaches to every choice. :mod:`onset_agent.benchmark`
+  measures tool-use competence by model and quantization and has not been run
+  under a real model.
 
 That third point is the one worth being blunt about. Fitting in memory and
 being competent at tool-constrained evidence work are different properties,
-and this project has measured neither for any Qwen size. What follows is sizing
+and this project has measured the second only for Qwen2.5-3B and -7B. What follows is sizing
 arithmetic plus the one qualitative claim the existing code already documents
 (7B calls tools reliably, 1.5B is noticeably worse at it), carried forward as
 an expectation and labelled as one.
@@ -846,10 +848,11 @@ def _assemble(machine: Machine, spec: ModelSpec, quantization: str,
             "plan that has been checked against a real device: "
             "pip install 'onset-hfo[llm]'")
     warnings.append(
-        "WHETHER THIS SIZE IS GOOD ENOUGH AT THIS TASK IS UNMEASURED. This "
-        "chooses a model that fits and loads. onset_agent.benchmark exists to "
-        "measure tool-use competence by model and quantization and has not yet "
-        "been run under a real model.")
+        "WHETHER THIS SIZE IS GOOD ENOUGH AT THIS TASK IS UNMEASURED unless "
+        "it is Qwen2.5-3B or -7B at 4-bit, the only two measured on this "
+        "task (data/agent_eval/). This chooses a model that fits and loads; "
+        "onset_agent.qa_eval, or onset_agent.benchmark for tool use by model "
+        "and quantization, measures any other.")
 
     return Choice(model=spec, quantization=quantization, device=device,
                   needs_gb=round(needs, 2), budget_gb=round(budget, 2),

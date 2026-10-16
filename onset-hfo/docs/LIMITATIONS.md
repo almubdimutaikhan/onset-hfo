@@ -32,10 +32,14 @@ numbers are what to expect, not what is guaranteed.
   post-surgical seizure outcome in the same cohort (`docs/OUTCOME.md`).
   Neither is clinical validation. The first measures *agreement with another
   detector's validated output*; the second is a 20-patient retrospective
-  study on 60 seconds per patient, in which **our detector does not reach
-  significance on the metric where the expert markings do**.
-* **Not tuned.** Thresholds are the published defaults, checked for sanity on
-  synthetic data and deliberately *not* fitted to it.
+  study on whole five-minute runs, in which **neither our detector nor the
+  expert markings separate the outcome groups at p < 0.05** (expert AUC 0.71,
+  p = 0.12; ours 0.67, p = 0.17).
+* **Tuned only where it says so.** The library's and the desktop's default
+  threshold is the published 5.0 robust SD (3.0 for line length). The outcome
+  study uses thresholds measured against ds003498's markings (2.0 for ripples,
+  5.0 for fast ripples), so its agreement figures at those thresholds are
+  optimistic: they were chosen on the same data.
 
 ## Specific limitations, and what each one means
 
@@ -48,7 +52,7 @@ numbers are what to expect, not what is guaranteed.
 | **The shipped threshold is not the measured optimum.** The default stays at the literature's 5.0 SD; ripples prefer 1.5–2.0 SD. | Anyone running the defaults on interictal ripple data gets recall 0.12 and near-chance channel ranking unless they pass `--threshold interictal-agreement`. |
 | **The two bands need different thresholds, and only `outcome` applies them automatically.** Ripples rank best at 2.0 SD, fast ripples at 5.0 SD. | Running 2.0 SD in the fast-ripple band drops precision to 0.086 and flattens the outcome signal entirely (`docs/OUTCOME.md`). `run` and `benchmark` take whatever threshold you pass, for every band. |
 | **The outcome study is 13 seizure-free against 7 recurrences.** The smallest effect these group sizes can detect at 80% power is AUC 0.85. | Every p above 0.05 in `docs/OUTCOME.md` means "underpowered", not "no effect". **Nothing survives Bonferroni**; one of 35 uncorrected comparisons reaches p = 0.032, which is fewer than the ~2 that 35 tests produce by chance. |
-| **A single short window is not a measurement, but a whole run is.** Across five *runs* on different nights the per-patient answer holds for 18/20 patients (experts) and 16/20 (ours); across five *minutes* of one run, 9/20 and 16/20. | Analyse whole runs, and pool a patient's runs where they exist. Never quote a result from a 60-second window. |
+| **A single short window is not a measurement, but a whole run is.** Across a patient's first five *runs* (not always on different nights; two patients have one run) the per-patient answer holds for 18/20 patients (experts) and 16/20 (ours); across five *minutes* of one run, 9/20 and 16/20. | Analyse whole runs, and pool a patient's runs where they exist. Never quote a result from a 60-second window. |
 | **The outcome result depends on the analysis window** — now measured (`onset-hfo stability`, `docs/OUTCOME.md`). Across five disjoint 60 s windows of the same recordings the expert AUC spans 0.566–0.819 and its p-value 0.007–0.613. | The 0.007 that this project once published was the most favourable of five minutes. The growing-window curve *does* settle from 180 s, so the whole-run number is a settled estimate of one recording; what is unstable is any single short window. |
 | **The busiest channel is often not the same channel.** Across those five windows the experts' top fast-ripple channel is identical in 7 of 20 patients and our detector's in 12 of 20; the inside/outside answer holds in 9 and 16. | **Addressed:** the outcome study now reports `candidates_resected` over the set of channels whose Poisson rate intervals overlap the leader's — the same rule `metrics.leader_separation` uses. On whole runs the data picks a single channel in only 9 of 20 patients (experts) and 6 of 20 (ours), median set size 2 and 2.5, worst case 27 tied channels of 37 (exact Poisson intervals, 0.3.17). Reporting the set costs 0.022 AUC for the experts and 0.071 for our detector. Never quote `top_channel_resected` without `n_candidates` beside it. |
 | **Resected contacts that were never recorded cannot be scored.** In five temporal-lobe subjects only 4 of 16 listed resected contacts appear in the recording. | Those patients' "share inside the resection" describes a quarter of their resection. `recordings.csv` carries `rz_coverage` per subject. |
@@ -81,11 +85,11 @@ HFO-guided versus spike-guided tailoring, seizure freedom at one year was
 The retrospective evidence is friendlier — [Fedele et al. (2017)](https://www.nature.com/articles/s41598-017-13064-1),
 whose markings this repository is scored against, found that resecting HFO-
 generating tissue predicted outcome in individual patients, and `docs/OUTCOME.md`
-reproduces that finding from their expert markings in 60 seconds per patient —
-but a randomised trial outranks a retrospective series, including this one.
-Reproducing a retrospective result is evidence that our *analysis* is sound,
-not evidence that the *clinical claim* is — and on the full recordings this
-repository does not reproduce it to significance either.
+finds the same direction from their expert markings on whole runs (AUC 0.71,
+p = 0.12, not significant with 20 patients) — but a randomised trial outranks
+a retrospective series, including this one. Reproducing the direction of a
+retrospective result is evidence that our *analysis* is sound, not evidence
+that the *clinical claim* is.
 
 What this means for anyone presenting or building on this work: the
 contribution here is **measurement quality and provenance**, not a claim that

@@ -34,7 +34,7 @@ to.** On the whole
 recording (300 s per patient, every expert marking), the channel with the
 most expert-marked fast ripples was inside the resection in 11 of 13 patients
 who became seizure-free and 3 of 7 whose seizures returned — AUC 0.71, 95% CI
-0.50–0.92, permutation p = 0.12. Our detector, same channels, same metric:
+0.49–0.92, permutation p = 0.12. Our detector, same channels, same metric:
 10 of 13 versus 3 of 7, AUC 0.67, p = 0.17.
 
 On the **first 60 seconds** of the same recordings, the same code, the same
@@ -133,7 +133,7 @@ surviving preprocessing.
 
 | source | band | scope | seizure-free | recurrence | AUC (95% CI) | p |
 |---|---|---|---|---|---|---|
-| expert | **fast ripple** | reviewed | **11/13 (0.85)** | **3/7 (0.43)** | **0.71 (0.50–0.92)** | 0.12 |
+| expert | **fast ripple** | reviewed | **11/13 (0.85)** | **3/7 (0.43)** | **0.71 (0.49–0.92)** | 0.12 |
 | rms | fast ripple | reviewed | 10/13 (0.77) | 3/7 (0.43) | 0.67 (0.45–0.89) | 0.17 |
 | rms | ripple | reviewed | 8/13 (0.62) | 1/7 (0.14) | 0.74 (0.55–0.92) | 0.07 |
 | expert | ripple | reviewed | 4/13 (0.31) | 2/7 (0.29) | 0.51 (0.29–0.73) | 1.00 |
@@ -335,7 +335,7 @@ Fast-ripple band, reviewed channels, whole runs:
 
 | source | metric | seizure-free | recurrence | AUC (95% CI) | p |
 |---|---|---|---|---|---|
-| expert | `top_channel_resected` | 0.85 | 0.43 | 0.709 (0.50–0.92) | 0.12 |
+| expert | `top_channel_resected` | 0.85 | 0.43 | 0.709 (0.49–0.92) | 0.12 |
 | expert | `candidates_resected` | 0.78 | 0.52 | 0.687 (0.44–0.91) | 0.16 |
 | rms | `top_channel_resected` | 0.77 | 0.43 | 0.670 (0.45–0.89) | 0.17 |
 | rms | `candidates_resected` | 0.65 | 0.50 | 0.599 (0.31–0.88) | 0.47 |

@@ -242,7 +242,7 @@ removed?*
 
 | source | seizure-free (n=13) | recurrence (n=7) | AUC (95% CI) | p |
 |---|---|---|---|---|
-| expert markings | 11/13 | 3/7 | 0.71 (0.50–0.92) | 0.12 |
+| expert markings | 11/13 | 3/7 | 0.71 (0.49–0.92) | 0.12 |
 | our RMS detector | 10/13 | 3/7 | 0.67 (0.45–0.89) | 0.17 |
 
 The direction is the one [Fedele et al. 2017](https://www.nature.com/articles/s41598-017-13064-1)

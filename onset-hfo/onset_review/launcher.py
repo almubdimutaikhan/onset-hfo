@@ -107,13 +107,15 @@ class LauncherDialog(QDialog):
         self.threshold.setRange(1.0, 10.0)
         self.threshold.setSingleStep(0.25)
         self.threshold.setDecimals(2)
-        self.threshold.setSpecialValueText("measured default")
+        self.threshold.setSpecialValueText("detector default")
         self.threshold.setValue(1.0)
         self.threshold.setSuffix(" robust SD")
         self.threshold.setToolTip(
-            "Leave at the minimum to use each detector's own measured "
-            "threshold (2.0 SD for the energy detectors, 3.0 for line "
-            "length). Raising it detects fewer, more confident events.")
+            "Leave at the minimum to use each detector's own default "
+            "threshold (5.0 SD for the energy detectors, 3.0 for line "
+            "length). The value that agreed best with ds003498's markings "
+            "was 2.0 for ripples. Raising it detects fewer, more confident "
+            "events.")
 
         self.spikes = QCheckBox("Also detect interictal discharges")
         self.spikes.setChecked(True)
