@@ -1609,19 +1609,24 @@ class PageWindow(QMainWindow):
         box = QVBoxLayout(column)
         box.setContentsMargins(0, 0, 0, 0)
         box.setSpacing(theme.SPACING)
-        box.addWidget(theme.section_label("Findings paragraph"))
+        # The two paragraphs and what they rest on share one tabbed card: at
+        # laptop height, three stacked boxes left the agreement panel no room.
+        self.paragraph_tabs = QTabWidget()
+        self.paragraph_tabs.setObjectName("onset_report_paragraphs")
+        findings_tab = QWidget()
+        tab = QVBoxLayout(findings_tab)
+        tab.setContentsMargins(6, 6, 6, 6)
         self.findings_edit = QPlainTextEdit()
         self.findings_edit.setObjectName("onset_findings_draft")
         self.findings_edit.setPlaceholderText(
             "Write the findings in your own words, or let the assistant draft them "
             "from the analysis; the report says which.")
-        self.findings_edit.setMaximumHeight(170)
         self.findings_edit.setPlainText(getattr(self.session.read, "draft", "") or "")
         self.findings_edit.textChanged.connect(self._findings_edited)
-        box.addWidget(self.findings_edit)
+        tab.addWidget(self.findings_edit, 1)
         self.findings_status = theme.muted("")
         self.findings_status.setObjectName("onset_findings_status")
-        box.addWidget(self.findings_status)
+        tab.addWidget(self.findings_status)
         self.draft_button = QPushButton("Draft it with the assistant")
         self.draft_button.setObjectName("onset_draft_findings")
         self.draft_button.setToolTip(
@@ -1630,8 +1635,47 @@ class PageWindow(QMainWindow):
             "marks the paragraph as the assistant's until you edit it.")
         self.draft_button.setEnabled("assistant" in self.panels)
         self.draft_button.clicked.connect(lambda _=False: self.draft_findings())
-        box.addWidget(self.draft_button)
+        tab.addWidget(self.draft_button)
+        self.paragraph_tabs.addTab(findings_tab, "Findings")
         self._say_findings_state()
+
+        limits_tab = QWidget()
+        tab = QVBoxLayout(limits_tab)
+        tab.setContentsMargins(6, 6, 6, 6)
+        self.limits_edit = QPlainTextEdit()
+        self.limits_edit.setObjectName("onset_limits_draft")
+        self.limits_edit.setPlaceholderText(
+            "What limits this analysis: the window's length, the contacts set aside, "
+            "the tied channels. Write it, or let the assistant draft it.")
+        self.limits_edit.setPlainText(getattr(self.session.read, "limits", "") or "")
+        self.limits_edit.textChanged.connect(self._limits_edited)
+        tab.addWidget(self.limits_edit, 1)
+        self.limits_status = theme.muted("")
+        self.limits_status.setObjectName("onset_limits_status")
+        tab.addWidget(self.limits_status)
+        self.limits_button = QPushButton("Draft it with the assistant")
+        self.limits_button.setObjectName("onset_draft_limits")
+        self.limits_button.setToolTip(
+            "Asks the assistant for the limitations paragraph, briefed with the "
+            "quality checks and your verdicts so far; checked and marked like the "
+            "findings.")
+        self.limits_button.setEnabled("assistant" in self.panels)
+        self.limits_button.clicked.connect(lambda _=False: self.draft_limits())
+        tab.addWidget(self.limits_button)
+        self.paragraph_tabs.addTab(limits_tab, "Limitations")
+        self._say_limits_state()
+
+        self.evidence_view = QTextBrowser()
+        self.evidence_view.setObjectName("onset_draft_evidence")
+        self.evidence_view.setOpenLinks(False)
+        self.evidence_view.setToolTip("Click a window to see it on the trace.")
+        self.evidence_view.anchorClicked.connect(self._evidence_clicked)
+        self.paragraph_tabs.addTab(self.evidence_view, "Evidence")
+        self.paragraph_tabs.setTabToolTip(2, "What each drafted sentence rests on: "
+                                             "its windows and its queries")
+        self.paragraph_tabs.setMaximumHeight(300)
+        box.addWidget(self.paragraph_tabs)
+        self._show_evidence()
         box.addWidget(theme.section_label("Agreement with the annotators"))
         box.addWidget(self.panels["agreement"], 1)
         self.appendix = QCheckBox("Show the appendix (every measurement)")
@@ -1658,6 +1702,8 @@ class PageWindow(QMainWindow):
         assistant = self.panels.get("assistant")
         if assistant is not None and hasattr(assistant, "drafted"):
             assistant.drafted.connect(self.take_draft)
+        if assistant is not None and hasattr(assistant, "draftedLimits"):
+            assistant.draftedLimits.connect(self.take_limits)
         return page
 
     # -- the findings paragraph ---------------------------------------------
@@ -1678,10 +1724,38 @@ class PageWindow(QMainWindow):
                 "No draft: the assistant refused or returned nothing. Its page says why.")
         return drafted
 
+    def draft_limits(self) -> bool:
+        """The limitations paragraph, drafted the same way."""
+        assistant = self.panels.get("assistant")
+        if assistant is None:
+            return False
+        self.limits_button.setEnabled(False)
+        self.limits_status.setText("Asking the assistant…")
+        try:
+            drafted = assistant.draft_limits()
+        finally:
+            self.limits_button.setEnabled(True)
+        if not drafted:
+            self.limits_status.setText(
+                "No draft: the assistant refused or returned nothing. Its page says why.")
+        return drafted
+
+    def _drafted_evidence(self, text: str) -> list:
+        """Sentence by sentence, what the assistant's last answer rests on."""
+        from onset_review import draftevidence
+
+        answer = getattr(self.panels.get("assistant"), "last_draft", None)
+        return draftevidence.annotate(text, answer) if answer is not None else []
+
+    def _basis(self) -> str:
+        from onset_review import draftevidence
+
+        return draftevidence.analysis_basis(self.session.request)
+
     def take_draft(self, text: str, by: str) -> None:
         """A paragraph from the assistant: shown in the box, filed as its."""
         read = self.session.read
-        read.set_draft(text, by)
+        read.set_draft(text, by, self._drafted_evidence(text), self._basis())
         self._keep_read()
         self.findings_edit.blockSignals(True)
         self.findings_edit.setPlainText(read.draft)
@@ -1689,17 +1763,97 @@ class PageWindow(QMainWindow):
         self._say_findings_state()
         self.refresh_report()
 
+    def take_limits(self, text: str, by: str) -> None:
+        read = self.session.read
+        read.set_limits(text, by, self._drafted_evidence(text), self._basis())
+        self._keep_read()
+        self.limits_edit.blockSignals(True)
+        self.limits_edit.setPlainText(read.limits)
+        self.limits_edit.blockSignals(False)
+        self._say_limits_state()
+        self.refresh_report()
+
     def _findings_edited(self) -> None:
-        """The reader typed: the paragraph is theirs now, and says so."""
+        """The reader typed: the paragraph is theirs now, and says so. The
+        sentences they left alone keep what they rest on."""
         read = self.session.read
         text = self.findings_edit.toPlainText()
         if text.strip() == read.draft.strip():
             return
         who = (getattr(read, "reader", "") or "").strip() or "the reader"
-        read.set_draft(text, who)
+        read.set_draft(text, who, basis=self._basis())
         self._keep_read()
         self._say_findings_state()
         self.refresh_report()
+
+    def _limits_edited(self) -> None:
+        read = self.session.read
+        text = self.limits_edit.toPlainText()
+        if text.strip() == read.limits.strip():
+            return
+        who = (getattr(read, "reader", "") or "").strip() or "the reader"
+        read.set_limits(text, who, basis=self._basis())
+        self._keep_read()
+        self._say_limits_state()
+        self.refresh_report()
+
+    def _show_evidence(self) -> None:
+        """The two paragraphs, sentence by sentence, with their windows as
+        links to the trace and their numbers with the query behind each."""
+        from urllib.parse import quote
+
+        from onset_review import draftevidence
+
+        read = self.session.read
+        basis = self._basis()
+        parts = []
+        for heading, text, evidence, written_for in (
+                ("Findings", read.draft, read.draft_evidence, read.draft_basis),
+                ("Limitations", read.limits, read.limits_evidence, read.limits_basis)):
+            sentences = draftevidence.split_sentences(text)
+            if not sentences:
+                continue
+            parts.append(f"<p><b>{heading}</b></p>")
+            if written_for and written_for != basis:
+                parts.append("<p><i>Written for an earlier analysis of this window; "
+                             "nothing here was checked against this one.</i></p>")
+                continue
+            by_sentence = {str(e.get("sentence", "")): e for e in evidence or []}
+            items = []
+            for sentence in sentences:
+                entry = by_sentence.get(sentence)
+                short = html.escape(sentence if len(sentence) <= 70
+                                    else sentence[:67].rstrip() + "…")
+                if entry is None:
+                    items.append(f"<li>{short}<br><i>yours; not checked against the "
+                                 "analysis</i></li>")
+                    continue
+                bits = [f'<a href="evidence:{quote(i, safe="")}">'
+                        f"{html.escape(draftevidence.describe_evidence(i))}</a>"
+                        for i in entry.get("evidence", [])]
+                bits += [html.escape(f"{n['value']} ← {n['source']}")
+                         for n in entry.get("numbers", []) if n.get("source")]
+                items.append(f"<li>{short}<br>" + (" · ".join(bits) if bits else
+                                                    "<i>no channel or number to trace</i>")
+                             + "</li>")
+            parts.append("<ol>" + "".join(items) + "</ol>")
+        self.evidence_view.setHtml("".join(parts) or
+                                   "<i>Nothing drafted yet. When the assistant drafts a "
+                                   "paragraph, each sentence's windows and queries are "
+                                   "listed here.</i>")
+
+    def _evidence_clicked(self, url) -> None:
+        from urllib.parse import unquote
+
+        from onset_review.assistant import parse_evidence_id
+
+        text = url.toString()
+        if not text.startswith("evidence:"):
+            return
+        parsed = parse_evidence_id(unquote(text[len("evidence:"):]))
+        assistant = self.panels.get("assistant")
+        if parsed is not None and assistant is not None:
+            assistant.evidencePicked.emit(parsed[0], parsed[1])
 
     def _keep_read(self) -> None:
         from onset_review import adjudication
@@ -1720,6 +1874,22 @@ class PageWindow(QMainWindow):
                 "until you change it.")
         else:
             self.findings_status.setText(f"Written by {read.draft_by}.")
+        if hasattr(self, "evidence_view"):
+            self._show_evidence()
+
+    def _say_limits_state(self) -> None:
+        read = self.session.read
+        if not read.limits:
+            self.limits_status.setText("Nothing written yet. The report then has no "
+                                       "Limitations section.")
+        elif read.limits_is_assistants:
+            self.limits_status.setText(
+                f"Drafted by the {read.limits_by}; marked as unedited by you until you "
+                "change it.")
+        else:
+            self.limits_status.setText(f"Written by {read.limits_by}.")
+        if hasattr(self, "evidence_view"):
+            self._show_evidence()
 
     def refresh_report(self) -> None:
         """Rebuild the preview from the session as it is now, verdicts and all."""

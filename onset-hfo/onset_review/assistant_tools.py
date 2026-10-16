@@ -18,7 +18,7 @@ from __future__ import annotations
 from onset_agent.tools import Tool, ToolError
 
 __all__ = ["analysis_tools", "explain_tools", "sensitivity_tools", "window_tools",
-           "ANALYSES", "COST"]
+           "reader_tools", "quality_tools", "ANALYSES", "COST"]
 
 #: The analyses a reviewer may let the assistant run, and what each costs.
 #: The research registry has more; its seizure-onset probability estimate is
@@ -205,3 +205,113 @@ def window_tools(session, allow_run: bool = False, cache_dir=None, lister=None,
          "required": ["t_start", "t_stop"], "additionalProperties": False},
         compare_handler)
     return tools
+
+
+#: How many channels `reader_verdicts` lists one by one: the busiest, as the
+#: ranking orders them. A findings paragraph names a handful, and a long list
+#: would crowd the model's context for nothing.
+READER_CHANNELS = 8
+
+
+def reader_tools(session) -> dict[str, Tool]:
+    """One tool: what the reader has said about this window's events so far.
+
+    Free -- it reads the verdicts already recorded -- and read-only: the
+    assistant can report the reader's read, never add to it. A paragraph that
+    says "the reader agreed with 12 of 14 events on AR1-AR2" can only say it
+    if this returned those numbers, because they pass the same number check.
+    """
+    def handler(_store):
+        read = getattr(session, "read", None)
+        if read is None:
+            raise ToolError("no reader's verdicts are attached to this window")
+        primary = session.request.primary
+        accepted = [e for e in session.events if e.accepted and e.detector == primary]
+        progress = read.progress(accepted)
+        counts = read.counts()
+        order = [str(c) for c in session.findings["channel"]] if len(session.findings) else []
+        listed = [c for c in order if c in progress][:READER_CHANNELS]
+        channels = [{"channel": c, "judged": progress[c]["judged"],
+                     "of_accepted": progress[c]["total"],
+                     "agree": progress[c]["agree"], "disagree": progress[c]["disagree"],
+                     "unsure": progress[c]["unsure"],
+                     "all_judged": progress[c]["complete"],
+                     "channel_verdict": progress[c]["verdict"] or "none"}
+                    for c in listed]
+        verdicts = {str(c): j.verdict for c, j in sorted(read.channels.items())}
+        return {
+            "reader": read.reader or "not named",
+            "accepted_events": len(accepted),
+            "judged": counts["judged"], "agree": counts["agree"],
+            "disagree": counts["disagree"], "unsure": counts["unsure"],
+            "verdicts_from_an_earlier_analysis": counts["orphans"],
+            "busiest_channels": channels,
+            "channel_verdicts": verdicts,
+            "note": ("The reader's own verdicts, as recorded. A channel's confirmed "
+                     "rate exists only where all_judged is true; elsewhere say how "
+                     "many of its events were judged."),
+        }
+
+    return {"reader_verdicts": Tool(
+        "reader_verdicts",
+        "What the reader decided: events judged agree, disagree or unsure, overall and "
+        "for the busiest channels, how many each channel has left, and the channels "
+        "the reader accepted or set aside. Free. For 'what did the reader conclude', "
+        "'how much has been reviewed'.",
+        {"type": "object", "properties": {}, "additionalProperties": False},
+        handler)}
+
+
+def quality_tools(session) -> dict[str, Tool]:
+    """One tool: how much of the window the quality stage let through.
+
+    Free. The limitations paragraph is mostly made of these numbers -- how
+    long the window is, which contacts were set aside, how many seconds each
+    analysed contact kept -- and without a tool returning them the number
+    check would refuse every sentence that states one.
+    """
+    def handler(_store):
+        from onset_hfo.quality import REASONS
+
+        start, stop = session.span
+        out = {"analysed_s": round(float(stop - start), 3),
+               "channels_ranked": int(len(session.findings)),
+               "quality_checks": "off"}
+        quality = getattr(session, "quality", None)
+        if quality is None or not len(quality):
+            out["note"] = ("The data-quality checks did not run: every contact was "
+                           "analysed and every rate divided by the whole span.")
+            return out
+        aside = quality[~quality["good"]]
+        flagged = quality[quality["flagged"]] if "flagged" in quality else quality.iloc[0:0]
+        clean = [float(v) for v in (session.clean_seconds or {}).values()]
+        out.update({
+            "quality_checks": "on",
+            "channels_checked": int(len(quality)),
+            "n_set_aside": int(len(aside)),
+            "n_flagged": int(len(flagged)),
+            "set_aside": [{"channel": str(r.channel),
+                           "why": REASONS.get(r.reason, str(r.reason))}
+                          for r in aside.itertuples()],
+            "analysed_but_flagged": [{"channel": str(r.channel),
+                                      "why": REASONS.get(r.reason, str(r.reason))}
+                                     for r in flagged.itertuples()],
+            "reinstated_by_reader": sorted(str(c) for c in session.request.keep_channels),
+        })
+        if clean:
+            ordered = sorted(clean)
+            middle = ordered[len(ordered) // 2] if len(ordered) % 2 else \
+                (ordered[len(ordered) // 2 - 1] + ordered[len(ordered) // 2]) / 2.0
+            out["usable_s_per_channel"] = {"min": round(ordered[0], 2),
+                                           "median": round(middle, 2),
+                                           "max": round(ordered[-1], 2)}
+        return out
+
+    return {"data_quality": Tool(
+        "data_quality",
+        "How much of this window was analysed: its length in seconds, how many "
+        "contacts the quality checks set aside or flagged and why, and the usable "
+        "seconds per contact. Free. For 'what limits this analysis', 'which contacts "
+        "were left out'.",
+        {"type": "object", "properties": {}, "additionalProperties": False},
+        handler)}

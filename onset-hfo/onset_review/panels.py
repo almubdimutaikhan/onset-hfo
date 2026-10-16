@@ -1192,7 +1192,7 @@ class ProvenancePanel(QTextBrowser):
                        f"original recording"),
             ("Band", request.band_label()),
             ("Detector", ", ".join(request.detectors)),
-            ("Threshold", "each detector's measured default"
+            ("Threshold", f"each detector's default ({request.default_thresholds()})"
                           if request.threshold_sd is None
                           else f"{request.threshold_sd:g} robust SD"),
             ("Sampling rate", f"{session.sfreq:g} Hz"),

@@ -85,21 +85,41 @@ Nine tools, all read-only, all over one `ResultStore`
 | `contact_map` | where each channel sits (shaft, side, region, measured or schematic) with its rate, and how the leading channels distribute over shafts and sides. Saved beside the analysis by the desktop window; a plain pipeline run has none and the tool says so. Carries no resection, by design: the reviewer sees it as rings, the model is never told |
 | `report_section` | one section of the structured report |
 
-Two more exist only inside the desktop window, where there is a reviewer to
-consent to them ([`onset_review/assistant_tools.py`](../onset_review/assistant_tools.py)):
+More exist only inside the desktop window, where there is a reviewer to
+consent to them and a read to report ([`onset_review/assistant_tools.py`](../onset_review/assistant_tools.py)):
 
 | Tool | Returns | Offered when |
 |---|---|---|
 | `explain_event` | the measurements of the selected event's own picture: cycles, how far its spectrum peaks inside the band at that moment, and the detail panel's reading (*island*, *column*, *unclear*) with its reasons | an event is selected and the question is about it |
 | `run_analysis` | one of six analyses from the pipeline's own registry — detect HFOs with other settings, detect spikes, spectral power, compare the detectors, propagation lead, channel QC — with its run id and how long it took | the reviewer has ticked *Let it run analyses on this window*; the briefing names each one with its cost in seconds, and the transcript says when one ran |
-
 | `threshold_sensitivity` | the window's leading channels re-tested at 1.25×, 1.5× and 2× the detection threshold, who leads at each, and up to what multiple the window's leader holds | free once the Threshold panel has run (the panel keeps its result on the session); otherwise only with analyses allowed, since it re-runs the detector |
 | `other_windows` | the other cached windows of the same recording, with their bounds and whether each has been analysed | there is at least one |
 | `compare_window` | another window analysed with this window's settings, and its leaders and tied set against this window's | analyses allowed; seconds to half a minute the first time, cached in memory and beside the settings after |
+| `reader_verdicts` | the reader's own read: events judged *agree*, *disagree* or *unsure* overall and for the eight busiest channels, how many each has left, and the channels accepted or set aside. Read-only: the assistant can report the read, never add to it | always (free); briefed when the question mentions the reader or verdicts, and for both drafts |
+| `data_quality` | the analysed span in seconds, how many contacts the quality checks set aside or flagged and why, and the usable seconds per contact (minimum, median, maximum) | always (free); briefed for questions about limits or quality, and for both drafts |
 
 The assistant can also be asked, from the Report page, to **draft the findings
-paragraph**: the same loop and guards, and the paragraph goes into the report
-marked as the assistant's, with the model named, until the reader edits it.
+paragraph** and the **limitations paragraph**: the same loop and guards, and
+each paragraph goes into the report marked as the assistant's, with the model
+named, until the reader edits it. Under each, the report lists what every
+sentence rests on, worked out from the answer with no model involved
+([`onset_review/draftevidence.py`](../onset_review/draftevidence.py)): the
+evidence windows of the channels the sentence names (cited first, then other
+windows a query returned, two per channel), and for each number the query
+that returned it (`top_channels(k=5)`, `data_quality()`). A bare whole number
+up to 20 is let through by the check without being looked up and is listed as
+such rather than credited to whichever query happened to return it. A
+sentence the reader rewrote loses its entry and is marked *not checked
+against the analysis*; one they left alone keeps it. The read is filed under
+the window, not the analysis, so a paragraph saved before a re-analysis at
+other settings comes back marked as written for an earlier analysis, with no
+evidence listed.
+
+The report's **Methods** paragraph is not drafted by a model at all: it is
+written by the software from the settings the analysis ran with (window,
+sampling rate, preprocessing, band, each detector's threshold, the
+event-validation rules, the quality stage, the Poisson interval and the tied
+set), so the same settings always give the same words.
 
 All of these are the exception to the rule below, and are bounded the same way as
 the rest: fixed to this window's recording, no file written, no setting

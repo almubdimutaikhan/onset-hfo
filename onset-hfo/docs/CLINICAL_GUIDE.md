@@ -460,7 +460,7 @@ by the whole window, which would understate a contact you had not finished.
 
 ![The Report page](images/onset-review-report.png)
 
-On the Report page, beside the preview, is a box for the findings paragraph:
+On the Report page, beside the preview, the **Findings** tab holds the findings paragraph:
 the three to six sentences a report opens with. Write it yourself, or press
 **Draft it with the assistant**. The draft goes through the assistant's whole
 loop — the usual queries, the number check, the citation check — so a draft
@@ -472,6 +472,27 @@ becomes *Written by you*, under your reader name. A reader signing a report
 has to know which sentences a model wrote, so the attribution is part of the
 document and not of the screen. The paragraph is saved with your verdicts
 and comes back with them.
+
+Its **Limitations** tab holds the second paragraph: how long the
+window is, which contacts the quality checks set aside, how many channels are
+tied with the busiest, whether the detectors disagree, and how much of the
+window you have judged. It drafts and attributes the same way. Both drafts
+are briefed with your verdicts so far, so a paragraph can say how many events
+you agreed with — but only as numbers the assistant's queries returned.
+
+**What each sentence rests on.** On the **Evidence** tab, and under each
+paragraph in the exported report, every sentence is listed with the evidence
+windows of the channels it names and, for each number, the query that
+returned it. Click a window to see it on the trace. A sentence you rewrote
+is marked as yours and *not checked against the analysis*; the sentences you
+left alone keep their evidence. If you re-analyse the same window with other
+settings, a paragraph written before is marked as written for an earlier
+analysis — its numbers are not this analysis's — until you draft or write it
+again.
+
+The report also has a **Methods** paragraph. No model writes it: the
+software writes it from the settings the analysis ran with, so it cannot
+describe a different analysis from the one on the page.
 
 ### Patient — who this recording belongs to
 

@@ -95,7 +95,7 @@ class ReviewRequest:
     detectors: tuple[str, ...] = ("rms",)
     band: str = "ripple"
     #: Detection threshold in robust SDs, or None to use each detector's own
-    #: measured default. Not a shared number: see `_detect`.
+    #: default (`default_thresholds`). Not a shared number: see `_detect`.
     threshold_sd: float | None = None
     with_spikes: bool = True
     #: What is done to the signal before any detector sees it. Part of the
@@ -243,6 +243,17 @@ class ReviewRequest:
         where = self.path.name if self.imported else self.dataset
         return (f"{where} · {self.subject} · run-{self.run} · "
                 f"{self.t_start:g}–{self.t_stop:g} s")
+
+    def default_thresholds(self) -> str:
+        """Each chosen detector's default threshold, for a header: "5.0
+        robust SD" when they agree, "Root-mean-square energy 5.0, Line length
+        3.0 robust SD" when they do not."""
+        cfg = PipelineConfig()
+        values = {name: getattr(cfg, name).threshold_sd for name in self.detectors}
+        if len(set(values.values())) == 1:
+            return f"{next(iter(values.values())):.1f} robust SD"
+        return (", ".join(f"{DETECTOR_LABELS.get(name, name)} {value:.1f}"
+                          for name, value in values.items()) + " robust SD")
 
     def pipeline_config(self) -> PipelineConfig:
         """The project's `PipelineConfig` that reproduces this review exactly.

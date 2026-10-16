@@ -24,7 +24,7 @@ import re
 from dataclasses import dataclass, field
 
 __all__ = ["check_question", "verify_answer", "collect_numbers", "GuardResult",
-           "about_the_assistant"]
+           "about_the_assistant", "numbers_in", "traced_to"]
 
 DIRECTIVE = re.compile(
     r"\b(resect\w*|ablat\w*|remov\w*|operat\w*|surg\w*|implant\w*|"
@@ -157,6 +157,33 @@ def _is_traceable(number: float, seen: set[float]) -> bool:
         if abs(round(value, 1) - number) <= 0.051 or abs(round(value) - number) < 1e-9:
             return True
     return False
+
+
+def numbers_in(text: str) -> list[tuple[str, str]]:
+    """The numbers in a text that the check looks at, as (number, unit) pairs
+    in order, with "" for a bare number. Evidence ids and channel names are
+    removed first, as in :func:`verify_answer`, because their digits are not
+    measurements."""
+    stripped = CHANNEL_TOKEN.sub(" ", EVIDENCE_TOKEN.sub(" ", text or ""))
+    found: list[tuple[int, str, str]] = []
+    taken: list[tuple[int, int]] = []
+    for match in NUMBER_WITH_UNIT.finditer(stripped):
+        found.append((match.start(), match.group(1), match.group(2).strip()))
+        taken.append(match.span(1))
+    for match in BARE_NUMBER.finditer(stripped):
+        if any(start <= match.start() < stop for start, stop in taken):
+            continue
+        found.append((match.start(), match.group(1), ""))
+    return [(raw, unit) for _, raw, unit in sorted(found)]
+
+
+def traced_to(number: float, sources: dict) -> list[str]:
+    """The labels of the tool calls a number can be traced to, by the same
+    rounding rule the check uses; empty when none."""
+    for value, labels in sources.items():
+        if _is_traceable(float(number), {float(value)}):
+            return list(labels)
+    return []
 
 
 def verify_answer(text: str, evidence_ids: list[str], retrieved: set[str],
