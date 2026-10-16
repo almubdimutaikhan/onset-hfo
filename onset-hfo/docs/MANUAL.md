@@ -389,8 +389,11 @@ are worth.
 
 **You will:** write up a window and ask the local model about it.
 
-1. **The findings paragraph.** On the **Report** page, write your conclusion,
-   or ask the assistant to draft one. The report says whose words they are.
+1. **The findings and limitations paragraphs.** On the **Report** page,
+   write your conclusion and what limits it, or ask the assistant to draft
+   either. The report says whose words they are and, sentence by sentence,
+   which evidence windows and which queries each drafted sentence rests on;
+   the Methods paragraph is written by the software from your settings.
 
    ![The Report page](images/onset-review-report.png)
 
@@ -601,7 +604,7 @@ the notebooks in `notebooks/`.
 |---|---|---|---|
 | band | Signal → HFO band | ripple | fast ripples are rarer and more specific; they need at least 1112 Hz |
 | detector | open dialog | RMS energy | four detectors agree on about half the individual events |
-| threshold | open dialog, Threshold tab | each detector's measured default | lower finds more, and more noise |
+| threshold | open dialog, Threshold tab | each detector's default: 5.0 robust SD (3.0 for line length) | lower finds more, and more noise |
 | reference | Signal | bipolar | a common reference shares its noise with every channel |
 | notch | Signal | the dataset's mains, 2 Hz wide | wide notches carve holes in the band |
 | high-pass | Signal | 1 Hz | anything up to 80 Hz is free; above that it eats the ripple band |

@@ -91,7 +91,7 @@ def _header(session: ReviewSession, reviewer: str | None) -> list[str]:
     request = session.request
     now = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     detectors = ", ".join(DETECTOR_LABELS.get(d, d) for d in request.detectors)
-    threshold = ("each detector's measured default"
+    threshold = (f"each detector's default ({request.default_thresholds()})"
                  if request.threshold_sd is None
                  else f"{request.threshold_sd:g} robust SD (set by the reviewer)")
     # An imported window has no accession, and an empty cell in a document
@@ -162,6 +162,7 @@ def review_markdown(session: ReviewSession, reviewer: str | None = None,
         ]
 
     out += _findings_section(session)
+    out += _limits_section(session)
 
     out += ["## Per-channel findings", "",
             f"{summary['accepted']} of {summary['detected']} candidate events "
@@ -199,6 +200,8 @@ def review_markdown(session: ReviewSession, reviewer: str | None = None,
     out += _read_section(session)
 
     out += _quality_section(session)
+
+    out += _methods_section(session)
 
     out += ["## How the signal was prepared", ""]
     out += [f"{index}. {step}" for index, step in enumerate(session.steps, 1)]
@@ -303,19 +306,140 @@ def _findings_section(session: ReviewSession) -> list[str]:
     and marked as not yet edited -- until the reader edits it, after which it
     is the reader's. The attribution is part of the document, not a UI
     nicety: a reader signing a report has to know which sentences a model
-    wrote.
+    wrote. Under it, sentence by sentence, what the text rests on.
     """
     read = getattr(session, "read", None)
     if read is None or not getattr(read, "draft", ""):
         return []
-    when = f" on {read.draft_at[:10]}" if read.draft_at else ""
-    if read.draft_is_assistants:
-        who = (f"_Drafted by the {read.draft_by}{when} from the analysis above. Every "
+    return _paragraph_section(session, "Findings", read.draft, read.draft_by,
+                              read.draft_at, read.draft_evidence,
+                              read.draft_basis, read.draft_is_assistants)
+
+
+def _limits_section(session: ReviewSession) -> list[str]:
+    """The limitations paragraph, kept and attributed like the findings."""
+    read = getattr(session, "read", None)
+    if read is None or not getattr(read, "limits", ""):
+        return []
+    return _paragraph_section(session, "Limitations", read.limits, read.limits_by,
+                              read.limits_at, read.limits_evidence,
+                              read.limits_basis, read.limits_is_assistants)
+
+
+def _paragraph_section(session, heading, text, by, at, evidence, basis,
+                       assistants) -> list[str]:
+    from onset_review import draftevidence
+
+    when = f" on {at[:10]}" if at else ""
+    current = draftevidence.analysis_basis(session.request)
+    if basis and basis != current:
+        # The read is filed under the window, so a paragraph written before a
+        # re-analysis comes back with it. Its numbers are about the earlier
+        # settings and nothing on this page checked them.
+        who = (f"_{'Drafted by the ' + by if assistants else 'Written by ' + (by or 'the reader')}"
+               f"{when} for an earlier analysis of this window ({basis}). Its "
+               f"numbers are not this analysis's and were not checked against "
+               f"it; draft or write it again before relying on it._")
+        return [f"## {heading}", "", text.strip(), "", who, ""]
+    if assistants:
+        who = (f"_Drafted by the {by}{when} from the analysis above. Every "
                "number in it was checked against a query over this analysis; the "
                "wording is the model's and has not been edited by the reader._")
     else:
-        who = f"_Written by {read.draft_by or 'the reader'}{when}._"
-    return ["## Findings", "", read.draft.strip(), "", who, ""]
+        who = f"_Written by {by or 'the reader'}{when}._"
+    out = [f"## {heading}", "", text.strip(), "", who, ""]
+    if evidence:
+        out += draftevidence.markdown_lines(text, evidence)
+    return out
+
+
+def _methods_section(session: ReviewSession) -> list[str]:
+    """What was done, as a methods paragraph, written from the settings.
+
+    No model writes this. Every value is read off the request and the
+    configuration the analysis ran with, so it cannot describe an analysis
+    other than the one on the page, and two reports of the same settings
+    carry the same paragraph word for word.
+    """
+    from onset_hfo.detectors import HFO_DETECTORS
+
+    request = session.request
+    cfg = request.pipeline_config()
+    low, high = request.band_hz
+    start, stop = session.span
+    minutes = (stop - start) / 60.0
+    source = (f"the local file {request.path.name}" if request.imported
+              else f"{request.dataset}")
+    detectors = []
+    for name in request.detectors:
+        if name not in HFO_DETECTORS:
+            continue
+        detector = getattr(cfg, name)
+        detectors.append(f"{DETECTOR_LABELS.get(name, name).lower()} at "
+                         f"{detector.threshold_sd:.1f} robust SD")
+    first = getattr(cfg, request.primary)
+    validation = cfg.validation
+    # A recording sampled too slowly for the band is ranked by its discharges
+    # instead, and the session notes say so; the paragraph must not describe a
+    # detection that never ran.
+    skipped = next((str(n) for n in session.notes
+                    if str(n).startswith("HFO detection skipped")), "")
+    sentences = [
+        f"{request.subject}, run {request.run}, of {source} was analysed from "
+        f"{start:g} to {stop:g} s ({minutes:.1f} min) at {session.sfreq:g} Hz.",
+        f"Before detection the signal was prepared as follows: "
+        f"{request.preprocess_label()}, leaving {len(session.findings)} "
+        f"{session.montage} channels.",
+    ]
+    if skipped:
+        sentences.append(skipped.rstrip(".") + ".")
+    else:
+        sentences += [
+            f"Candidate {request.band.replace('_', ' ')}s were detected in "
+            f"{low:g}–{high:g} Hz with {', '.join(detectors) or 'no detector'}"
+            + (" (the reviewer's threshold)" if request.threshold_sd is not None
+               else " (each detector's default)")
+            + f"; an event needed at least {first.min_peaks} peaks above "
+            f"{first.peak_threshold_sd:g} SD and a duration of "
+            f"{first.min_duration_ms:g}–{first.max_duration_ms:g} ms, and events "
+            f"closer than {first.merge_gap_ms:g} ms were merged.",
+            f"Each candidate was then checked on the unfiltered signal: it was "
+            f"rejected with fewer than {validation.min_cycles:g} cycles or with an "
+            f"in-band spectral peak less than {validation.min_peak_prominence_db:g} "
+            f"dB above the fitted 1/f background, and, where the window was too "
+            f"short to measure a spectrum, when its 1–30 Hz amplitude exceeded "
+            f"{validation.max_low_band_sd:g} robust SD.",
+        ]
+    if request.with_spikes or skipped:
+        sentences.append(
+            f"Interictal discharges were detected{'' if skipped else ' separately'} in "
+            f"{cfg.spikes.band[0]:g}–{cfg.spikes.band[1]:g} Hz at "
+            f"{cfg.spikes.threshold_sd:.1f} robust SD.")
+    quality = getattr(session, "quality", None)
+    if request.check_quality and quality is not None and len(quality):
+        set_aside = int((~quality["good"]).sum())
+        sentences.append(
+            f"Data-quality checks ran on {len(quality)} channels and set "
+            f"{set_aside} aside; events on unusable channels or in unusable "
+            f"{cfg.quality.segment_s:g}-s segments were discarded, and each "
+            f"channel's rate was divided by its own usable time.")
+    else:
+        sentences.append("The data-quality checks were off, so every channel "
+                         "was analysed and every rate was divided by the "
+                         "whole analysed span.")
+    ranked_by = ("interictal discharges" if skipped else
+                 "accepted events from the "
+                 f"{DETECTOR_LABELS.get(request.primary, request.primary).lower()} "
+                 "detector")
+    sentences.append(
+        f"Channels were ranked by their rate of {ranked_by}, in events per "
+        "minute, each with an exact (Garwood) 95% Poisson interval, and every "
+        "channel whose interval overlapped the busiest channel's was reported "
+        "as tied with it.")
+    return ["## Methods", "",
+            " ".join(sentences), "",
+            "_Written by the software from the settings this analysis ran "
+            "with; no model was involved._", ""]
 
 
 def _read_section(session: ReviewSession) -> list[str]:

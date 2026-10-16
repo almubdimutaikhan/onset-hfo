@@ -97,6 +97,14 @@ class AgentAnswer:
     #: For a background answer: the document sections it was answered from,
     #: as (label, text) pairs, so the window can show them.
     sources: list[tuple[str, str]] = field(default_factory=list)
+    #: Every evidence id a tool returned during the answer, in order: the
+    #: windows a sentence naming a channel can be traced to.
+    retrieved: list[str] = field(default_factory=list)
+    #: Each number a tool returned -> the calls that returned it, as
+    #: "tool(arguments)" labels. What lets a report say, number by number,
+    #: where a drafted sentence's figures came from. Not part of `as_dict`,
+    #: so saved evaluation runs keep their shape.
+    number_sources: dict = field(default_factory=dict)
 
     @property
     def tools_called(self) -> list[str]:
@@ -503,6 +511,7 @@ class OnsetAgent:
         messages = [{"role": "system", "content": self.system}]
         retrieved: list[str] = []
         numbers_seen: set[float] = set()
+        number_sources: dict[float, list[str]] = {}
         retries = 0
 
         def run_calls(calls, *, briefed: bool) -> None:
@@ -522,7 +531,13 @@ class OnsetAgent:
                     for evidence_id in _collect_ids(payload):
                         if evidence_id not in retrieved:
                             retrieved.append(evidence_id)
-                    numbers_seen.update(guard.collect_numbers(payload))
+                    found = guard.collect_numbers(payload)
+                    numbers_seen.update(found)
+                    label = f"{call.name}({_args(call.arguments)})"
+                    for number in found:
+                        sources = number_sources.setdefault(number, [])
+                        if label not in sources and len(sources) < 3:
+                            sources.append(label)
                 messages.append({"role": "tool", "tool_call_id": call.id, "name": call.name,
                                  "content": json.dumps(payload, default=str)})
                 if self.verbose:
@@ -641,7 +656,9 @@ class OnsetAgent:
                   "problems": check.problems, "text": text[:600], "evidence_ids": ids})
             if check.ok:
                 return AgentAnswer(question=question, text=text, evidence_ids=ids, trace=trace,
-                                   backend=self.backend.name, verified=True)
+                                   backend=self.backend.name, verified=True,
+                                   retrieved=list(retrieved),
+                                   number_sources=dict(number_sources))
             if retries >= self.max_retries:
                 break
             retries += 1

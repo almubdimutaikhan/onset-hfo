@@ -3135,6 +3135,59 @@ def test_the_assistant_drafts_the_findings_and_the_report_page_takes_it_up(paged
         read.draft, read.draft_by, read.draft_at = before
 
 
+def test_the_report_page_drafts_the_limitations_and_shows_what_each_sentence_rests_on(
+        paged, review):
+    from urllib.parse import quote
+
+    from qtpy.QtCore import QUrl
+
+    from onset_review import adjudication
+
+    page = paged.pages
+    assistant = paged.panels["assistant"]
+    read = review.read
+    before = read.to_json()
+    picked = []
+    assistant.evidencePicked.connect(lambda channel, start: picked.append((channel, start)))
+    try:
+        read.set_draft("", "")
+        read.set_limits("", "")
+        page._say_findings_state()
+        assert "Nothing drafted yet" in page.evidence_view.toPlainText()
+        assert page.draft_limits(), assistant.transcript.toPlainText()[-600:]
+        assert read.limits_is_assistants and page.limits_edit.toPlainText() == read.limits
+        assert read.limits_evidence and read.limits_basis == page._basis()
+        assert "Drafted by the assistant" in page.limits_status.text()
+        # Its briefing had the quality checks and the reader's verdicts in it.
+        assert "data_quality" in assistant.transcript.toPlainText()
+        assert "reader_verdicts" in assistant.transcript.toPlainText()
+        shown = page.report_view.toPlainText()
+        assert "Limitations" in shown and "What each sentence rests on" in shown
+        assert "Limitations" in page.evidence_view.toPlainText()
+
+        # A window in the list is a link to the trace.
+        channel = str(review.findings["channel"].iloc[0])
+        evidence_id = f"{review.request.subject}|{channel}|rms|1.25"
+        read.set_draft(f"{channel} led.", "assistant (scripted)",
+                       [{"sentence": f"{channel} led.", "evidence": [evidence_id],
+                         "numbers": []}], page._basis())
+        page._say_findings_state()
+        assert f"{channel} at 1.25 s (rms)" in page.evidence_view.toPlainText()
+        page._evidence_clicked(QUrl("evidence:" + quote(evidence_id, safe="")))
+        assert picked == [(channel, 1.25)]
+
+        # The reader edits the limits box: theirs, and their sentence unchecked.
+        page.limits_edit.setPlainText(read.limits + " I would read a longer span.")
+        assert not read.limits_is_assistants
+        assert "yours; not checked" in page.evidence_view.toPlainText()
+    finally:
+        restored = adjudication.Adjudication.from_json(before)
+        for name in ("draft", "draft_by", "draft_at", "draft_evidence", "draft_basis",
+                     "limits", "limits_by", "limits_at", "limits_evidence",
+                     "limits_basis"):
+            setattr(read, name, getattr(restored, name))
+
+
 def test_the_assistant_is_offered_the_other_windows_only_when_there_are_some(
         qapp, review, recording, monkeypatch):
     from onset_review import windows

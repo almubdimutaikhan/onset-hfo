@@ -49,6 +49,7 @@ from qtpy.QtWidgets import (
 )
 
 from onset_review import theme
+from onset_review.draftevidence import DRAFT_QUESTION, LIMITS_QUESTION  # noqa: F401
 
 __all__ = ["AssistantPanel", "BACKENDS", "SUGGESTIONS", "parse_evidence_id",
            "explain_refusal", "describe_step"]
@@ -331,22 +332,15 @@ def _run(worker) -> None:
 
 
 
-#: What the assistant is asked when the Report page asks for a draft. The
-#: briefing already carries the leaders, their evidence and the detectors'
-#: disagreements, so the question names the shape of the paragraph and
-#: nothing the model could not have been given.
-DRAFT_QUESTION = ("Draft the findings paragraph of this window's report in three to six "
-                  "sentences: which channels led and at what rate, whether they are tied "
-                  "with others, whether the two detectors agreed, and what limits the "
-                  "finding. State only numbers from the evidence, as measurements.")
-
-
 class AssistantPanel(QWidget):
     """Ask about this window; get an answer that cites it, or a refusal."""
 
     #: A findings paragraph the model drafted, with who drafted it, for the
     #: Report page to take up. Emitted only for a verified, unrefused answer.
+    #: The answer itself is `last_draft`, for what each sentence rests on.
     drafted = Signal(str, str)
+    #: The same for the limitations paragraph.
+    draftedLimits = Signal(str, str)
 
     #: (channel, time in archive seconds) when a citation is clicked.
     evidencePicked = Signal(str, float)
@@ -387,6 +381,9 @@ class AssistantPanel(QWidget):
         self.new_chat.clicked.connect(self.new_conversation)
         self._history: list[tuple[str, str]] = []
         self._drafting = False
+        #: The answer behind the last paragraph drafted, so the Report page can
+        #: work out, sentence by sentence, which windows and queries it rests on.
+        self.last_draft = None
         self._sources: list = []
         self._event_key: str = ""
 
@@ -570,15 +567,25 @@ class AssistantPanel(QWidget):
         returned is refused like any answer, and the refusal is shown here.
         True when a draft was produced.
         """
+        return self._draft(DRAFT_QUESTION, self.drafted)
+
+    def draft_limits(self) -> bool:
+        """The limitations paragraph, drafted and checked like the findings."""
+        return self._draft(LIMITS_QUESTION, self.draftedLimits)
+
+    def _draft(self, question: str, signal) -> bool:
         self._drafting = True
+        self.last_draft = None
         try:
-            self.ask(DRAFT_QUESTION)
+            self.ask(question)
         finally:
             self._drafting = False
         answer = getattr(self._worker, "answer", None) if self._worker is not None else None
-        if answer is None or answer.refused or not str(answer.text).strip():
+        if (answer is None or answer.refused or not answer.verified
+                or not str(answer.text).strip()):
             return False
-        self.drafted.emit(str(answer.text).strip(), f"assistant ({answer.backend})")
+        self.last_draft = answer
+        signal.emit(str(answer.text).strip(), f"assistant ({answer.backend})")
         return True
 
     def ask(self, question: str | None = None) -> None:
@@ -636,11 +643,15 @@ class AssistantPanel(QWidget):
         from onset_review.assistant_tools import (
             analysis_tools,
             explain_tools,
+            quality_tools,
+            reader_tools,
             sensitivity_tools,
             window_tools,
         )
 
         tools = explain_tools(self._session)
+        tools.update(reader_tools(self._session))
+        tools.update(quality_tools(self._session))
         tools.update(sensitivity_tools(self._session,
                                        allow_run=self.analyses.isChecked()))
         tools.update(window_tools(self._session, allow_run=self.analyses.isChecked()))
@@ -654,12 +665,20 @@ class AssistantPanel(QWidget):
     _THRESHOLD_WORDS = ("threshold", "stricter", "survive", "robust", "how sure")
     _WINDOW_WORDS = ("other window", "windows", "minute", "earlier", "later", "between",
                      "another", "the first", "the second", "same in", "change between")
+    _READER_WORDS = ("reader", "verdict", "judged", "reviewed so far", "agreed with")
+    _QUALITY_WORDS = ("limitation", "limits", "quality", "set aside", "flagged",
+                      "contacts were left", "how long")
 
     def extra_briefing(self, question: str) -> list:
         """What the window already knows that the question is about: the
         selected event's reading, the threshold re-test when it has run."""
         lowered = question.lower()
         out: list = []
+        if (getattr(self._session, "read", None) is not None
+                and any(word in lowered for word in self._READER_WORDS)):
+            out.append(("reader_verdicts", {}))
+        if any(word in lowered for word in self._QUALITY_WORDS):
+            out.append(("data_quality", {}))
         if (getattr(self._session, "sensitivity", None) is not None
                 and any(word in lowered for word in self._THRESHOLD_WORDS)):
             out.append(("threshold_sensitivity", {}))

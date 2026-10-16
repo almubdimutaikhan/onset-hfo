@@ -254,6 +254,21 @@ class Adjudication:
     draft: str = ""
     draft_by: str = ""
     draft_at: str = ""
+    #: Per sentence of the draft: the windows and the queries it rests on
+    #: (`onset_review.draftevidence`). Only sentences the assistant wrote and
+    #: the reader left unchanged have an entry.
+    draft_evidence: list = field(default_factory=list)
+    #: The settings the paragraph was written against
+    #: (`draftevidence.analysis_basis`). A read is filed under the window, not
+    #: the analysis, so a re-run at another threshold reopens the same read;
+    #: this is how the report knows the paragraph's numbers are from before.
+    draft_basis: str = ""
+    #: The limitations paragraph, kept exactly like the findings one.
+    limits: str = ""
+    limits_by: str = ""
+    limits_at: str = ""
+    limits_evidence: list = field(default_factory=list)
+    limits_basis: str = ""
 
     # -- recording a verdict ----------------------------------------------
     def judge_event(self, key: str, verdict: str, reader: str = "",
@@ -284,16 +299,37 @@ class Adjudication:
             self.reader = who
         return judged
 
-    def set_draft(self, text: str, by: str) -> None:
+    def set_draft(self, text: str, by: str, evidence: list | None = None,
+                  basis: str | None = None) -> None:
         """Record the findings paragraph and who it is by: the assistant (named
-        with its model) or the reader. Empty text clears it."""
-        self.draft = str(text or "").strip()
-        self.draft_by = str(by or "") if self.draft else ""
-        self.draft_at = now() if self.draft else ""
+        with its model) or the reader. Empty text clears it.
+
+        `evidence` is what each sentence rests on, when the assistant drafted
+        it. Without it -- the reader typing -- the sentences they left
+        unchanged keep theirs and the rest have none. `basis` is the analysis
+        the text was written against; when it is not the one the evidence was
+        found under, no evidence is kept, because those windows and queries
+        belong to another analysis.
+        """
+        (self.draft, self.draft_by, self.draft_at, self.draft_evidence,
+         self.draft_basis) = _paragraph(text, by, evidence, basis,
+                                        self.draft_evidence, self.draft_basis)
+
+    def set_limits(self, text: str, by: str, evidence: list | None = None,
+                   basis: str | None = None) -> None:
+        """The limitations paragraph, recorded exactly as `set_draft` records
+        the findings."""
+        (self.limits, self.limits_by, self.limits_at, self.limits_evidence,
+         self.limits_basis) = _paragraph(text, by, evidence, basis,
+                                         self.limits_evidence, self.limits_basis)
 
     @property
     def draft_is_assistants(self) -> bool:
         return bool(self.draft) and self.draft_by.lower().startswith("assistant")
+
+    @property
+    def limits_is_assistants(self) -> bool:
+        return bool(self.limits) and self.limits_by.lower().startswith("assistant")
 
     def clear_event(self, key: str) -> None:
         """Take a verdict back. The *reader* may do this; software may not."""
@@ -382,6 +418,13 @@ class Adjudication:
             "draft": self.draft,
             "draft_by": self.draft_by,
             "draft_at": self.draft_at,
+            "draft_evidence": list(self.draft_evidence),
+            "limits": self.limits,
+            "limits_by": self.limits_by,
+            "limits_at": self.limits_at,
+            "limits_evidence": list(self.limits_evidence),
+            "draft_basis": self.draft_basis,
+            "limits_basis": self.limits_basis,
             # Orphans are written back among the events they came from: under
             # their own original keys, so that re-running the settings they
             # were given under finds them again.
@@ -401,6 +444,13 @@ class Adjudication:
             draft=str(data.get("draft", "")),
             draft_by=str(data.get("draft_by", "")),
             draft_at=str(data.get("draft_at", "")),
+            draft_evidence=list(data.get("draft_evidence") or []),
+            limits=str(data.get("limits", "")),
+            limits_by=str(data.get("limits_by", "")),
+            limits_at=str(data.get("limits_at", "")),
+            limits_evidence=list(data.get("limits_evidence") or []),
+            draft_basis=str(data.get("draft_basis", "")),
+            limits_basis=str(data.get("limits_basis", "")),
             events={str(key): Judgement.from_json(value)
                     for key, value in (data.get("events") or {}).items()},
             channels={str(key): Judgement.from_json(value)
@@ -454,6 +504,23 @@ def save(request, read: Adjudication) -> Path:
     return path
 
 
+def _paragraph(text, by, evidence, basis, old_evidence, old_basis):
+    """(text, by, at, evidence, basis) for a paragraph being recorded."""
+    from onset_review.draftevidence import keep_unchanged
+
+    text = str(text or "").strip()
+    if not text:
+        return "", "", "", [], ""
+    basis = old_basis if basis is None else str(basis)
+    if evidence is not None:
+        kept = list(evidence)
+    elif basis == old_basis:
+        kept = keep_unchanged(old_evidence, text)
+    else:
+        kept = []
+    return text, str(by or ""), now(), kept, basis
+
+
 def reconcile(read: Adjudication, events,
               tolerance_s: float = MATCH_TOLERANCE_S) -> Adjudication:
     """Re-attach stored verdicts to the events of the current analysis.
@@ -499,8 +566,14 @@ def reconcile(read: Adjudication, events,
         taken.add(best)
         carried[best] = replace(judged, match="exact" if best_exact else "near")
 
+    # The paragraphs travel with the read: a re-analysis that dropped them
+    # would let the next save erase what the reader wrote or signed off.
     return Adjudication(
         window=read.window, reader=read.reader, note=read.note,
         events=carried, channels=dict(read.channels),
         orphaned={key: replace(read.events[key], match="orphan")
-                  for key in sorted(orphans)})
+                  for key in sorted(orphans)},
+        draft=read.draft, draft_by=read.draft_by, draft_at=read.draft_at,
+        draft_evidence=list(read.draft_evidence), draft_basis=read.draft_basis,
+        limits=read.limits, limits_by=read.limits_by, limits_at=read.limits_at,
+        limits_evidence=list(read.limits_evidence), limits_basis=read.limits_basis)

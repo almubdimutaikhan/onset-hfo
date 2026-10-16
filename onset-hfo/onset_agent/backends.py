@@ -482,7 +482,12 @@ class ScriptedBackend(Backend):
         observations = [m for m in messages if m["role"] == "tool"]
         q = (question or "").lower()
 
-        if not observations:
+        # A draft's briefing (the reader's verdicts, the quality checks) is
+        # context, not the answer: the paragraph still starts from the query
+        # the question's own words call for.
+        own = [m for m in observations
+               if not str(m.get("tool_call_id", "")).startswith("brief-")]
+        if not observations or (not own and q.startswith("draft")):
             return AssistantMessage(tool_calls=[self._first_call(q)])
         if len(observations) == 1 and re.search(r"evidence|window|show me|why", q):
             data = json.loads(observations[0]["content"])
@@ -592,6 +597,20 @@ def _render(payloads: list) -> str:
                 parts.append(f"{payload['section']}: " + "; ".join(items) + ".")
             else:
                 parts.append(f"{payload['section']}: {content}")
+        if "quality_checks" in payload and "analysed_s" in payload:
+            if payload["quality_checks"] == "on":
+                parts.append(f"The analysed span is {payload['analysed_s']} s; the quality "
+                             f"checks set aside {payload.get('n_set_aside')} of "
+                             f"{payload.get('channels_checked')} contacts and flagged "
+                             f"{payload.get('n_flagged')}.")
+            else:
+                parts.append(f"The analysed span is {payload['analysed_s']} s and the "
+                             "quality checks did not run.")
+        if "accepted_events" in payload and "judged" in payload:
+            parts.append(f"The reader has judged {payload['judged']} of "
+                         f"{payload['accepted_events']} accepted events: "
+                         f"{payload.get('agree')} agree, {payload.get('disagree')} disagree, "
+                         f"{payload.get('unsure')} unsure.")
         if payload.get("subject") and payload.get("sampling_rate_hz"):
             parts.append(f"Analysis of {payload['subject']} ({payload.get('source')}), "
                          f"{payload.get('duration_s')} s at {payload['sampling_rate_hz']} Hz, "
