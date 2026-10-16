@@ -53,7 +53,9 @@ Read in this order:
 3. [**METHODS.md**](METHODS.md) — every algorithm and every threshold, with
    the paper each came from and the reason for each deviation.
 4. [**EVALUATION.md**](EVALUATION.md) — what has been measured, on what, and
-   what the numbers do and do not support.
+   what the numbers do and do not support. [**EVENTML.md**](EVENTML.md) is
+   an experiment beside it: a learned second stage for HFO candidates,
+   subject-specific and leave-one-patient-out, against the shipped rules.
 5. [**OUTCOME.md**](OUTCOME.md) — the one test whose reference standard is
    not another algorithm: did the HFO map point at the tissue whose removal
    made the patient seizure-free? Includes the expert positive control that

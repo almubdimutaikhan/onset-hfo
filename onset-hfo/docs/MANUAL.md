@@ -503,6 +503,11 @@ Turn the mode off and they go; nothing in them is lost.
    the window does: the ranking step by step, rates with intervals, the
    detectors compared, quality, the spectrum, one event in detail, the
    Epileptogenicity Index, fetching from OpenNeuro, saving everything as CSV.
+   Its last group, **Learned detection (research)**, is for researchers: a
+   learned second stage on this recording's candidate events, training any
+   braindecode network on them, and scoring a recording with a saved network.
+   None of it changes the analysis on the clinical pages; see
+   [`EVENTML.md`](EVENTML.md).
 3. Run a cell with **Ctrl+Enter**. Plots appear in the Plots pane, and every
    command run goes in the report.
 

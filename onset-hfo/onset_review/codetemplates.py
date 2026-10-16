@@ -28,7 +28,7 @@ __all__ = ["Template", "templates", "find", "grouped", "GROUPS", "FOLDER"]
 FOLDER = Path(__file__).with_name("templates")
 #: The order groups are offered in: the order a reader meets the pages.
 GROUPS = ("Start here", "Detection and ranking", "Signal", "Events", "Seizure onset",
-          "Anatomy", "Results")
+          "Anatomy", "Results", "Learned detection (research)")
 _FIELDS = {"template": "title", "group": "group", "mirrors": "mirrors", "about": "about"}
 
 
