@@ -303,6 +303,10 @@ def test_a_reanalysis_replaces_the_window_rather_than_opening_a_second(qapp, rec
     monkeypatch.setattr(launcher, "load_with_progress",
                         lambda request, cache_dir=None, parent=None:
                         session_from_recording(recording, request))
+    # Windows other tests left open are not this test's business: count only
+    # the ones this re-analysis could have opened.
+    already = {id(w) for w in QApplication.topLevelWidgets()
+               if isinstance(w, PageWindow) and w.isVisible()}
     review = _Review(qapp, None, False, build_parser().parse_args([]))
     review._open_request(ReviewRequest(dataset="", subject="synthetic", t_start=0.0,
                                        t_stop=float(recording.duration),
@@ -319,7 +323,8 @@ def test_a_reanalysis_replaces_the_window_rather_than_opening_a_second(qapp, rec
         assert second is not first
         assert not first.isVisible(), "the window it replaced must close"
         open_windows = [w for w in QApplication.topLevelWidgets()
-                        if isinstance(w, PageWindow) and w.isVisible()]
+                        if isinstance(w, PageWindow) and w.isVisible()
+                        and id(w) not in already]
         assert open_windows == [second], "one window, not two"
         if not second.isMaximized():     # a maximised window has no place of its own
             assert second.pos() == first.pos(), "in the same place on the screen"

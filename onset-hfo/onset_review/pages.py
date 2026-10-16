@@ -1741,11 +1741,14 @@ class PageWindow(QMainWindow):
         return drafted
 
     def _drafted_evidence(self, text: str) -> list:
-        """Sentence by sentence, what the assistant's last answer rests on."""
-        from onset_review import draftevidence
+        """Sentence by sentence, what the assistant's last answer rests on,
+        with the claims the draft was held to."""
+        from onset_review import claims, draftevidence
 
         answer = getattr(self.panels.get("assistant"), "last_draft", None)
-        return draftevidence.annotate(text, answer) if answer is not None else []
+        if answer is None:
+            return []
+        return draftevidence.annotate(text, answer, claims.facts_from_session(self.session))
 
     def _basis(self) -> str:
         from onset_review import draftevidence
@@ -1755,7 +1758,8 @@ class PageWindow(QMainWindow):
     def take_draft(self, text: str, by: str) -> None:
         """A paragraph from the assistant: shown in the box, filed as its."""
         read = self.session.read
-        read.set_draft(text, by, self._drafted_evidence(text), self._basis())
+        read.set_draft(text, by, self._drafted_evidence(text), self._basis(),
+                       read.verdict_state())
         self._keep_read()
         self.findings_edit.blockSignals(True)
         self.findings_edit.setPlainText(read.draft)
@@ -1765,7 +1769,8 @@ class PageWindow(QMainWindow):
 
     def take_limits(self, text: str, by: str) -> None:
         read = self.session.read
-        read.set_limits(text, by, self._drafted_evidence(text), self._basis())
+        read.set_limits(text, by, self._drafted_evidence(text), self._basis(),
+                        read.verdict_state())
         self._keep_read()
         self.limits_edit.blockSignals(True)
         self.limits_edit.setPlainText(read.limits)
@@ -1806,10 +1811,13 @@ class PageWindow(QMainWindow):
 
         read = self.session.read
         basis = self._basis()
+        now = read.verdict_state()
         parts = []
-        for heading, text, evidence, written_for in (
-                ("Findings", read.draft, read.draft_evidence, read.draft_basis),
-                ("Limitations", read.limits, read.limits_evidence, read.limits_basis)):
+        for heading, text, evidence, written_for, then in (
+                ("Findings", read.draft, read.draft_evidence, read.draft_basis,
+                 read.draft_verdicts),
+                ("Limitations", read.limits, read.limits_evidence, read.limits_basis,
+                 read.limits_verdicts)):
             sentences = draftevidence.split_sentences(text)
             if not sentences:
                 continue
@@ -1819,6 +1827,12 @@ class PageWindow(QMainWindow):
                              "nothing here was checked against this one.</i></p>")
                 continue
             by_sentence = {str(e.get("sentence", "")): e for e in evidence or []}
+            stale = set(draftevidence.stale_on_verdicts(evidence, then, now))
+            if stale:
+                parts.append("<p><b>Your verdicts have changed since this was drafted"
+                             "</b> (then " + html.escape(draftevidence.describe_verdicts(then))
+                             + "; now " + html.escape(draftevidence.describe_verdicts(now))
+                             + "). The marked sentences quote them.</p>")
             items = []
             for sentence in sentences:
                 entry = by_sentence.get(sentence)
@@ -1833,6 +1847,9 @@ class PageWindow(QMainWindow):
                         for i in entry.get("evidence", [])]
                 bits += [html.escape(f"{n['value']} ← {n['source']}")
                          for n in entry.get("numbers", []) if n.get("source")]
+                bits += ["✓ " + html.escape(c) for c in entry.get("claims", [])]
+                if sentence in stale:
+                    bits.append("<b>verdicts changed since</b>")
                 items.append(f"<li>{short}<br>" + (" · ".join(bits) if bits else
                                                     "<i>no channel or number to trace</i>")
                              + "</li>")
@@ -1904,6 +1921,10 @@ class PageWindow(QMainWindow):
                                                 appendix=appendix))
         except Exception as error:      # noqa: BLE001 - a preview must not kill a page
             self.report_view.setPlainText(f"The report could not be rendered: {error}")
+        # Verdicts given on the Review page since the last visit can make a
+        # drafted sentence stale; the Evidence tab says so on arrival.
+        if getattr(self, "evidence_view", None) is not None:
+            self._show_evidence()
 
     def _assistant_page(self) -> QWidget:
         return self._on_card(self.panels["assistant"])

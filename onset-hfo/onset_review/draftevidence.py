@@ -27,7 +27,8 @@ from __future__ import annotations
 import re
 
 __all__ = ["split_sentences", "annotate", "keep_unchanged", "describe_evidence",
-           "markdown_lines", "analysis_basis", "DRAFT_QUESTION", "LIMITS_QUESTION"]
+           "markdown_lines", "analysis_basis", "DRAFT_QUESTION", "LIMITS_QUESTION",
+           "quotes_verdicts", "stale_on_verdicts", "describe_verdicts"]
 
 #: What the assistant is asked when the Report page asks for a draft. The
 #: briefing already carries the leaders, their evidence and the detectors'
@@ -71,14 +72,25 @@ def _channel(evidence_id: str) -> str:
     return parts[1].upper() if len(parts) >= 4 else ""
 
 
-def annotate(text: str, answer) -> list[dict]:
+def annotate(text: str, answer, facts=None) -> list[dict]:
     """One entry per sentence of `text`: the sentence, the evidence ids behind
-    the channels it names, and each checked number with its source.
+    the channels it names, each checked number with its source, and -- with
+    `facts` (`onset_review.claims.Facts`) -- each claim about the ranking, the
+    tied set, the quality checks or the reader's verdicts that was checked.
 
     `answer` is the :class:`onset_agent.agent.AgentAnswer` the text came from;
     only its ``evidence_ids``, ``retrieved`` and ``number_sources`` are read.
     """
     from onset_agent import guard
+
+    confirmed: dict[str, list[str]] = {}
+    if facts is not None:
+        from onset_review import claims
+
+        for sentence, description in claims.check(text, facts).confirmed:
+            confirmed.setdefault(sentence, [])
+            if description not in confirmed[sentence]:
+                confirmed[sentence].append(description)
 
     cited = [str(i) for i in (getattr(answer, "evidence_ids", None) or [])]
     retrieved = [str(i) for i in (getattr(answer, "retrieved", None) or [])]
@@ -101,8 +113,39 @@ def annotate(text: str, answer) -> list[dict]:
                      and abs(value) <= guard.MAX_FREE_INTEGER)
             labels = [] if small else guard.traced_to(round(value, 4), sources)
             numbers.append({"value": raw + _unit(unit), "source": "; ".join(labels)})
-        out.append({"sentence": sentence, "evidence": evidence, "numbers": numbers})
+        out.append({"sentence": sentence, "evidence": evidence, "numbers": numbers,
+                    "claims": confirmed.get(sentence, [])})
     return out
+
+
+#: A sentence about the reader's read, when no query says so: the verdict
+#: tool's numbers are the sure sign, these words the fallback.
+_ABOUT_THE_READ = re.compile(r"\breader\b|\bverdicts?\b|\bjudged\b", re.IGNORECASE)
+
+
+def quotes_verdicts(entry: dict) -> bool:
+    """Whether a drafted sentence rests on the reader's verdicts: a number
+    from `reader_verdicts`, a checked claim about them, or words about them."""
+    if any("reader_verdicts" in str(n.get("source", "")) for n in entry.get("numbers", [])):
+        return True
+    if any("reader" in str(c) for c in entry.get("claims", [])):
+        return True
+    return bool(_ABOUT_THE_READ.search(str(entry.get("sentence", ""))))
+
+
+def stale_on_verdicts(entries: list[dict], then: dict, now: dict) -> list[str]:
+    """The sentences that quote the reader's verdicts, when those have changed
+    since the paragraph was drafted; empty when they have not, or when no
+    snapshot was taken (a paragraph wholly the reader's)."""
+    if not then or not now or then.get("digest") == now.get("digest"):
+        return []
+    return [str(e.get("sentence", "")) for e in entries or [] if quotes_verdicts(e)]
+
+
+def describe_verdicts(state: dict) -> str:
+    """'12 judged (10 agree, 1 disagree, 1 unsure)'."""
+    return (f"{state.get('judged', 0)} judged ({state.get('agree', 0)} agree, "
+            f"{state.get('disagree', 0)} disagree, {state.get('unsure', 0)} unsure)")
 
 
 def _unit(unit: str) -> str:
@@ -131,12 +174,14 @@ def describe_evidence(evidence_id: str) -> str:
     return f"{parts[1]} at {start} ({parts[2]})"
 
 
-def markdown_lines(text: str, entries: list[dict]) -> list[str]:
+def markdown_lines(text: str, entries: list[dict], stale: list[str] = ()) -> list[str]:
     """The paragraph's sentences as a list, each with what it rests on.
 
-    A sentence with an entry lists its windows and its numbers' sources; one
-    without an entry (written or rewritten by the reader) says it was not
-    checked against the analysis. Nothing is listed for an empty text.
+    A sentence with an entry lists its windows, its numbers' sources and the
+    claims that were checked; one without an entry (written or rewritten by
+    the reader) says it was not checked against the analysis. A sentence in
+    `stale` quotes verdicts that have changed since. Nothing is listed for an
+    empty text.
     """
     sentences = split_sentences(text)
     if not sentences:
@@ -161,6 +206,10 @@ def markdown_lines(text: str, entries: list[dict]) -> list[str]:
             parts.append("numbers: " + "; ".join(traced))
         if counts:
             parts.append("small counts, not looked up: " + ", ".join(counts))
+        if entry.get("claims"):
+            parts.append("checked: " + "; ".join(entry["claims"]))
+        if sentence in set(stale):
+            parts.append("**the reader's verdicts have changed since this was drafted**")
         lines.append(f"{number}. “{short}” — " + (" · ".join(parts) if parts
                                                    else "no channel or number to trace."))
     return lines + [""]

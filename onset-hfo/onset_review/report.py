@@ -313,7 +313,8 @@ def _findings_section(session: ReviewSession) -> list[str]:
         return []
     return _paragraph_section(session, "Findings", read.draft, read.draft_by,
                               read.draft_at, read.draft_evidence,
-                              read.draft_basis, read.draft_is_assistants)
+                              read.draft_basis, read.draft_is_assistants,
+                              read.draft_verdicts)
 
 
 def _limits_section(session: ReviewSession) -> list[str]:
@@ -323,11 +324,12 @@ def _limits_section(session: ReviewSession) -> list[str]:
         return []
     return _paragraph_section(session, "Limitations", read.limits, read.limits_by,
                               read.limits_at, read.limits_evidence,
-                              read.limits_basis, read.limits_is_assistants)
+                              read.limits_basis, read.limits_is_assistants,
+                              read.limits_verdicts)
 
 
 def _paragraph_section(session, heading, text, by, at, evidence, basis,
-                       assistants) -> list[str]:
+                       assistants, verdicts=None) -> list[str]:
     from onset_review import draftevidence
 
     when = f" on {at[:10]}" if at else ""
@@ -341,15 +343,29 @@ def _paragraph_section(session, heading, text, by, at, evidence, basis,
                f"numbers are not this analysis's and were not checked against "
                f"it; draft or write it again before relying on it._")
         return [f"## {heading}", "", text.strip(), "", who, ""]
+    claimed = any(e.get("claims") for e in evidence or [])
     if assistants:
         who = (f"_Drafted by the {by}{when} from the analysis above. Every "
-               "number in it was checked against a query over this analysis; the "
-               "wording is the model's and has not been edited by the reader._")
+               "number in it was checked against a query over this analysis"
+               + ("; its statements about the busiest channel, the tied set, the "
+                  "quality checks and the reader's verdicts were checked against "
+                  "the analysis too" if claimed else "")
+               + "; the wording is the model's and has not been edited by the reader._")
     else:
         who = f"_Written by {by or 'the reader'}{when}._"
     out = [f"## {heading}", "", text.strip(), "", who, ""]
+    # A sentence quoting the reader's verdicts is true of the verdicts it saw;
+    # the reader may have judged more since.
+    now = session.read.verdict_state() if getattr(session, "read", None) else {}
+    stale = draftevidence.stale_on_verdicts(evidence, verdicts or {}, now)
+    if stale:
+        out += [f"_The reader's verdicts have changed since this was drafted (then "
+                f"{draftevidence.describe_verdicts(verdicts)}; now "
+                f"{draftevidence.describe_verdicts(now)}). "
+                f"{len(stale)} sentence{'s' if len(stale) != 1 else ''} quoting them "
+                f"may be out of date: draft it again, or edit it._", ""]
     if evidence:
-        out += draftevidence.markdown_lines(text, evidence)
+        out += draftevidence.markdown_lines(text, evidence, stale)
     return out
 
 

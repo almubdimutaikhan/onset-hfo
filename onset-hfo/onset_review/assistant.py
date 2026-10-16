@@ -174,7 +174,7 @@ class _AskWorker(QThread):
 
     def __init__(self, store, question: str, kind: str, model: str,
                  base_url: str, parent=None, extra_tools=None, history=None,
-                 extra_briefing=None):
+                 extra_briefing=None, claim_check=None):
         super().__init__(parent)
         self._store = store
         self._question = question
@@ -182,6 +182,7 @@ class _AskWorker(QThread):
         self._extra_tools = dict(extra_tools or {})
         self._history = list(history or [])
         self._extra_briefing = list(extra_briefing or [])
+        self._claim_check = claim_check
         self._backend = None
         self._stop = False
         self.answer = None
@@ -211,7 +212,7 @@ class _AskWorker(QThread):
                                      extra_tools=self._extra_tools).ask(
                 self._question, should_stop=lambda: self._stop,
                 on_event=self.progress.emit, history=self._history,
-                extra_briefing=self._extra_briefing)
+                extra_briefing=self._extra_briefing, claim_check=self._claim_check)
         except Exception as error:
             self.error = f"{type(error).__name__}: {error}"
 
@@ -606,7 +607,8 @@ class AssistantPanel(QWidget):
                                   self.base_url.text().strip(),
                                   extra_tools=self.extra_tools(),
                                   history=list(self._history),
-                                  extra_briefing=self.extra_briefing(text))
+                                  extra_briefing=self.extra_briefing(text),
+                                  claim_check=self._claim_check() if self._drafting else None)
         self._worker.progress.connect(self._progress)
         self._set_busy(True)
         import logging
@@ -637,6 +639,16 @@ class AssistantPanel(QWidget):
         if answer is not None and not answer.refused and answer.verified:
             self._history.append((text, str(answer.text)))
             self._history = self._history[-6:]
+
+    def _claim_check(self):
+        """For a drafted paragraph: what it says about the busiest channel, the
+        tied set, the quality checks and the reader's verdicts, checked against
+        this window (`onset_review.claims`). Only drafts are held to it: a
+        paragraph goes into a report, and its patterns were written for one."""
+        from onset_review import claims
+
+        facts = claims.facts_from_session(self._session)
+        return lambda text: claims.check(text, facts).problems
 
     # -- what the window adds to the tool set --------------------------------
     def extra_tools(self) -> dict:

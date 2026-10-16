@@ -3176,6 +3176,20 @@ def test_the_report_page_drafts_the_limitations_and_shows_what_each_sentence_res
         page._evidence_clicked(QUrl("evidence:" + quote(evidence_id, safe="")))
         assert picked == [(channel, 1.25)]
 
+        # The draft quotes the reader's verdicts; judging one more makes that
+        # sentence stale, and the Evidence tab says so when the page comes back.
+        assert read.limits_verdicts == read.verdict_state()
+        accepted = [e for e in review.events if e.accepted and e.detector == "rms"]
+        key = adjudication.event_key(accepted[0].channel, accepted[0].start, "rms")
+        saved = dict(read.events)
+        read.judge_event(key, "agree", "Dr A")
+        page.refresh_report()
+        assert "Your verdicts have changed since this was drafted" in \
+            page.evidence_view.toPlainText()
+        assert "verdicts have changed since this was drafted" in page.report_view.toPlainText()
+        read.events.clear()
+        read.events.update(saved)
+
         # The reader edits the limits box: theirs, and their sentence unchecked.
         page.limits_edit.setPlainText(read.limits + " I would read a longer span.")
         assert not read.limits_is_assistants
@@ -3184,7 +3198,7 @@ def test_the_report_page_drafts_the_limitations_and_shows_what_each_sentence_res
         restored = adjudication.Adjudication.from_json(before)
         for name in ("draft", "draft_by", "draft_at", "draft_evidence", "draft_basis",
                      "limits", "limits_by", "limits_at", "limits_evidence",
-                     "limits_basis"):
+                     "limits_basis", "draft_verdicts", "limits_verdicts"):
             setattr(read, name, getattr(restored, name))
 
 

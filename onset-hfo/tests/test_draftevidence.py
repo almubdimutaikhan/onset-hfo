@@ -126,7 +126,8 @@ def test_both_paragraphs_survive_a_save_and_a_reanalysis(review):
     read.set_limits("The window is short.", "Dr A", [], "b")
     again = adjudication.Adjudication.from_json(read.to_json())
     for name in ("draft", "draft_by", "draft_at", "draft_evidence", "draft_basis",
-                 "limits", "limits_by", "limits_at", "limits_evidence", "limits_basis"):
+                 "limits", "limits_by", "limits_at", "limits_evidence", "limits_basis",
+                 "draft_verdicts", "limits_verdicts"):
         assert getattr(again, name) == getattr(read, name), name
     assert again.limits_is_assistants is False
     # `reconcile` runs on every re-analysis; it used to drop the paragraph, and
@@ -156,7 +157,8 @@ def blank_paragraphs(review):
     yield read
     restored = adjudication.Adjudication.from_json(before)
     for name in ("draft", "draft_by", "draft_at", "draft_evidence", "draft_basis",
-                 "limits", "limits_by", "limits_at", "limits_evidence", "limits_basis"):
+                 "limits", "limits_by", "limits_at", "limits_evidence", "limits_basis",
+                 "draft_verdicts", "limits_verdicts"):
         setattr(read, name, getattr(restored, name))
 
 
@@ -285,3 +287,161 @@ def test_the_readers_verdicts_and_the_quality_checks_are_tools_whose_numbers_pas
     entries = draftevidence.annotate(answer.text, answer)
     traced = [n for e in entries for n in e["numbers"] if n["source"]]
     assert any("reader_verdicts()" in n["source"] for n in traced) or len(accepted) <= 20
+
+
+# -- what a draft claims, checked against the analysis -------------------------
+
+FACTS = dict(leader="AR1-AR2", distinguishable=True, tied=["AR1-AR2", "AR2-AR3"],
+             set_aside=2, flagged=0, judged=3, disagree=1, unsure=0, accepted=75)
+
+
+@pytest.mark.parametrize("sentence, holds", [
+    ("AR1-AR2 led at 52 events/min.", True),
+    ("AR2-AR3 led at 52 events/min.", False),           # right number, wrong channel
+    ("Compared with AR3-AR4, AR1-AR2 led.", True),      # an object is not a subject
+    ("AR1-AR2 and AR2-AR3 led.", True),                 # a shared lead is the tied set
+    ("AR1-AR2 and AR3-AR4 led.", False),
+    ("The busiest channel is AR2-AR3.", False),
+    ("The busiest channel, AR1-AR2, carried 52 events.", True),
+    ("AR1-AR2 stands out.", True),
+    ("No channel stands out.", False),
+    ("AR2-AR3 cannot be told apart from AR1-AR2.", True),   # "can't" is not a negation here
+    ("AR2-AR3 can't be told apart from AR1-AR2.", True),
+    ("AR3-AR4 is tied with AR1-AR2.", False),
+    ("AR3-AR4 is not tied with the busiest channel.", True),
+    ("AR2-AR3 is not tied with it.", False),
+    ("AR1-AR2 is tied with one other channel.", True),
+    ("AR1-AR2 is tied with two other channels.", False),
+    ("No other channel is tied with AR1-AR2.", False),
+    ("No contacts were set aside.", False),
+    ("No contacts were flagged.", True),
+    ("The reader has not judged any events.", False),
+    ("The reader agreed with all judged events.", False),
+    ("The reader judged every event.", False),
+    # Not a recognised claim: left to the number and citation checks.
+    ("Highest rates (rms): AR1-AR2 54.0/min; AR2-AR3 36.0/min.", True),
+])
+def test_a_drafts_claims_are_held_to_the_analysis(sentence, holds):
+    from onset_review import claims
+
+    result = claims.check(sentence, claims.Facts(**FACTS))
+    assert result.ok is holds, result.problems
+    if not holds:
+        assert result.problems[0].startswith(f'"{sentence}"')
+
+
+def test_the_same_claims_hold_or_fail_the_other_way_round():
+    from onset_review import claims
+
+    alone = claims.Facts(leader="AR1-AR2", distinguishable=False, tied=["AR1-AR2"],
+                         set_aside=0, flagged=1, judged=0, accepted=75)
+    assert claims.check("No channel stands out.", alone).ok
+    assert not claims.check("AR1-AR2 stands out.", alone).ok
+    assert claims.check("No other channel is tied with AR1-AR2.", alone).ok
+    assert claims.check("No contacts were set aside.", alone).ok
+    assert not claims.check("No contacts were flagged.", alone).ok
+    assert claims.check("The reader has not judged any events.", alone).ok
+    nothing = claims.Facts()
+    assert not claims.check("AR1-AR2 led.", nothing).ok, "nothing was detected"
+
+
+def test_the_facts_come_from_the_session_on_screen(review):
+    from onset_review import claims
+
+    facts = claims.facts_from_session(review)
+    assert facts.leader == str(review.leader["leader"]).upper()
+    assert facts.tied == [str(c).upper() for c in review.candidates]
+    assert facts.set_aside == int((~review.quality["good"]).sum())
+    assert facts.accepted == sum(1 for e in review.events
+                                 if e.accepted and e.detector == review.request.primary)
+    leader = facts.leader
+    assert claims.check(f"{leader} led.", facts).ok
+
+
+def test_a_draft_that_claims_the_wrong_leader_is_sent_back_and_then_refused(store):
+    calls = []
+
+    def wrong(text):
+        calls.append(text)
+        return ['"..." says XX1-XX2 led; the ranking puts SA2-SA3 first']
+
+    answer = OnsetAgent(store).ask("Which channels have the highest rates?",
+                                   claim_check=wrong)
+    assert answer.refused and not answer.verified
+    assert len(calls) == 2, "checked, sent back once, checked again"
+    problems = [e for e in answer.trace if e.get("type") == "answer"]
+    assert "the ranking puts SA2-SA3 first" in problems[0]["problems"][0]
+    fine = OnsetAgent(store).ask("Which channels have the highest rates?",
+                                 claim_check=lambda text: [])
+    assert fine.verified and not fine.refused
+
+
+def test_annotate_lists_the_claims_each_sentence_was_held_to():
+    from onset_review import claims
+
+    entries = draftevidence.annotate("AR1-AR2 led. It is tied with one other channel.",
+                                     _answer(), claims.Facts(**FACTS))
+    assert entries[0]["claims"] == ["AR1-AR2 is the busiest channel"]
+    assert entries[1]["claims"] == ["tied with 1 other channel(s)"]
+    lines = draftevidence.markdown_lines("AR1-AR2 led.", entries[:1])
+    assert "checked: AR1-AR2 is the busiest channel" in lines[2]
+
+
+# -- a draft quoting the reader's verdicts goes stale when they change ---------
+
+def _judge(read, review, n, verdict="agree"):
+    accepted = [e for e in review.events if e.accepted and e.detector == "rms"]
+    for event in accepted[:n]:
+        read.judge_event(adjudication.event_key(event.channel, event.start, event.detector),
+                         verdict, "Dr A")
+
+
+def test_the_verdict_state_changes_with_any_verdict_not_only_with_the_counts(review):
+    read = adjudication.Adjudication(window="w")
+    _judge(read, review, 2)
+    before = read.verdict_state()
+    assert (before["judged"], before["agree"]) == (2, 2)
+    accepted = [e for e in review.events if e.accepted and e.detector == "rms"]
+    # Same counts, a different event judged: still a different read.
+    read.clear_event(adjudication.event_key(accepted[0].channel, accepted[0].start, "rms"))
+    _judge(read, review, 3)
+    read.clear_event(adjudication.event_key(accepted[1].channel, accepted[1].start, "rms"))
+    after = read.verdict_state()
+    assert (after["judged"], after["agree"]) == (2, 2)
+    assert after["digest"] != before["digest"]
+
+
+def test_a_sentence_quoting_the_verdicts_is_marked_once_the_reader_judges_more(
+        review, blank_paragraphs):
+    read, basis = blank_paragraphs, draftevidence.analysis_basis(review.request)
+    saved = dict(read.events)
+    try:
+        read.events.clear()
+        _judge(read, review, 2)
+        entries = [
+            {"sentence": "SA2-SA3 led.", "evidence": [], "numbers": [], "claims": []},
+            {"sentence": "The reader agreed with 2 of 2 judged events.", "evidence": [],
+             "numbers": [{"value": "2", "source": ""}], "claims": []}]
+        read.set_draft("SA2-SA3 led. The reader agreed with 2 of 2 judged events.",
+                       "assistant (scripted)", entries, basis, read.verdict_state())
+        text = report.review_markdown(review, appendix=False)
+        assert "verdicts have changed" not in text
+        _judge(read, review, 5, "disagree")
+        text = report.review_markdown(review, appendix=False)
+        section = text[text.index("## Findings"):text.index("## Per-channel findings")]
+        assert "The reader's verdicts have changed since this was drafted (then 2 judged" \
+            in section
+        assert "1 sentence quoting them may be out of date" in section
+        assert "“SA2-SA3 led.” — no channel" in section, "that one does not quote them"
+        assert section.count("verdicts have changed since this was drafted**") == 1
+        # The reader rewrites the verdict sentence: no assistant sentence quotes
+        # them any more, so nothing is stale.
+        read.set_draft("SA2-SA3 led. I have judged more since.", "Dr A", basis=basis)
+        assert read.draft_verdicts, "kept while an assistant sentence survives"
+        text = report.review_markdown(review, appendix=False)
+        assert "verdicts have changed" not in text
+        read.set_draft("My own paragraph.", "Dr A", basis=basis)
+        assert read.draft_verdicts == {}
+    finally:
+        read.events.clear()
+        read.events.update(saved)
