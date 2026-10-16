@@ -420,8 +420,13 @@ def evaluate(candidates: pd.DataFrame, reference: pd.DataFrame,
         experts_b = experts_all[experts_all["band"] == band]
         rules_b = rules_all[rules_all["band"] == band]
         subjects = sorted(cands["subject"].unique())
+        if verbose:
+            print(f"[eventml] {band}: leave one patient out over {len(subjects)} patients",
+                  flush=True)
         lopo = _lopo_predictions(cands, experts_b, subjects)
         for subject in subjects:
+            if verbose:
+                print(f"[eventml] {band}: {subject}, subject-specific", flush=True)
             mine = cands[cands["subject"] == subject]
             ex = experts_b[experts_b["subject"] == subject]
             if not len(ex):
