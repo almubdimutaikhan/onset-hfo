@@ -610,13 +610,20 @@ class OutcomeResult:
         control = ""
         if len(expert):
             if expert.iloc[0]["p_permutation"] >= 0.05:
+                n_patients = (int(expert.iloc[0]["n_seizure_free"])
+                              + int(expert.iloc[0]["n_recurrence"]))
                 control = ("The expert markings do not separate the groups either, so this "
-                           "is a statement about a 60-second window and 20 patients, not "
-                           "about the detector.")
+                           f"is a statement about a {self._window_phrase()} window and "
+                           f"{n_patients} patients, not about the detector.")
             else:
                 control = ("The expert markings do separate the groups on the same channels, "
                            "so any failure of the detector arm is the detector's.")
         return " ".join(lines + [floor, control]).strip()
+
+    def _window_phrase(self) -> str:
+        """The analysed window as the verdict names it: "300-second"."""
+        length = float(self.window_s[1]) - float(self.window_s[0])
+        return f"{length:g}-second"
 
     def save(self, directory: str | Path | None = None) -> Path:
         out = Path(directory or RESULTS_DIR) / f"outcome_{self.dataset}"

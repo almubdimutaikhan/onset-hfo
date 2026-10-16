@@ -2305,8 +2305,8 @@ def test_the_caveat_and_the_reader_are_on_the_page_window(paged, review):
     window._set_reader_status(paged.host, review)
 
 
-def test_the_disclaimer_is_the_sites_word_for_word():
-    from app import panels as site
+def test_the_disclaimer_is_assembled_from_its_canonical_parts():
+    from onset_review import studytables as site
     from onset_review.pages import DISCLAIMER
 
     assert DISCLAIMER == " ".join(

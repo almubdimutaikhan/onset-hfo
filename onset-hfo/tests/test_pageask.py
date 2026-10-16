@@ -56,7 +56,7 @@ def test_every_study_page_has_a_key_message_from_its_tables(key):
 
 
 def test_the_key_numbers_are_the_tables_numbers():
-    from app import panels
+    from onset_review import studytables as panels
 
     best = panels.operating_points("rank_rho")
     rho = float(best[best["band"] == "ripple"]["rank_rho"].max())

@@ -1,20 +1,18 @@
-"""The results site's study pages, as Markdown built from the committed tables.
+"""The study pages, as Markdown built from the committed tables.
 
-The Streamlit site (``app/``) has six pages that report the cohort studies:
-Detectors, Outcome, Patients, Data, Architecture, Research. They are the
-public record of what this project measured, and the desktop window shows
-the same pages so that a reviewer never has to leave it to find out how much
-a number can be trusted.
+The Library pages report the cohort studies -- Detectors, Outcome, Patients,
+Ictal onset, Template map, Data, Architecture, Research -- so that a reviewer
+never has to leave the window to find out how much a number can be trusted.
 
 Each builder here returns one Markdown document. The numbers come from the
-same committed tables the site reads, through the same loaders
-(``app.panels``), so a corrected extract corrects both. The prose is the
-site's, carried over; where the site derives a sentence from a table, so does
-this. No Qt in this module: the text is testable without a display, and the
-page widget in :mod:`onset_review.studypages` only renders it.
+committed tables through the loaders in :mod:`onset_review.studytables`; where
+a sentence depends on a table, it is derived from it. No Qt in this module:
+the text is testable without a display, and the page widget in
+:mod:`onset_review.studypages` only renders it.
 
-The site and its tables are part of the repository, not of the wheel. On an
-install that lacks them the builders say so, and the pages point at the site.
+The tables are part of the repository and of the release bundle, not of the
+wheel. On an install that lacks them the builders say so, and the pages point
+at the project's site.
 """
 
 from __future__ import annotations
@@ -53,13 +51,17 @@ SITE = "https://berdakh.github.io/onset-hfo/"
 
 # -- the data layer --------------------------------------------------------
 
-#: Where an installed release bundle keeps the site's loaders and tables
+#: Where an installed release bundle keeps the committed tables
 #: (``install.sh`` copies the bundle's ``site/`` here).
 INSTALLED_SITE = Path.home() / ".local" / "share" / "onset-review" / "site"
 
 
+def _has_tables(root: Path) -> bool:
+    return any((root / "data" / table).is_dir() for table in ("outcome", "benchmark"))
+
+
 def site_root() -> Path | None:
-    """The directory holding ``app/panels.py`` and ``data/``, or None.
+    """The directory whose ``data/`` holds the committed tables, or None.
 
     Three places, in order: ``ONSET_REVIEW_SITE_DIR``; the checkout this
     package was imported from; the installed bundle's ``site/``.
@@ -71,7 +73,7 @@ def site_root() -> Path | None:
     named = os.environ.get("ONSET_REVIEW_SITE_DIR")
     candidates = ([Path(named).expanduser()] if named else []) + [PROJECT_ROOT, INSTALLED_SITE]
     for root in candidates:
-        if (root / "app" / "panels.py").exists():
+        if _has_tables(root):
             return root
     return None
 
@@ -80,13 +82,12 @@ _loaded: dict = {}
 
 
 def _panels():
-    """The site's loaders, or None where the site is not on this machine.
+    """The table loaders, or None where the tables are not on this machine.
 
-    ``app/panels.py`` is loaded from its file rather than imported as
-    ``app.panels``: the site's package ``__init__`` imports Streamlit, which
-    the desktop does not ship, and the loaders themselves need only pandas
-    and this project. The data root is pointed at the same place first, so
-    a bundle's tables are found beside a bundle's loaders.
+    :mod:`onset_review.studytables` reads its data root once, at import, so it
+    is loaded afresh from its file for each root: the data root is pointed at
+    the tables first, and a bundle's tables are then found wherever the
+    bundle was installed.
     """
     root = site_root()
     if root is None:
@@ -105,8 +106,8 @@ def _panels():
         # site must not redirect it.
         os.environ.pop("ONSET_HFO_DATA_ROOT", None)
     try:
-        spec = importlib.util.spec_from_file_location("onset_site_panels",
-                                                      root / "app" / "panels.py")
+        spec = importlib.util.spec_from_file_location(
+            "onset_site_panels", Path(__file__).with_name("studytables.py"))
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     except Exception:       # noqa: BLE001 - absent, broken: both mean "not here"
@@ -131,11 +132,10 @@ def _image(name: str) -> Path | None:
 
 def _missing(name: str) -> str:
     return (f"# {name}\n\n> **The study tables are not on this machine.** These "
-            f"pages read the committed extracts under `data/` through the site's "
-            f"own loaders (`app/panels.py`), which ship with a checkout of the "
-            f"repository and with the release bundle's `site/` (installed by "
-            f"`install.sh`), not with the bare wheel. The same page is on the "
-            f"results site: {SITE}\n")
+            f"pages read the committed extracts under `data/`, which ship with "
+            f"a checkout of the repository and with the release bundle's `site/` "
+            f"(installed by `install.sh`), not with the bare wheel. The results "
+            f"are summarised on the project's site: {SITE}\n")
 
 
 # -- Markdown helpers ----------------------------------------------------------
@@ -1314,7 +1314,7 @@ here it structurally cannot.
 
 1. **Every score carries the window it looked at.** An event's evidence id is
    `subject|channel|detector|start`, and it resolves or the answer is discarded.
-2. **The agent cannot compute.** Eight read-only tools over one saved analysis.
+2. **The agent cannot compute.** Nine read-only tools over one saved analysis.
    No tool runs a detector, writes a file, or takes another patient's id.
 3. **Scope refusals happen before the model runs.** Treatment and diagnosis
    questions never reach a model that could be persuaded.

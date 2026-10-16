@@ -148,7 +148,7 @@ re-measurement is not reviewable.
 
 ## Notebooks
 
-The four notebooks are generated:
+The eight notebooks are generated:
 
 ```bash
 python scripts/build_notebooks.py     # writes notebooks/*.ipynb without outputs
@@ -170,30 +170,20 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/*.ipynb
 * Prefer a boring, readable implementation to a clever one: this codebase's
   main job is to be argued with.
 
-## Four things that must stay in step with `berdakh/onset`
+## What must stay in step with `berdakh/onset`
 
 There are two repositories under one project name: this one, and the
 [teaching prototype](https://github.com/berdakh/onset) on a synthetic cohort.
-[`DUPLICATION.md`](DUPLICATION.md) measures what is actually shared and says
-what must **not** be merged. Four things must match across them. **Anything not
-on this list is allowed to differ.**
-
-1. The **standing disclaimer**'s structure and its no-recommendation sentence.
-   The canonical copy is `app/common.py`'s `DISCLAIMER_LEAD` /
-   `DATA_SENTENCE` / `DISCLAIMER_TAIL`; only `DATA_SENTENCE` differs between
-   the two apps, because only one of them runs on real recordings.
-2. The **shared page names**: `Home`, `Report`, `Assistant`, `Data`,
-   `Architecture`, `Research`.
-3. The **sidebar link row** — same destinations, same names, same order:
-   Clinical guide · Implementation walkthrough · Results & docs · Onset
-   project. The entries after those four differ by design.
-4. `.streamlit/config.toml`, which carries a `TWIN FILE` header saying so.
-
-No mechanism can enforce this across two repositories, and a submodule or a
-published package would cost more than four items are worth. The honest
-control is that the list is short, written down in both places, and each item
-carries a comment naming its twin. **If you change one of the four, change it
-in the other repository in the same sitting.**
+[`DUPLICATION.md`](DUPLICATION.md) records what was shared while both had a
+Streamlit site. This repository retired its Streamlit site in October 2026, so
+the page names, the sidebar link row and the shared theme file no longer apply
+here. One thing still must match: the **standing disclaimer**'s structure and
+its no-recommendation sentence. The canonical copy is
+`onset_review/studytables.py`'s `DISCLAIMER_LEAD` / `DATA_SENTENCE` /
+`DISCLAIMER_TAIL` (the desktop banner is assembled from them); only
+`DATA_SENTENCE` differs in the prototype, because only this project runs on
+real recordings. **If you change it, change the prototype's copy in the same
+sitting.**
 
 ## Review checklist
 

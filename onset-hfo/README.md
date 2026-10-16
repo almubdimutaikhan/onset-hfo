@@ -29,12 +29,10 @@ the schema**.
 
 ## Start here
 
-**[Open the live app](https://onsetnu.streamlit.app/)** — ten pages over real recordings, no install.
+**Install the desktop application** — the signal itself, with the marks on it.
 A channel's rate leads to the events behind it, an event leads to the signal it
 was measured on, and the assistant's every citation opens to both. Ask it which
 channels to resect and watch it refuse.
-
-**Or install the desktop reviewer** — the signal itself, with the marks on it:
 
 ```bash
 ./packaging/install-ubuntu.sh --with-sample && onset-review
@@ -113,7 +111,11 @@ result and what it does and does not support. One file, opens in a browser.
 
 Otherwise, run something:
 
-## Five notebooks, no setup
+## Eight notebooks, runnable in Colab
+
+Each notebook is the scriptable route to something the desktop application
+does; the badge opens it in Google Colab, where the first cell installs the
+package.
 
 | | Notebook | What it does | Needs |
 |---|---|---|---|
@@ -121,7 +123,10 @@ Otherwise, run something:
 | 2 | [**Agentic analysis**](notebooks/02_agentic_analysis.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/02_agentic_analysis.ipynb) | An open-weight model answering questions about those results, with citations, refusals and guards | nothing (a model is optional) |
 | 3 | [**Validation and benchmark**](notebooks/03_validation_and_benchmark.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/03_validation_and_benchmark.ipynb) | Precision/recall against known truth, threshold curves, what each check buys | nothing |
 | 4 | [**Orchestration and localization**](notebooks/04_orchestration_and_localization.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/04_orchestration_and_localization.ipynb) | The agent choosing what to measure, a learned per-contact model, conformal sets, and trying to break all of it | nothing |
-| 5 | [**Surgical outcome study**](notebooks/05_surgical_outcome_study.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/05_surgical_outcome_study.ipynb) | Did the HFO map point at the tissue whose removal cured the patient? Reproduces a published finding, then shows our detector missing it | ~480 MB download |
+| 5 | [**Surgical outcome study**](notebooks/05_surgical_outcome_study.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/05_surgical_outcome_study.ipynb) | Did the HFO map point at the tissue whose removal cured the patient? The study on whole runs, against the published markings | ~2.5 GB download |
+| 6 | [**Agent benchmark**](notebooks/06_agent_benchmark.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/06_agent_benchmark.ipynb) | Tool-use competence of an open-weight model, by size and quantization | GPU runtime |
+| 7 | [**Annotation**](notebooks/07_annotation.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/07_annotation.ipynb) | Blinded, stratified marking of detector windows by two readers, and their agreement | one 60 s slice |
+| 8 | [**Assistant evaluation**](notebooks/08_assistant_evaluation.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/08_assistant_evaluation.ipynb) | The 111-question evaluation of the assistant under Qwen2.5 | GPU runtime, Ollama |
 
 ## Or, locally, in two minutes
 
@@ -171,11 +176,8 @@ python -m onset_hfo.cli benchmark
 # 9. test the HFO map against what happened to the patients after surgery
 python -m onset_hfo.cli outcome
 
-# 10. read a saved analysis on a page, with the signal behind every number
-#     (or just open https://onsetnu.streamlit.app/)
-pip install -e ".[app]" && streamlit run app/Home.py
-
-# 11. sit with the signal itself: the desktop reviewer, installed on Ubuntu
+# 10. sit with the signal itself: the desktop application, installed on Ubuntu
+#     (its Library pages read the committed study tables)
 ./packaging/install-ubuntu.sh --with-sample
 onset-review                                  # or the applications menu
 onset-review --subject sub-01 --window 0 60 --expert    # straight in
@@ -242,7 +244,7 @@ removed?*
 
 | source | seizure-free (n=13) | recurrence (n=7) | AUC (95% CI) | p |
 |---|---|---|---|---|
-| expert markings | 11/13 | 3/7 | 0.71 (0.50–0.92) | 0.12 |
+| expert markings | 11/13 | 3/7 | 0.71 (0.49–0.92) | 0.12 |
 | our RMS detector | 10/13 | 3/7 | 0.67 (0.45–0.89) | 0.17 |
 
 The direction is the one [Fedele et al. 2017](https://www.nature.com/articles/s41598-017-13064-1)
@@ -361,8 +363,6 @@ chance — see [`docs/EVALUATION.md`](docs/EVALUATION.md).
 | [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) | what this must not be used for |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | the clinical and signal-processing vocabulary, defined |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | what to build next, in order, with the reasoning |
-| [**the live app**](https://onsetnu.streamlit.app/) | the interface itself, deployed — ten pages over real recordings |
-| [`app/README.md`](app/README.md) | the reading interface: what it shows, the one rule it is built on, and how to deploy it |
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | how to add a detector, a dataset or a tool without breaking the contracts |
 
 ## Layout
@@ -418,14 +418,6 @@ onset_agent/          the agent
   verifier.py         deterministic + language-model verifiers, and their delta
   scoring.py          ranking vs clinician SOZ labels, with a permutation null
   orchestrate.py      python -m onset_agent.orchestrate ...
-
-app/                  the reading interface (Streamlit), ten pages
-  Home.py             the landing page
-  common.py           banner, analysis picker, committed-study loader
-  panels.py           everything the page decides; imports no Streamlit, so it is tested
-  signal.py           the one place the interface touches the recording again
-  pages/              Recording · Report · Assistant · Detectors · Outcome
-                      Patients · Data · Architecture · Research
 
 onset_review/         the desktop reviewer (Qt), installable on Ubuntu
   session.py          a loaded window: the recording, the detections, the findings

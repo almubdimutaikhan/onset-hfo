@@ -3,7 +3,7 @@
 *Open as notebook* on a study page writes one of these and opens it on the
 Analysis page, where every cell runs in the console beside the recording
 that is open. The notebook reads the same committed tables through the same
-loaders the page reads (``app/panels.py`` via `onset_review.studies`) and
+loaders the page reads (`onset_review.studytables` via `onset_review.studies`) and
 draws the same figures with the same functions (`onset_review.studycharts`),
 so what it shows is the page, taken apart -- a starting point for a reader's
 own question about the study, not a second version of it.

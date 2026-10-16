@@ -109,25 +109,21 @@ again.
 
 ## The interface
 
-`app/` is a nine-page Streamlit app over real results:
-`streamlit run app/Home.py`, after `pip install -e ".[app]"`.
+The interface is the desktop application (`onset_review/`, `onset-review`).
+Every number this project produces carries its signal window; in the window a
+rate leads to the events behind it, an event leads to the signal it was
+measured on, and an assistant answer's citations expand to both.
 
-It mirrors the page order of the Onset prototype (`berdakh/onset`) so the two can be read side by side and eventually merged, with real recordings underneath instead of a synthetic cohort. It exists because every number this project produces already carried its
-signal window — but only inside a JSON file, which makes "evidence-based" a
-claim rather than something a reader can check. On the page a rate leads to
-the events behind it, an event leads to the signal it was measured on, and an
-agent answer's citations expand to both.
+The study pages (Library) are built by `onset_review/studies.py` from the
+committed tables, through the loaders in `onset_review/studytables.py`. That
+module imports no interface toolkit and is tested offline
+(`tests/test_studytables.py`); its docstring states the one rule the pages are
+built on — the interface shows what the pipeline wrote and computes nothing of
+its own — and its single documented exception.
 
-Everything the page decides lives in `app/panels.py`, which imports no
-Streamlit and is therefore tested offline (`tests/test_app.py`). The page
-itself was checked by driving Chromium against a running server — loading it,
-opening each tab, rendering an event figure, asking the agent a scoped
-question and an out-of-scope one, and expanding a citation to its window.
-That is not a CI test; it is how the screenshots in the pull request were
-produced, and it is the way to verify a change to any page.
-
-`app/README.md` has the one rule the page is built on and its single
-documented exception.
+A Streamlit site (`app/`) served the same pages until October 2026; it was
+retired when the desktop application covered all of them, and its view model
+became `onset_review/studytables.py`.
 
 ## Running it
 

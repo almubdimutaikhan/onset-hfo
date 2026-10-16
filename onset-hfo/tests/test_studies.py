@@ -25,7 +25,7 @@ def test_every_study_page_builds_from_the_committed_tables(key):
 
 
 def test_the_detectors_page_reads_the_sweep_rather_than_restating_it():
-    from app import panels
+    from onset_review import studytables as panels
 
     text = studies.build("detectors", band="ripple", metric="rank_rho")
     sweep = panels.sweep()
@@ -52,7 +52,7 @@ def test_a_non_primary_arm_is_flagged_as_such():
 
 
 def test_the_research_page_quotes_the_robustness_and_montage_extracts():
-    from app import panels
+    from onset_review import studytables as panels
 
     text = studies.build("research")
     montage = panels.montage_groups()
@@ -97,27 +97,25 @@ def test_the_markdown_table_helper_escapes_and_rounds():
     assert studies.table(frame.iloc[0:0]) == "*(no rows)*\n"
 
 
-def test_the_loaders_are_read_from_their_file_not_through_the_sites_package():
-    """`app/__init__` imports Streamlit, which the desktop does not ship; the
-    loaders must not need it."""
+def test_the_loaders_are_loaded_afresh_for_the_tables_they_read():
+    """The loaders read their data root at import, so the pages load them from
+    their file for each root rather than sharing one imported module."""
     studies._loaded.clear()
     panels = studies._panels()
     assert panels is not None and panels.__name__ == "onset_site_panels"
-    assert panels.__file__.endswith("app/panels.py")
+    assert panels.__file__.endswith("onset_review/studytables.py")
 
 
 def test_an_installed_site_is_found_by_the_environment_and_sets_the_data_root(
         tmp_path, monkeypatch):
-    """A release bundle puts the loaders and the tables under site/; the
-    reviewer must read both from there, not from a checkout it does not have."""
+    """A release bundle puts the tables under site/; the reviewer must read
+    them from there, not from a checkout it does not have."""
     import shutil
 
     from onset_hfo.config import PROJECT_ROOT
 
     site = tmp_path / "site"
-    (site / "app").mkdir(parents=True)
-    shutil.copy(PROJECT_ROOT / "app" / "panels.py", site / "app" / "panels.py")
-    (site / "data").mkdir()
+    (site / "data").mkdir(parents=True)
     shutil.copytree(PROJECT_ROOT / "data" / "outcome", site / "data" / "outcome")
     monkeypatch.setenv("ONSET_REVIEW_SITE_DIR", str(site))
     monkeypatch.delenv("ONSET_HFO_DATA_ROOT", raising=False)

@@ -42,8 +42,12 @@ If they only take one sentence away, this is it:
 
 ## The five-minute demo
 
-Live at **<https://onsetnu.streamlit.app/>**. Rehearse this exact path; it
-works without a login and needs no data of theirs.
+Run it in the desktop application, installed from the latest release with
+`./install.sh --with-sample`. Rehearse this exact path; it needs no network
+and no data of theirs. The page names below map to the application as
+**Recording** → Review › Recording, **Report** → Report, **Assistant** →
+Assistant, and the cohort pages (**Detectors**, **Outcome**, **Patients**) →
+Library.
 
 ### 1 · Recording — "where does a number come from?" *(90 s)*
 
@@ -239,7 +243,7 @@ anyone claiming otherwise.
 Everything is public: the code, both archives, and every table behind every
 number on the stand.
 
-- Live app — <https://onsetnu.streamlit.app/>
+- Desktop application — <https://github.com/berdakh/onset-hfo/releases/latest>
 - Results and documentation — <https://berdakh.github.io/onset-hfo/>
 - Code — <https://github.com/berdakh/onset-hfo>
 - The outcome study in full, including what it cannot support —

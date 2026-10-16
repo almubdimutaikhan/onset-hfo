@@ -390,3 +390,26 @@ def test_comparisons_are_counted_once_per_distinct_test_not_per_summary():
     groups = compare_groups(tied_summary, participants, metrics=metrics)
     assert groups["auc"].nunique() == 1 and groups["p_permutation"].nunique() == 1
     assert groups["n_comparisons"].iloc[0] == 2
+
+
+def test_the_verdict_names_the_window_that_was_analysed():
+    """It said "a 60-second window" for every run, the 300-second one included."""
+    from pathlib import Path
+
+    from onset_hfo.outcome import OutcomeResult
+
+    groups = pd.read_csv(Path(__file__).resolve().parents[1] / "data" / "stability"
+                         / "outcome_groups_300s.csv")
+    empty = pd.DataFrame()
+
+    def verdict(window):
+        return OutcomeResult(subjects=empty, channels=empty, meta=empty, groups=groups,
+                             participants=empty, window_s=window,
+                             power_floor=0.85).verdict()
+
+    full = verdict((0.0, 300.0))
+    assert "a 300-second window and 20 patients" in full
+    assert "60-second" not in full
+    assert "35-comparison Bonferroni" in full
+    assert "a 60-second window" in verdict((0.0, 60.0))
+    assert "a 45-second window" in verdict((30.0, 75.0))

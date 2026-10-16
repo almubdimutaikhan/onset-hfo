@@ -343,29 +343,45 @@ def test_the_cli_passes_the_analysis_offset_through(tmp_path):
 
 
 # --------------------------------------------------------------------------
-# 7. The notebooks are written by the builder, with one recorded exception
+# 7. The notebooks are written by the builder, every one of them
 # --------------------------------------------------------------------------
 
 
 def test_every_committed_notebook_is_produced_by_the_builder():
-    """`scripts/build_notebooks.py` says notebooks are written there. One is not.
+    """`scripts/build_notebooks.py` says notebooks are written there.
 
-    `06_agent_benchmark.ipynb` was committed directly and the builder never
-    learned about it, which nothing caught. This test does not pretend that is
-    fixed -- it pins the exception so a second one cannot appear quietly.
+    `06_agent_benchmark.ipynb` was once committed directly and the builder
+    never learned about it, which nothing caught for a while. It is written
+    there now, and this keeps a second one from appearing quietly.
     """
+    import importlib.util
+    import json
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
     builder = (root / "scripts" / "build_notebooks.py").read_text()
     committed = {p.name for p in (root / "notebooks").glob("*.ipynb")}
-    # Look for the constant assignment, not the bare name: the builder
-    # *mentions* 06 in a comment explaining why it is absent, and a substring
-    # check counted that as registration.
+    # Look for the constant assignment, not the bare name: a substring check
+    # once counted a comment that mentioned a notebook as registering it.
     unregistered = {n for n in committed if f'= "{n}"' not in builder}
-    assert unregistered == {"06_agent_benchmark.ipynb"}, (
+    assert unregistered == set(), (
         f"notebooks not written by the builder: {sorted(unregistered)}. Add them "
-        f"to scripts/build_notebooks.py, or extend this exception deliberately.")
+        f"to scripts/build_notebooks.py.")
+
+    # And the committed sources are the builder's: an edit made in the JSON
+    # is lost the next time the builder runs.
+    spec = importlib.util.spec_from_file_location("build_notebooks",
+                                                  root / "scripts" / "build_notebooks.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    for _, name, cells, _ in module.NOTEBOOKS:
+        stored = json.loads((root / "notebooks" / name).read_text())["cells"]
+        assert ["".join(c["source"]) for c in stored] == ["".join(c["source"]) for c in cells], (
+            f"{name} differs from what scripts/build_notebooks.py writes; edit the builder "
+            f"and regenerate")
+        first = "".join(stored[0]["source"])
+        assert (f"https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/"
+                f"onset-hfo/notebooks/{name}") in first, f"{name} has no Colab badge"
 
 
 def test_the_annotation_notebook_exists_and_carries_its_colab_badge():

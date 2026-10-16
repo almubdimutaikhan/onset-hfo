@@ -406,7 +406,7 @@ python -m onset_hfo.learn fit --holdout sub-pt01 --out artifacts/models/soz.pkl
 
 ## 6. What this is not
 
-* **Not a clinical model.** Fitted on 22 ictal recordings from three centres,
+* **Not a clinical model.** Fitted on 22 ictal recordings from four centres,
   scored against a retrospective record, on patients whose outcome is already
   known.
 * **Not interictal.** The clinical HFO literature measures interictal rate;

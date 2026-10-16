@@ -3,7 +3,7 @@
 The notebooks are committed to the repository (so that the Colab badges work),
 but they are *written* here, as plain Python, because reviewing a diff of
 notebook JSON is miserable and because it keeps the notebooks consistent
-with each other.
+with each other. Every notebook is written here, 06 included.
 
     python scripts/build_notebooks.py                  # write the JSON
     python scripts/build_notebooks.py --execute        # write it and run it
@@ -11,12 +11,26 @@ with each other.
 ``--execute`` runs each notebook top to bottom and stores the outputs, which
 is how the committed copies get their figures and tables. It needs the data
 cache (or network access) and takes a while; pass notebook numbers to limit
-it, e.g. ``--execute 5``.
+it, e.g. ``--execute 5``. Writing a notebook without ``--execute`` replaces
+its stored outputs with none, so pass the numbers of the notebooks you mean
+to rebuild.
+
+With ``ONSET_HFO_OFFLINE`` set, cells tagged ``network`` (listing the
+archive, which has no cache) are not run and keep no output, and everything
+else runs from the cache. Cells tagged ``interactive`` (a marking widget that
+waits for clicks) are never run by ``--execute``. Paths on the machine that ran the notebook are
+written relative to the project directory, so the stored outputs carry no
+one's home directory.
 
 Every notebook is designed to run top to bottom in a free Colab instance with
 no configuration. Notebook 1 downloads ~24 MB of public data and notebook 5
-about 480 MB (twenty subjects); notebooks 2, 3 and 4 need no download at all
-(notebook 2 can optionally pull an open-weight model).
+about 2.5 GB (the whole 300 s run-01 of twenty subjects); notebooks 2, 3 and
+4 need no download at all (notebook 2 can optionally pull an open-weight
+model). Notebook 7 fetches the same ~24 MB slice as notebook 1 to draw its
+windows. Notebooks 6 and 8 want a GPU runtime and download model weights.
+
+Each notebook is the scriptable route to something the desktop application
+(``onset-review``) does in its window; the first cell of each says where.
 """
 
 from __future__ import annotations
@@ -29,16 +43,18 @@ NOTEBOOK_DIR = Path(__file__).resolve().parent.parent / "notebooks"
 REPO = "https://github.com/berdakh/onset-hfo.git"
 BRANCH = "master"   # the repository default branch
 
-SETUP = f'''# Colab setup. On your own machine, skip this cell and run
-#   pip install -e ".[dev]"  from the onset-hfo directory instead.
+SETUP = f'''# Setup. On Colab this clones the repository and installs the package. On
+# your own machine (after  pip install -e ".[dev]"  in the onset-hfo
+# directory) it installs nothing and only moves to that directory.
 import os, sys, subprocess
 IN_COLAB = "google.colab" in sys.modules
 REPO = "{REPO}"
-BRANCH = "{BRANCH}"   # change to the default branch once this work is merged
+BRANCH = "{BRANCH}"   # the repository's default branch
 
-if IN_COLAB and not os.path.exists("onset-hfo"):
-    subprocess.run(["git", "clone", "-q", "--branch", BRANCH, "--depth", "1", REPO], check=True)
 if IN_COLAB:
+    if not os.path.exists("/content/onset-hfo"):
+        subprocess.run(["git", "clone", "-q", "--branch", BRANCH, "--depth", "1", REPO,
+                        "/content/onset-hfo"], check=True)
     os.chdir("/content/onset-hfo/onset-hfo")
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-e", "."], check=True)
 elif os.path.basename(os.getcwd()) == "notebooks":
@@ -47,8 +63,17 @@ sys.path.insert(0, os.getcwd())
 print("working directory:", os.getcwd())'''
 
 
-SETUP_ML = SETUP.replace('"-q", "-e", "."', '"-q", "-e", ".[ml]"').replace(
-    'pip install -e ".[dev]"', 'pip install -e ".[dev,ml]"')
+def _with_extras(extras: str, more: str = "") -> str:
+    """The setup cell, installing the package with `extras` (and `more`)."""
+    pip_more = "".join(f', "{name}"' for name in more.split())
+    return SETUP.replace('"-q", "-e", "."', f'"-q", "-e", ".[{extras}]"{pip_more}').replace(
+        'pip install -e ".[dev]"', f'pip install -e ".[dev,{extras}]"'
+        + (f" {more}" if more else ""))
+
+
+SETUP_ML = _with_extras("ml")
+# Notebook 6 loads models in-process; bitsandbytes is for the 8- and 4-bit rows.
+SETUP_LLM = _with_extras("llm", "bitsandbytes")
 
 _COUNTER = itertools.count(1)
 
@@ -63,18 +88,29 @@ def md(text: str) -> dict:
             "source": text.strip("\n").splitlines(True)}
 
 
-def code(text: str) -> dict:
-    return {"cell_type": "code", "id": _cell_id(), "metadata": {}, "execution_count": None,
+def code(text: str, tags: tuple[str, ...] = ()) -> dict:
+    """A code cell. Tag it ``network`` if it needs the archive with no cache to
+    fall back on, so an offline ``--execute`` leaves it unrun rather than
+    storing a traceback, and ``interactive`` if it waits for a person (a
+    marking widget), which ``--execute`` never runs."""
+    return {"cell_type": "code", "id": _cell_id(),
+            "metadata": {"tags": list(tags)} if tags else {}, "execution_count": None,
             "outputs": [], "source": text.strip("\n").splitlines(True)}
 
 
-def write(name: str, cells: list[dict]) -> Path:
+#: Colab opens a notebook carrying this on a GPU runtime.
+GPU_METADATA = {"accelerator": "GPU", "colab": {"provenance": [], "toc_visible": True,
+                                                "gpuType": "T4"}}
+
+
+def write(name: str, cells: list[dict], metadata: dict | None = None) -> Path:
     notebook = {
         "cells": cells,
         "metadata": {
             "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
             "language_info": {"name": "python", "version": "3.10"},
             "colab": {"provenance": [], "toc_visible": True},
+            **(metadata or {}),
         },
         "nbformat": 4,
         "nbformat_minor": 5,
@@ -106,6 +142,12 @@ epileptologist's software would, run two classical high-frequency-oscillation
 (HFO) detectors and one interictal-spike detector over it, look at what they
 found, and produce a structured report that cites the exact signal windows
 behind every number.
+
+**Where this sits.** This is what the desktop application, Onset Review, does
+when it opens a recording: **Review › Recording** shows the channel ranking
+and the trace, **Review › Signal** the preprocessing and data quality, and
+**Report** the structured report. The notebook is the scriptable route to the
+same `onset_hfo` code, one step at a time, and it runs on Colab.
 
 **Why this matters.** In epilepsy surgery the question is *which tissue is
 generating the seizures*. Ripples (80–250 Hz oscillations lasting a few tens
@@ -149,10 +191,14 @@ is 500 Hz, so **ripples (80–250 Hz) can be analysed and fast ripples
 (250–500 Hz) cannot**. The pipeline refuses to pretend otherwise.
 """),
     code("""
-from onset_hfo.datasets import fetch_slice, list_runs
+from onset_hfo.datasets import list_runs
 
-# What else is available for this subject (not downloaded, just listed):
+# What else is available for this subject (not downloaded, just listed; this
+# asks the archive, so it needs the network):
 print(list_runs("sub-pt01").to_string(index=False))
+""", tags=("network",)),
+    code("""
+from onset_hfo.datasets import fetch_slice
 
 recording = fetch_slice(subject="sub-pt01", task="ictal", run="01",
                         t_start=50.0, t_stop=110.0)
@@ -256,9 +302,11 @@ fig = plot_channel_rates(result.rates["rms"], top_k=15, label="rms")
 """),
     md("""
 Read the confidence intervals, not just the bars. Sixty seconds of recording
-turns a rate into a small count: 30 events/min *is* 30 events, and the
-interval around it is wide. Two channels whose intervals overlap are not
-ranked, they are tied.
+turns a rate into a small count. Each channel's rate is its count divided by
+the time on that channel that survived the quality checks (the `duration_s`
+column above, at most 60 s), so a rate of 30 events/min is a few tens of
+events, and the interval around it is wide. Two channels whose intervals
+overlap are not ranked, they are tied.
 """),
     code("""
 top = list(result.rates["rms"]["channel"].head(3))
@@ -327,8 +375,9 @@ Markdown(result.report.to_markdown())
     md("""
 ## 8. A weak reality check
 
-This ictal recording has no HFO markings. (The interictal dataset does --
-see notebook 3 and `onset-hfo benchmark`.) What we have here is the list of
+This ictal recording has no HFO markings. (The interictal dataset, ds003498,
+does: `onset-hfo benchmark` scores the detectors against them, and
+`docs/EVALUATION.md` has the result.) What we have here is the list of
 contacts the clinician named in the seizure markers. Are our top-ranked
 channels drawn from them more often than chance?
 
@@ -343,10 +392,20 @@ check = marked_contact_check(result.rates["rms"], recording.marked_contacts, k=1
 print(json.dumps(check, indent=2))
 """),
     md("""
-Whatever this prints, do not over-read it. If the overlap is no better than
-chance that is unsurprising for ictal data and a rate-only ranking; if it is
-better, it is mild encouragement and nothing more. Precision and recall are
-measured in notebook 3, on synthetic data where the truth is known.
+How to read it: `n_top_touching_marked` counts the ten highest-rate channels
+that share a contact with the clinician's list, `expected_by_chance` is the
+same count averaged over 2,000 random orderings of the channels, and
+`permutation_p_value` is the share of those orderings that did at least as
+well.
+
+Whatever this prints, do not over-read it. An overlap above chance is mild
+encouragement and nothing more; one at chance would be unsurprising for ictal
+data and a rate-only ranking. The number also moves with the pipeline: an
+earlier version of the pipeline, before its quality checks set aside the time
+and channels they reject, found 2 of 10 on this same minute — no better than
+chance. Precision and recall are measured in notebook 3 on
+synthetic data where the truth is known, and against the expert markings of
+ds003498 by `onset-hfo benchmark`.
 
 ## 9. Where the results went
 
@@ -390,7 +449,12 @@ nb2 = [
 Notebook 1 produced tables. This notebook puts a language model in front of
 them — carefully.
 
-**The design in one paragraph.** The agent can call eight read-only tools
+**Where this sits.** This agent is the one behind **Assistant › This
+recording** in the desktop application, Onset Review, where it answers about
+the open recording with every number checked. Here you can drive it from code,
+see each tool call, and swap the model, on Colab or locally.
+
+**The design in one paragraph.** The agent can call nine read-only tools
 over one saved analysis. It cannot run a detector, change a threshold, open a
 file or reach the network. Every factual claim it makes must cite an
 `evidence_id` that a tool actually returned, and every number it states must
@@ -546,7 +610,8 @@ cannot be argued out of, because there is no model in the path to argue with.
 ## 6. Watching a guard catch a fabrication
 
 Let us make a model that lies, and check that the system holds. This backend
-retrieves real data and then states a rate nobody measured.
+retrieves real data and then states a rate nobody measured, citing an
+evidence window no tool returned.
 """),
     code("""
 import json
@@ -560,7 +625,7 @@ class LyingBackend(Backend):
         if self.turn == 1:
             return AssistantMessage(tool_calls=[ToolCall("top_channels", {"k": 3}, "c1")])
         return AssistantMessage(content=json.dumps({
-            "answer": "The leading channel fires at 999.9 events/min, far above the others.",
+            "answer": "The leading channel fires at 4210.5 events/min, far above the others.",
             "evidence_ids": ["sub-xx|MADE-UP|rms|0.000"]}))
 
 bad = OnsetAgent(store, LyingBackend())
@@ -569,9 +634,20 @@ print(answer.text, "\\n")
 print(json.dumps([s for s in answer.trace if s["type"] == "answer"], indent=2))
 """),
     md("""
-Both problems are named: the citation was never returned by a tool, and the
-number appears in no tool result. The answer is dropped. Note what the agent
-says instead — it points at the report, which *is* authoritative.
+Each check names its own problem: the citation was never returned by a tool,
+and 4210.5 appears in no tool result. Either one alone is enough to fail the
+answer. The agent sends the problems back to the model and asks once more;
+this backend repeats the lie, so the second attempt fails the same way and the
+answer is dropped. Note what the agent says instead — it points at the report,
+which *is* authoritative.
+
+**What the number check does not catch.** A stated number passes if it is
+within rounding — 1%, or 0.05 — of *any* number a tool returned, because
+models legitimately write 43.4 for 43.4483. So a fabrication that happens to
+sit next to a real value gets through it: "999.9 events/min" is within 1% of
+the 1000 Hz sampling rate the briefing reports, and the number check passes
+it (the made-up citation still fails). The check proves a number was
+retrieved; it cannot prove it was retrieved *for this sentence*.
 
 ## 7. The trace
 
@@ -633,16 +709,25 @@ nb3 = [
 
 {badge(NB3)}
 
-The public recording has no HFO labels. Nobody has marked every ripple in it,
-so on real data we can report rates, rankings and agreement, but **not**
-precision and recall. Claiming otherwise would be the most common way
-detection papers mislead.
+The ictal recording of notebook 1 (ds003029) has no HFO labels. Nobody has
+marked every ripple in it, so on that recording we can report rates, rankings
+and agreement, but **not** precision and recall. Claiming otherwise would be
+the most common way detection papers mislead. (The interictal archive,
+ds003498, does publish expert HFO markings — `onset-hfo benchmark` scores the
+detectors against them — but those markings come from another detector
+reviewed by experts, not from a known truth.)
 
 So we build a recording where the truth is known: 1/f background, mains noise,
 implanted ripples at a controlled signal-to-noise ratio, interictal discharges
 (some with ripples riding on them, as in real epileptic tissue), and — most
 importantly — **the traps**: large sharp transients that ring through an
 80–250 Hz filter and look exactly like ripples.
+
+**Where this sits.** The desktop application, Onset Review, reports the
+measured scores under **Library › Detectors** (against the ds003498 expert
+markings) and lets you re-run the detector at stricter thresholds in the
+**Threshold** tab of **Review › Recording**. This notebook is where the
+detectors are tested against a known truth, in code you can change.
 
 Everything in this notebook runs offline in about a minute.
 """),
@@ -716,7 +801,7 @@ print(evaluate_detections(result.spikes, recording.ground_truth,
                           detector="spike", kind="spike").summary())
 """),
     md("""
-Recall around 0.5 for the HFO detectors is not a bug to be tuned away. A
+Recall of 0.5–0.6 for the HFO detectors is not a bug to be tuned away. A
 5-SD threshold detector finds the ripples that are clearly above the noise
 and misses the marginal ones; the next cell shows exactly that trade-off.
 What *would* be a bug is high recall bought with false positives, which is
@@ -763,8 +848,8 @@ from onset_hfo.evaluate import validation_benefit
 validation_benefit(result.events["rms"], recording.ground_truth).round(3)
 """),
     md("""
-Precision roughly 0.6 before, roughly 0.98 after; recall falls by a couple of
-points. The `false_positive_causes` column names what was being confused —
+Precision roughly 0.6 before, roughly 0.97 after; recall falls by about a
+point. The `false_positive_causes` column names what was being confused —
 `artifact` for filter ringing, `spike` for a discharge misread as an
 oscillation. If that column ever showed mostly `background`, the detector
 would be firing on noise and the thresholds would need to move.
@@ -857,9 +942,14 @@ creative, and real recordings have physiological ripples in healthy tissue
 that no simulator here models. These scores are a floor on sanity, not a
 measure of clinical utility.
 
-The next step for this project — see `docs/ROADMAP.md` — is a small
-hand-annotated subset of real recordings. That is the only thing that
-converts these numbers into a claim about patients.
+Two steps toward real recordings exist already. `onset-hfo benchmark`
+scores the same detectors against the expert markings of ds003498 (20
+patients; results in `docs/EVALUATION.md`), and notebook 5 asks whether the
+resulting map points at the tissue whose removal stopped the seizures. Both
+are agreement with a reference that is itself another detector's output
+reviewed by experts. **[Notebook 7](07_annotation.ipynb)** is the missing
+piece: a blinded, stratified sample of real windows marked by two people, with
+the chance-corrected agreement between them reported before any score.
 """),
 ]
 
@@ -881,6 +971,13 @@ Notebooks 1–3 cover a **fixed pipeline** and an agent that can *read* what it
 produced. This one covers the two halves added since: an agent that decides
 *what to measure*, and a learned per-contact model with calibrated
 uncertainty — plus the place where they meet.
+
+**Where this sits.** The desktop application, Onset Review, uses one piece of
+this directly: the **Threshold** tab of **Review › Recording** re-runs the
+ranking detector at stricter thresholds through the same `AnalysisSession`
+the planner below drives. The planner ladder and the learned model are
+research code with no page of their own; **Library › Research** reports their
+measured state. This notebook is where they run.
 
 **Nothing here downloads a recording.** The orchestration runs on simulated
 data and the modelling runs on a cohort feature table committed to the
@@ -905,9 +1002,9 @@ not scores.
 ---
 ## Part A — the agent chooses the analysis
 
-The original agent had eight read-only tools over a *saved* analysis. It could
-report that a channel had 54 ripples/min at a threshold somebody chose hours
-ago. It could not ask the question a reviewer asks next:
+The agent of notebook 2 has nine read-only tools over a *saved* analysis. It
+can report that a channel had 54 ripples/min at a threshold somebody chose
+hours ago. It cannot ask the question a reviewer asks next:
 
 > *Does that survive a stricter threshold?*
 
@@ -980,9 +1077,13 @@ they never look again.
 
 **A caution the repository insists on.** On the real `sub-pt01` recording this
 same mechanism re-orders the top five and the re-ordering *means nothing* —
-those channels sit between 70 and 83 events/min with heavily overlapping
-intervals, so they are tied, not ranked. A mechanism that works is not the
-same as a mechanism that helped.
+at the planner's rates those channels sit between 70 and 83 events/min with
+heavily overlapping intervals, so they are tied, not ranked
+(`docs/EVALUATION.md`, *The orchestration ladder*). Those rates are not
+notebook 1's: the planner's `detect_hfo` counts over the whole window, while
+notebook 1's pipeline first sets aside the time and channels its quality
+checks reject. A mechanism that works is not the same as a mechanism that
+helped.
 """),
     md("""
 ---
@@ -1113,9 +1214,11 @@ for spine in ("top", "right"):
 fig.tight_layout()
 """),
     md("""
-Five contacts — under a tenth of a typical implantation — recovers a large
-part of what is lost moving to a new patient. `labelled_fraction` is in the
-table on purpose: *40 labels* sounds modest until it is 60% of the electrodes.
+Five contacts — under a tenth of a typical implantation — close about a
+quarter of the gap between leave-one-patient-out and the within-subject
+ceiling (`gap_closed`), and the curve keeps climbing with more.
+`labelled_fraction` is in the table on purpose: *20 labels* sounds modest
+until it is nearly a third of the electrodes.
 """),
     md("""
 ---
@@ -1261,7 +1364,7 @@ for label, rec in [("with implanted ripples", recording),
   reciting priors about electrode naming, and a script cannot fail it.
 - **This is ictal data.** The clinical HFO literature measures *interictal*
   rate; every feature here comes from a 60-second window around a seizure.
-- **The model is not clinical.** Fitted on 22 recordings from three centres,
+- **The model is not clinical.** Fitted on 22 recordings from four centres,
   scored against a retrospective record, on patients whose outcome is already
   known.
 - **Nothing here identifies a seizure onset zone.** The agent's guard still
@@ -1302,9 +1405,16 @@ analysis on the first 60 seconds give a *stronger* answer than the full five
 minutes — which is the most useful result in the notebook, because it says the
 number is not stable yet.
 
+**Where this sits.** The desktop application, Onset Review, shows this study's
+published result under **Library › Outcome** and the same study one patient
+at a time under **Library › Patients**, read from the committed tables. This
+notebook is the analysis behind those pages, re-run from the archive: change
+a window or a threshold here and you get your own version of them.
+
 **Runtime.** About 45 minutes on a free Colab instance, most of it downloading
-~2.2 GB (every run is exactly 300 s, so this is the whole recording and every
-expert marking in it). Everything is cached, so a second run is compute-only.
+about 2.5 GB (the whole of run-01 for each subject: 300 s for eighteen of
+them, 256 s and 260 s for the other two, and every expert marking in it).
+Everything is cached, so a second run is compute-only.
 """),
     code(SETUP),
     md("""
@@ -1404,7 +1514,7 @@ Four choices, each of which can only make the result *worse*:
     code("""
 from onset_hfo.outcome import outcome_study
 
-# The default window is the whole run (300 s). ~2.2 GB cold, ~25 minutes cached.
+# The default window is the whole run (300 s). ~2.5 GB cold, ~25 minutes cached.
 result = outcome_study(verbose=True)
 result.save()
 """),
@@ -1531,11 +1641,11 @@ print(result.summary("top_channel_resected")
 """),
     md("""
 At 2.0 SD the fast-ripple detector runs at precision 0.086 — a mean of 1,142
-detections per 60 s against a mean of 228 expert-marked events. Nothing about
-the outcome data was used to choose either threshold; both come from
-channel-rank agreement with the experts, in
-`notebooks/03_validation_and_benchmark.ipynb`. **One threshold for both bands
-is a bug, not a simplification.**
+detections per 60 s against a mean of 278 expert-marked fast ripples. Nothing
+about the outcome data was used to choose either threshold; both come from
+channel-rank agreement with the experts, measured by `onset-hfo benchmark`
+(`docs/EVALUATION.md`, section 0). **One threshold for both bands is a bug,
+not a simplification.**
 
 ## 9. Read this before quoting any of it
 
@@ -1543,8 +1653,9 @@ is a bug, not a simplification.**
   returns **0.85** — with these group sizes only a very large separation
   reaches 80% power. A p above 0.05 here means *underpowered*, not *no effect*.
 - **Nothing in the full-run study reaches p < 0.05**, and the Bonferroni column
-  in `groups.csv` corrects across 24 comparisons. Read every row as
-  hypothesis-generating.
+  in `groups.csv` corrects across the table's 35 distinct comparisons (36
+  arms, two of which are the same test on the same values). Read every row
+  as hypothesis-generating.
 - **One full run of one night**, against several whole nights in the source
   study. The archive has 1–6 runs per subject; combining them is the obvious
   extension, and given §7 it should happen before any number here is called
@@ -1567,6 +1678,200 @@ print("\\nfiles written:")
 import pathlib
 for f in sorted(pathlib.Path("artifacts/results/outcome_ds003498").iterdir()):
     print("  ", f.name)
+"""),
+]
+
+
+# =========================================================================
+# 6. The orchestration ladder under real models, on a GPU
+# =========================================================================
+
+NB6 = "06_agent_benchmark.ipynb"
+nb6 = [
+    md(f"""
+# Onset-HFO 6 — Measuring the agent, for real
+
+{badge(NB6)}
+
+Every orchestration number this project has published comes from the **scripted
+planner** — a deterministic keyword policy that speaks the tool protocol. It is the
+control, not the result. This notebook runs the same S0–S3 ladder with served
+open-weight models across a quantization sweep, and scores each cell.
+
+**Where this sits.** The desktop application, Onset Review, runs one local
+model at a time behind its **Assistant** pages and does not run this ladder;
+**Library › Research** lists a real model driving the analysis ladder as open
+work. This notebook is how that measurement is made. It needs a GPU runtime
+(Runtime → Change runtime type → **T4 GPU**).
+
+**What it measures**
+
+| metric | what it answers |
+|---|---|
+| tool-call validity | can the model address the tools at all? |
+| unsupported-claim rate | what share of its numeric claims does no tool output support? |
+| planning quality | how far did its choices move the answer from the S0 reference? |
+| verifier delta | true statements the model verifier removed, against hallucinations it let through |
+
+**What it does *not* measure honestly here: wall-clock.** A Colab GPU is shared and
+throttled, you do not control which card you get, and `bitsandbytes` int8 is slower
+than fp16 on pre-Ampere cards — so a quantization timing comparison on a T4 measures
+the kernel, not the model. Timings are recorded and **flagged**; `timing_warnings()`
+at the end tells you when they must not be compared. Take timing separately, on one
+fixed machine, or leave it out.
+"""),
+    md("""
+## 1 · Install
+
+About three minutes. `bitsandbytes` is only needed for the 8-bit and 4-bit rows.
+"""),
+    code(SETUP_LLM),
+    md("""
+## 2 · What card did you get?
+
+Run this before anything else. It decides which cells are worth attempting and
+whether you need to force `float16`.
+"""),
+    code("""
+import torch
+from onset_agent.benchmark import APPROX_VRAM_GB, environment, fits
+
+env = environment()
+print(f"GPU          {env['gpu_name']}  ({env['gpu_total_gb']} GB)")
+print(f"CUDA         {env['cuda']}")
+print(f"bfloat16     {env['supports_bf16']}")
+
+# Most recent model configs declare bfloat16. On a card without it -- a T4 --
+# dtype='auto' will honour a dtype the hardware cannot run.
+DTYPE = 'auto' if env['supports_bf16'] else 'float16'
+print(f"\\nuse dtype={DTYPE!r}")
+
+vram = env['gpu_total_gb']
+print('\\nwhat fits, roughly:')
+for (size, quant), need in sorted(APPROX_VRAM_GB.items()):
+    mark = 'yes' if fits(size, quant, vram) else 'no '
+    print(f'  {size:>4} {quant:>5}  ~{need:>4.1f} GB   {mark}')
+"""),
+    md("""
+## 3 · Keep the checkpoints somewhere that survives a disconnect
+
+Free runtimes idle out after about 90 minutes and cap around 12 hours. Every cell
+writes its own JSON the moment it finishes and the sweep **skips what is already
+there**, so re-running section 5 after a disconnect resumes. That only helps if the
+files outlive the runtime — mount Drive.
+
+Skip this cell to keep checkpoints in the ephemeral runtime instead.
+"""),
+    code("""
+OUT = '/content/agent_benchmark' if IN_COLAB else 'artifacts/agent_benchmark'
+try:
+    from google.colab import drive
+    drive.mount('/content/drive')
+    OUT = '/content/drive/MyDrive/onset-hfo/agent_benchmark'
+except Exception as exc:
+    print(f'not on Colab or Drive declined ({exc.__class__.__name__}); '
+          f'checkpoints will not survive a disconnect')
+print('checkpoints ->', OUT)
+"""),
+    md("""
+## 4 · Choose the matrix
+
+Start with **one** cell and confirm the loop runs before committing a GPU hour.
+`expand_matrix` puts S0 in once per subject rather than once per precision: the fixed
+pipeline runs no model, so three identical rows would imply a comparison nobody made.
+"""),
+    code("""
+from onset_agent.benchmark import Cell, expand_matrix
+
+MODELS = ['Qwen/Qwen2.5-7B-Instruct']   # add 4B / 14B once the loop is proven
+SUBJECT = 'sub-pt01'
+
+smoke = [Cell(model=MODELS[0], quantization='4bit', rung='S2', subject=SUBJECT)]
+full  = expand_matrix(MODELS, ['4bit', '8bit'], ['S0','S1','S2','S3'], [SUBJECT])
+
+CELLS = smoke          # <- switch to `full` after the smoke test passes
+print(f'{len(CELLS)} cell(s)')
+for c in CELLS:
+    print(' ', c.cell_id)
+"""),
+    md("""
+## 5 · Run it
+
+`backend_factory` is called **once per cell**, so the previous model is released
+before the next loads. On a 16 GB card that is the difference between a sweep and an
+out-of-memory error.
+
+A cell that fails is recorded with its traceback and the sweep continues — "this
+model at this precision could not finish the ladder" is a result, and one model that
+will not load should not cost you the other eight.
+
+**Re-run this cell after a disconnect.** It resumes.
+"""),
+    code("""
+import gc   # torch and DTYPE come from section 2, which must run first
+from onset_agent.analysis import AnalysisSession
+from onset_agent.backends import make_backend
+from onset_agent.benchmark import run_matrix
+from onset_hfo.datasets import fetch_slice
+
+def session_factory(subject):
+    rec = fetch_slice(subject, 'ictal', '01', t_start=50, t_stop=110)
+    return AnalysisSession(rec, verbose=False)
+
+def backend_factory(cell):
+    gc.collect(); torch.cuda.empty_cache()   # release the previous model first
+    return make_backend('transformers', model=cell.model,
+                        quantization=cell.quantization, dtype=DTYPE,
+                        revision=None)       # pin a commit here for a citable run
+
+out = run_matrix(CELLS, session_factory=session_factory,
+                 backend_factory=backend_factory, out=OUT)
+"""),
+    md("""
+## 6 · Read it
+
+Failed cells keep their row. Check `timing_warnings` before quoting anything from
+the `wall_clock_s` column.
+"""),
+    code("""
+from IPython.display import display
+from onset_agent.benchmark import summarise, timing_warnings
+
+frame = summarise(out)
+frame.to_csv(f'{out}/summary.csv', index=False)
+
+cols = ['model','quantization','rung','ok','tool_call_validity',
+        'unsupported_claim_rate','top5_overlap_vs_s0','n_tool_calls','wall_clock_s']
+display(frame[[c for c in cols if c in frame]])
+
+for w in timing_warnings(frame):
+    print(f'timing caveat: {w}')
+"""),
+    md("""
+## 7 · The verifier delta
+
+The cost of verification, which is the number nobody reports: true statements the
+model verifier removed, against unsupported numbers it let through. It needs a second
+model instance, so it is separate from the sweep above — pass `verifier_backend=` to
+`run_matrix` to fold it in, at roughly double the cost.
+"""),
+    code("""
+# from onset_agent.backends import make_backend
+# verifier = make_backend('transformers', model=MODELS[0],
+#                         quantization='4bit', dtype=DTYPE)
+# out = run_matrix(CELLS, session_factory=session_factory,
+#                  backend_factory=backend_factory, out=OUT,
+#                  verifier_backend=verifier, overwrite=True)
+"""),
+    md("""
+## 8 · Before you quote any of this
+
+* Every cell records its GPU, CUDA version, library versions and git commit. Keep
+  `summary.csv` **and** `cells/` — the per-cell JSON holds the drafted report and the
+  struck sentences, which is the evidence for the unsupported-claim rate.
+* Pin `revision=` to a model commit if the numbers are going in a paper. `main` moves.
+* The scripted-planner rows in `docs/ORCHESTRATION.md` are the control. Report both.
+* Do not compare `wall_clock_s` across sessions. See section 6.
 """),
 ]
 
@@ -1609,6 +1914,12 @@ sampling rather than the marking, and `onset_hfo.review` enforces them:
 defined a reference no detector can be scored against more finely than that.
 The notebook prints that sentence before it prints any score.
 
+**Where this sits.** In the desktop application, Onset Review, a reader
+records their own read of each channel and event on **Review › Recording** —
+with the detector's verdict in view, which makes it a review rather than a
+benchmark. **Library › Research** lists the hand-annotated benchmark as open
+work; this notebook is how it is collected, blinded, on Colab or locally.
+
 **Runtime.** Minutes of compute; the marking is however long you take.
 Progress is appended to a CSV after every window, so you can close the tab.
 """),
@@ -1616,8 +1927,10 @@ Progress is appended to a CSV after every window, so you can close the tab.
     md("""
 ## 1. Something to review
 
-Any saved analysis will do. The shipped example is a real 60-second recording
-from OpenNeuro `ds003029` and needs no download.
+Any saved analysis will do. The shipped example is the saved analysis of a
+real 60-second slice of OpenNeuro `ds003029` (notebook 1's recording),
+committed to the repository, so drawing the sample needs no download. Drawing
+the windows themselves, in section 3, fetches that slice (~24 MB, once).
 """),
     code("""from onset_hfo.store import ResultStore
 from onset_hfo.detectors.base import Event
@@ -1654,8 +1967,11 @@ from onset_hfo.review import sample_windows, write_manifest
 N_PER_STRATUM = 70
 OUT = Path("artifacts/review")
 
+# Candidate times are in original-recording seconds; t_offset puts the
+# background stratum on the same clock.
 windows = sample_windows(by_detector, duration_s=duration, channels=channels,
-                         n_per_stratum=N_PER_STRATUM, seed=0)
+                         n_per_stratum=N_PER_STRATUM, seed=0,
+                         t_offset=float(store.provenance.get("slice_start_s", 0)))
 manifest_path = write_manifest(windows, OUT / "manifest.csv")
 
 import pandas as pd
@@ -1683,6 +1999,7 @@ import ipywidgets as widgets
 from IPython.display import clear_output, display
 import matplotlib.pyplot as plt
 
+from onset_hfo.datasets import fetch_slice
 from onset_hfo.preprocess import prepare
 from onset_hfo.review import AnnotationLog, read_manifest
 from onset_hfo.viz import plot_event
@@ -1692,15 +2009,24 @@ log = AnnotationLog(OUT / "annotations.csv", reviewer=REVIEWER)
 todo = log.remaining(manifest)
 print(f"{log.done} done, {len(todo)} to go")
 
-# The signal behind the windows. `reload_spec` on a saved analysis says which
-# slice to fetch; here we use the analysis the store was built from.
-prep = prepare(store.recording(), verbose=False) if hasattr(store, "recording") else None"""),
+# The signal behind the windows: the slice the saved analysis was run on, as
+# its provenance names it (downloaded once, then read from the cache).
+p = store.provenance
+recording = fetch_slice(dataset=p["source"].split(":", 1)[1], subject=p["subject"],
+                        task=p.get("task"), run=p.get("run"),
+                        t_start=p["slice_start_s"], t_stop=p["slice_stop_s"], verbose=False)
+prep = prepare(recording, verbose=False)
+missing = sorted(set(manifest.channel) - set(prep.ch_names))
+print(f"signal: {prep.n_channels} channels, {prep.t_offset:.0f}-"
+      f"{prep.t_offset + prep.duration:.0f} s; manifest channels it lacks: {missing or 'none'}")"""),
     md("""
-If `prep` is `None` above, the saved analysis does not carry its signal and
-the windows cannot be drawn — run `python -m onset_hfo.cli run` first, or
-point `ResultStore` at an analysis you produced locally.
+To review an analysis of your own, point `ResultStore` in section 1 at its
+directory: the cell above fetches whichever archive slice its provenance
+names. An analysis of a local file has no archive slice to fetch; load that
+recording yourself and pass it to `prepare` instead.
 
-The loop below draws one window and waits for a click.
+The loop below draws one window and waits for a click. (The committed copy
+stores no output for it: it is drawn when you run it.)
 """),
     code("""out = widgets.Output()
 state = {"i": 0}
@@ -1716,8 +2042,9 @@ def show():
         window = Event(channel=row.channel, start=mid - 0.015, stop=mid + 0.015,
                        detector="", band=(80.0, 250.0))
         print(f"{row.window_id}   ({state['i'] + 1} of {len(todo)})")
-        plot_event(prep, window, context_s=row.t_stop - row.t_start)
-        plt.show()
+        fig = plot_event(prep, window, context_s=row.t_stop - row.t_start)
+        display(fig)
+        plt.close(fig)      # one figure per window, not an ever-growing pile
 
 def mark(label):
     def handler(_):
@@ -1733,7 +2060,7 @@ for label, style in (("hfo", "success"), ("not_hfo", "danger"), ("unsure", "warn
     buttons.append(b)
 
 display(widgets.HBox(buttons), out)
-show()"""),
+show()""", tags=("interactive",)),
     md("""
 ## 4. What the reference is worth
 
@@ -1743,11 +2070,17 @@ first on purpose: every score after it has to be read against that number.
     code("""from onset_hfo.review import agreement, ceiling_note
 
 annotations = pd.read_csv(OUT / "annotations.csv")
-stats = agreement(annotations)
-print(ceiling_note(stats))
-print()
-for k, v in stats.items():
-    print(f"  {k}: {v}")"""),
+reviewers = sorted(annotations["reviewer"].astype(str).unique())
+stats = None
+if len(reviewers) != 2:
+    print(f"Marked so far by: {', '.join(reviewers) or 'nobody'}. Agreement needs exactly "
+          "two reviewers: run section 3 once per reviewer, then this cell.")
+else:
+    stats = agreement(annotations)
+    print(ceiling_note(stats))
+    print()
+    for k, v in stats.items():
+        print(f"  {k}: {v}")"""),
     md("""
 ## 5. Score the detector against it
 
@@ -1760,20 +2093,23 @@ whichever is kinder is how a detector's precision gets published.
 """),
     code("""from onset_hfo.review import score_against_annotations, save_study
 
-key = pd.read_csv(manifest_path.with_suffix(".key.csv"))
-for rule in ("both", "either"):
-    scores = score_against_annotations(by_detector["rms"], manifest, annotations,
-                                       key, consensus=rule, detector="rms")
-    print(f"consensus = {rule}")
-    for stratum, s in scores["strata"].items():
-        print(f"  {stratum:11s} n={s['n']:3d}  tp={s['true_positive']:3d} "
-              f"fp={s['false_positive']:3d} fn={s['false_negative']:3d} "
-              f"tn={s['true_negative']:3d}  reviewers called "
-              f"{s['reviewer_hfo_rate']:.0%} of them HFOs")
-    print()
+if stats is None:
+    print("Nothing to score yet: the reference is both reviewers' marks (section 4).")
+else:
+    key = pd.read_csv(manifest_path.with_suffix(".key.csv"))
+    for rule in ("both", "either"):
+        scores = score_against_annotations(by_detector["rms"], manifest, annotations,
+                                           key, consensus=rule, detector="rms")
+        print(f"consensus = {rule}")
+        for stratum, s in scores["strata"].items():
+            print(f"  {stratum:11s} n={s['n']:3d}  tp={s['true_positive']:3d} "
+                  f"fp={s['false_positive']:3d} fn={s['false_negative']:3d} "
+                  f"tn={s['true_negative']:3d}  reviewers called "
+                  f"{s['reviewer_hfo_rate']:.0%} of them HFOs")
+        print()
 
-save_study(OUT, stats, scores)
-print("written to", OUT)"""),
+    save_study(OUT, stats, scores)
+    print("written to", OUT)"""),
     md("""
 ## What to do with it
 
@@ -1807,6 +2143,12 @@ measured by `onset_agent.qa_eval`: 111 questions about five committed
 analyses, every reply sorted by what a reader would have seen (correct,
 unmatched, caught by the number check, declined, refused, resisted). See
 `docs/AGENT.md`, *Measuring it with a real model*.
+
+**Where this sits.** This is the assistant behind **Assistant › This
+recording** and **Assistant › Chat** in the desktop application, Onset Review,
+which runs one local model on your own machine. This notebook measures what
+such a model does across the whole question bank, on a GPU you do not have to
+own.
 
 On a laptop CPU the bank takes hours, because the model reads a 3,400-token
 prompt at about 14 tokens a second. **On Colab's free T4 GPU it takes
@@ -1920,15 +2262,81 @@ def execute(path: Path, timeout: int = 5400) -> None:
     GitHub sees the numbers without running anything. Regenerating a notebook
     without re-executing it silently deletes those outputs, so this is how a
     rebuild is meant to be done.
+
+    With ``ONSET_HFO_OFFLINE`` set, cells tagged ``network`` are left unrun
+    and keep no output: the archive listing they show has no cache, and a
+    stored ``OfflineError`` would tell a reader on GitHub nothing true about
+    the notebook. Cells tagged ``interactive`` (notebook 7's marking widget)
+    are never run here: they wait for clicks, and a widget's stored output is
+    an empty placeholder on GitHub. Paths on this machine are written relative to the project
+    directory (and the home directory as ``~``) before the notebook is saved.
     """
+    import os
+
     import nbformat
     from nbclient import NotebookClient
 
+    root = path.parent.parent
     notebook = nbformat.read(path, as_version=4)
+    skip = {"interactive"} | ({"network"} if os.environ.get("ONSET_HFO_OFFLINE") else set())
+    skipped: dict[str, str] = {}
+    for cell in notebook.cells:
+        if cell.cell_type == "code" and skip & set(cell.metadata.get("tags", [])):
+            skipped[cell.id] = cell.source
+            cell.source = ""                # nbclient does not run an empty cell
     client = NotebookClient(notebook, timeout=timeout, kernel_name="python3",
-                            resources={"metadata": {"path": str(path.parent.parent)}})
-    client.execute()
+                            resources={"metadata": {"path": str(root)}})
+    client.execute()                    # a failing cell raises; nothing is saved
+    for cell in notebook.cells:
+        if cell.get("id") in skipped:
+            cell.source = skipped[cell.id]
+            cell.outputs, cell.execution_count = [], None
+    relative_paths(notebook, root)
     nbformat.write(notebook, path)
+    if skipped:
+        print(f"  left {len(skipped)} interactive or network cell(s) unrun")
+
+
+def relative_paths(notebook: dict, root: Path) -> None:
+    """Rewrite this machine's paths in stored outputs, in place.
+
+    `root` (the project directory, which the notebooks run in) becomes a path
+    relative to it, and the home directory becomes ``~``: a committed output
+    should say ``artifacts/results/...``, which is true on every machine,
+    rather than where one person's checkout happened to live.
+    """
+    pairs = [(str(root) + "/", ""), (str(root), "."), (str(Path.home()) + "/", "~/")]
+
+    def fix(value):
+        if isinstance(value, list):
+            return [fix(v) for v in value]
+        if isinstance(value, str):
+            for old, new in pairs:
+                value = value.replace(old, new)
+        return value
+
+    for cell in notebook["cells"]:
+        for output in cell.get("outputs", []):
+            for key in ("text", "traceback", "evalue"):
+                if key in output:
+                    output[key] = fix(output[key])
+            for mime, value in output.get("data", {}).items():
+                if mime.startswith("text/"):
+                    output["data"][mime] = fix(value)
+
+
+#: (number, file name, cells, extra notebook metadata). The number is the
+#: notebook's own, so `--execute 7` means notebook 7.
+NOTEBOOKS = [
+    (1, NB1, nb1, None),
+    (2, NB2, nb2, None),
+    (3, NB3, nb3, None),
+    (4, NB4, nb4, None),
+    (5, NB5, nb5, None),
+    (6, NB6, nb6, GPU_METADATA),
+    (7, NB7, nb7, None),
+    (8, NB8, nb8, GPU_METADATA),
+]
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -1938,16 +2346,10 @@ def main(argv: list[str] | None = None) -> None:
     run = "--execute" in argv
     wanted = {int(a) for a in argv if a.isdigit()}
     NOTEBOOK_DIR.mkdir(parents=True, exist_ok=True)
-    for number, (name, cells) in enumerate(
-            [(NB1, nb1), (NB2, nb2), (NB3, nb3), (NB4, nb4), (NB5, nb5),
-             (None, None), (NB7, nb7), (NB8, nb8)], 1):
-        if name is None:
-            # 06_agent_benchmark.ipynb is committed but was never added here.
-            # Numbering is kept aligned so `--execute 7` means notebook 7.
-            continue
+    for number, name, cells, metadata in NOTEBOOKS:
         if wanted and number not in wanted:
             continue
-        path = write(name, cells)
+        path = write(name, cells, metadata)
         print(f"wrote {path} ({len(cells)} cells)")
         if run:
             print(f"  executing {name} ...", flush=True)

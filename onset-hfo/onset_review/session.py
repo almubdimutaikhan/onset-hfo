@@ -10,7 +10,7 @@ is true and `onset_review.window` decides how it looks. A panel that wants a
 number asks for it here; nothing downstream recomputes a rate.
 
 Nothing here is new analysis. Every number comes from the same functions the
-command line, the report and the Streamlit app use -- `prepare`, the detector
+command line, the report and the study pages use -- `prepare`, the detector
 registry, `channel_rates`, `leader_separation`, `candidate_channels` -- so a
 rate read off the screen is the rate the paper quotes. That constraint is the
 reason this module is thin.
@@ -254,9 +254,11 @@ class ReviewRequest:
         the screen shows the fast-ripple one would have it quoting numbers that
         are nowhere on the display.
 
-        Each detector keeps its own measured threshold unless the reviewer set
+        Each detector keeps its own default threshold unless the reviewer set
         one, because they are not interchangeable -- line length runs at 3.0 SD
-        and the energy detectors at 2.0.
+        and the energy detectors at 5.0, the literature value, in both bands.
+        The thresholds measured against ds003498 (2.0 for ripples, 5.0 for fast
+        ripples, ``config.THRESHOLDS``) are used by the outcome study, not here.
         """
         cfg = PipelineConfig()
         if self.preprocess is not None:
