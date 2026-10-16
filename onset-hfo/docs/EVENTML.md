@@ -1,10 +1,11 @@
 # A learned second stage for HFO candidates
 
-**Status: experiment, not in the application.** Step one of the
-deep-learning plan: before training any network, test whether a model
-fitted on the measurements the detectors already make separates
+**Status: research code, not on the clinical pages.** It tests whether a
+model fitted on the measurements the detectors already make separates
 expert-marked events from the rest better than the hand-written validation
-rules. Code: [`onset_hfo/eventml.py`](../onset_hfo/eventml.py). Committed
+rules. Training networks is left to the researchers who want it: the code
+and the Analysis-page templates below are there to do it, and no trained
+model ships with the software. Code: [`onset_hfo/eventml.py`](../onset_hfo/eventml.py). Committed
 results: [`data/eventml/`](../data/eventml/).
 
 ```bash
@@ -165,12 +166,19 @@ scripts that run on the recording on screen:
   * `eventnet.predict`, `eventnet.save`, `eventnet.load`, and
     `eventnet.available_models()`.
 
-## Next
+## Next, for whoever takes it up
 
-Two steps, in this order:
-1. **A pooled model adjusted with the reader's verdicts:** the
-   leave-one-patient-out model, then fine-tuned on a few dozen verdicts of
-   the current patient.
-2. **A network on the raw windows (braindecode)**, as the second stage over
-   the same candidates. The bar is the pooled model's ripple F1 of 0.513
-   leaving one patient out, not the rules.
+* **A network on the raw windows.** `python -m onset_hfo.eventnet` trains
+  any braindecode model on the same candidates, one patient held out at a
+  time. A run of EEGNet was started here and stopped partway, at 10 of 20
+  patients in the ripple band, by choice: with 20 patients from one centre
+  a network can overfit easily, and training it is a research question,
+  not something the software needs to ship. Its partial numbers are not
+  reported. The bar a network has to clear is the boosted model's
+  leave-one-patient-out ripple F1 of 0.513, not the rules'.
+* **A pooled model adjusted with the reader's verdicts:** the
+  leave-one-patient-out model, fine-tuned on a few dozen verdicts of the
+  current patient.
+* **Another dataset.** None of these numbers says how a model behaves on
+  another hospital's recordings; that is the test that matters before any
+  learned stage is used outside research.
