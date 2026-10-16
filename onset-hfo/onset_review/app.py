@@ -483,6 +483,7 @@ class _Review:
         maximised = False
         if previous is not None and state is None:
             self.parts.host.resize(previous.host.size())
+            self.parts.host.move(previous.host.pos())
             maximised = previous.host.isMaximized()
         if previous is None and self.start_window is not None:
             # The same window, as far as the reviewer is concerned: the full
@@ -495,6 +496,7 @@ class _Review:
             # the reviewer never sees the default arrangement flash past.
             self.parts.host.restoreState(state)
             self.parts.host.resize(previous.host.size())
+            self.parts.host.move(previous.host.pos())
             maximised = previous.host.isMaximized()
         # MNE chooses the browser's opening size and chooses it large -- wider
         # and taller than a laptop screen. Clamped to the screen's work area
@@ -513,6 +515,17 @@ class _Review:
                 previous.figure.close()
             except Exception:
                 pass
+            # The window the trace sat in, when it is not the trace itself
+            # (the page window, or the dock host that wraps a browser): closed
+            # too, or a re-analysis leaves the old window open behind the new
+            # one with an empty trace. Its close handler leaves alone what was
+            # carried into the new window -- the console, the editor, the
+            # panes, a held case.
+            if previous.host is not previous.figure and previous.host is not self.parts.host:
+                try:
+                    previous.host.close()
+                except Exception:
+                    pass
         if self.start_window is not None:
             self.start_window.close()
             self.start_window = None

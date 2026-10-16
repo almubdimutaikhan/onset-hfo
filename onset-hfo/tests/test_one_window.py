@@ -287,3 +287,45 @@ def test_every_page_lets_the_window_shrink_to_a_laptop_screen(qapp, recording, c
         review.parts.panels["console"].clear_user_variables()
         host.close()
         _settle(qapp)
+
+
+def test_a_reanalysis_replaces_the_window_rather_than_opening_a_second(qapp, recording,
+                                                                        config, monkeypatch):
+    """Applying new settings rebuilds the window. The old one used to stay open
+    behind the new one, its trace gone, because only the trace inside it was
+    closed: two windows of the same recording, one of them stale."""
+    from qtpy.QtWidgets import QApplication
+
+    from onset_review import launcher
+    from onset_review.app import _Review, build_parser
+    from onset_review.pages import PageWindow
+
+    monkeypatch.setattr(launcher, "load_with_progress",
+                        lambda request, cache_dir=None, parent=None:
+                        session_from_recording(recording, request))
+    review = _Review(qapp, None, False, build_parser().parse_args([]))
+    review._open_request(ReviewRequest(dataset="", subject="synthetic", t_start=0.0,
+                                       t_stop=float(recording.duration),
+                                       detectors=("rms",)))
+    _settle(qapp)
+    first = review.parts.host
+    console = review.parts.panels["console"]
+    try:
+        first.resize(1200, 800)
+        first.move(40, 30)
+        review._rerun(threshold_sd=5.0)
+        _settle(qapp)
+        second = review.parts.host
+        assert second is not first
+        assert not first.isVisible(), "the window it replaced must close"
+        open_windows = [w for w in QApplication.topLevelWidgets()
+                        if isinstance(w, PageWindow) and w.isVisible()]
+        assert open_windows == [second], "one window, not two"
+        if not second.isMaximized():     # a maximised window has no place of its own
+            assert second.pos() == first.pos(), "in the same place on the screen"
+        assert review.parts.panels["console"] is console and second.isAncestorOf(console), \
+            "the console was carried over, not closed with the old window"
+    finally:
+        review.parts.panels["console"].clear_user_variables()
+        review.parts.host.close()
+        _settle(qapp)
