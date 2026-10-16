@@ -2,16 +2,18 @@
 # repository" button from it; `cffconvert` turns it into BibTeX.
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "Onset-HFO: detecting high-frequency oscillations in intracranial EEG, with an evidence-only agent"
+title: "Onset Review: traceable analysis of high-frequency oscillations and seizure onset in intracranial EEG"
 abstract: >-
-  A research prototype for detecting high-frequency oscillations and interictal
-  epileptiform discharges in intracranial EEG. It ships four HFO detectors, a
-  spike detector, artifact validation, data-quality checks that remove only
-  what no physiology produces, Poisson confidence intervals and a candidate
-  channel set rather than a single argmax; an installable desktop reviewer
-  built on MNE's own Qt browser; and an agent that answers only from the saved
-  result tables and cites them. Evaluated against the expert HFO markings and
-  the surgical outcomes of OpenNeuro ds003498. Not a medical device, and not
+  An open-source Python library and desktop application for intracranial EEG.
+  It detects ripples and fast ripples with four detectors and interictal
+  discharges with a fifth, rejects filter ringing by testing each event against
+  its spectral background, attaches an exact Poisson confidence interval to
+  every channel rate and reports channels whose intervals overlap the leader's
+  as a tied set, computes the Epileptogenicity Index of seizure onset, and
+  records a reader's event-by-event review. An optional assistant answers
+  questions about a saved analysis with a locally run open-weight model, under
+  checks on its citations and numbers. Validated on OpenNeuro ds003498,
+  ds003029 and ds004100. Research software: not a medical device, and not
   validated for clinical use.
 type: software
 authors:
@@ -22,7 +24,7 @@ authors:
 repository-code: "https://github.com/berdakh/onset-hfo"
 url: "https://berdakh.github.io/onset-hfo/"
 license: MIT
-version: "0.3.17"
+version: "0.3.18"
 keywords:
   - intracranial EEG
   - high-frequency oscillations
