@@ -1,9 +1,11 @@
-"""Turning a saved analysis into things a page can show.
+"""Turning a saved analysis and the committed study tables into things a
+page can show.
 
-Every function here is pure, takes a :class:`~onset_hfo.store.ResultStore`,
-and returns plain data or a DataFrame. None of them imports Streamlit, which
-is what makes them testable and what keeps the UI a *view*: the page arranges
-what these return and does not decide anything.
+Every function here is pure, takes a :class:`~onset_hfo.store.ResultStore` or
+reads a committed table, and returns plain data or a DataFrame. None of them
+imports an interface toolkit, which is what makes them testable and what keeps
+the desktop study pages (:mod:`onset_review.studies`) a *view*: the page
+arranges what these return and does not decide anything.
 
 The one rule this module exists to enforce
 ------------------------------------------
@@ -22,10 +24,14 @@ this project could ship. It derives nothing new: it reads the counts and
 intervals already in ``rates_*.csv`` through a library function the tests
 cover. Treat any second exception as a bug.
 
-Re-rendering a signal window (``app/signal.py``) is not an exception to
+Re-rendering a signal window (:func:`reload_spec`) is not an exception to
 this rule either. The event's times, frequency and amplitude all come from the
 store; the signal is fetched again only so the reader can *look* at the window
 the numbers describe. Nothing is re-detected.
+
+This module was the Streamlit site's view model (``app/panels.py``) until the
+site was retired in favour of the desktop application, whose study pages had
+already read the same tables through it.
 """
 
 from __future__ import annotations
@@ -40,8 +46,8 @@ from onset_hfo.store import ResultStore
 
 #: Where the committed tables live. The checkout's ``data/`` unless
 #: ``ONSET_HFO_DATA_ROOT`` says otherwise -- which the desktop reviewer sets
-#: when it reads these loaders out of an installed release bundle rather
-#: than a checkout.
+#: when it reads the tables of an installed release bundle rather than a
+#: checkout (:func:`onset_review.studies.site_root`).
 DATA_ROOT = Path(os.environ.get("ONSET_HFO_DATA_ROOT") or PROJECT_ROOT / "data")
 
 #: A real 60 s analysis that ships with the source, so every page works on a
@@ -65,17 +71,9 @@ BENCHMARK = DATA_ROOT / "benchmark"
 # The standing disclaimer -- the canonical copy
 # --------------------------------------------------------------------------
 #
-# DUPLICATION.md item 5. The same disclaimer is shown by berdakh/onset's
-# app/common.py. This is the copy of record: the structure below is fixed, and
-# the *only* part the teaching prototype changes is DATA_SENTENCE, because it
-# runs on a synthetic cohort and must not claim otherwise. If you edit anything
-# but DATA_SENTENCE here, edit the twin too -- see docs/DUPLICATION.md, which
-# carries both wordings side by side so neither has to be reconstructed.
-#
-# It lives here rather than in common.py for the reason this module exists:
-# common.py imports Streamlit, CI does not install Streamlit, and a test
-# that reaches for the most important sentence in the product must not need
-# a browser library to read it.
+# The desktop window's banner (onset_review.pages.DISCLAIMER) is assembled
+# from these three parts. berdakh/onset, the teaching prototype, carries the
+# same structure with its own DATA_SENTENCE (docs/DUPLICATION.md).
 
 #: Fixed. Names the thing and refuses the category, in that order.
 DISCLAIMER_LEAD = "Research tool — not a medical device."
@@ -141,9 +139,7 @@ def analyses() -> list[Path]:
     """Every saved analysis: the shipped example first, then anything local.
 
     Lives here rather than beside the page because it is a fact about the
-    filesystem, not a decision about layout -- and because this module must
-    import without Streamlit, which is what lets the tests run in CI where
-    Streamlit is not installed.
+    filesystem, not a decision about layout.
     """
     found = find_results(RESULTS_DIR)
     if EXAMPLE.exists() and EXAMPLE not in found:

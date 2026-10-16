@@ -52,6 +52,9 @@ from qtpy.QtWidgets import (
 )
 
 from onset_review import theme
+from onset_review.studytables import DATA_SENTENCE as _DATA_SENTENCE
+from onset_review.studytables import DISCLAIMER_LEAD as _DISCLAIMER_LEAD
+from onset_review.studytables import DISCLAIMER_TAIL as _DISCLAIMER_TAIL
 
 __all__ = ["PageWindow", "PAGES", "STUDY_PAGES", "DISCLAIMER", "SECTIONS",
            "sections", "page_label"]
@@ -78,14 +81,9 @@ GUIDE_PAGES = (("quickstart", "Quick start"), ("case", "Case"))
 STUDY_PAGES = ("Detectors", "Outcome", "Patients", "Data", "Architecture",
                "Research")
 
-#: The site's disclaimer, word for word (`app/panels.py`). A test pins the
-#: two copies to each other; it is duplicated rather than imported because the
-#: wheel does not ship the Streamlit app.
-DISCLAIMER = ("Research tool — not a medical device. "
-              "Methods tested on real recordings with expert markings and "
-              "surgical outcomes — and nothing here is validated for clinical use. "
-              "Every number cites the window it came from. There is no "
-              "recommendation anywhere in this product; the clinician decides.")
+#: The standing disclaimer, assembled from its canonical parts in
+#: `onset_review.studytables`.
+DISCLAIMER = " ".join([_DISCLAIMER_LEAD, _DATA_SENTENCE, _DISCLAIMER_TAIL])
 
 #: The one line of it that is always showing; the rest opens on a click.
 DISCLAIMER_LINE = ("Research tool — not a medical device. Nothing here is "

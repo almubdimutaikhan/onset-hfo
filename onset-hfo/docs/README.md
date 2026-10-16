@@ -29,18 +29,13 @@ screen supports concluding, and the five things never to conclude from it.
 
 ## "I just want to click around in it"
 
-**[https://onsetnu.streamlit.app/](https://onsetnu.streamlit.app/)** — deployed, no install, no account.
-
-Or locally:
-
-```bash
-pip install -e ".[app]"
-streamlit run app/Home.py
-```
-
-The reading interface: a saved analysis on a page, where a rate leads to the
-events behind it and an event leads to the signal it was measured on. See
-[`app/README.md`](../app/README.md).
+Install the desktop application from the
+[latest release](https://github.com/berdakh/onset-hfo/releases/latest)
+(`./install.sh --with-sample`, then `onset-review`), or run the notebooks in
+Colab with no install — the badge at the top of each notebook opens it. In the
+application a rate leads to the events behind it and an event leads to the
+signal it was measured on; the Library pages report the cohort studies from
+the committed tables.
 
 ## "I just want to see it work"
 
@@ -133,7 +128,7 @@ Read in this order:
 | What does the report contain? | [`onset_hfo/report.py`](../onset_hfo/report.py) |
 | Which contacts were resected, and how is that mapped to channels? | [`onset_hfo/clinical.py`](../onset_hfo/clinical.py) |
 | How is the outcome study computed, and what are its statistics? | [`onset_hfo/outcome.py`](../onset_hfo/outcome.py) |
-| What does the interface decide, and what does it only display? | [`app/panels.py`](../app/panels.py) |
+| What does the interface decide, and what does it only display? | [`onset_review/studytables.py`](../onset_review/studytables.py) |
 | What does the desktop window show, and where does each number come from? | [`onset_review/session.py`](../onset_review/session.py) and [`onset_review/trends.py`](../onset_review/trends.py) |
 | How is a span longer than memory analysed, and what does chunking cost? | [`onset_hfo/longrun.py`](../onset_hfo/longrun.py) and [`onset_hfo/streaming.py`](../onset_hfo/streaming.py) |
 | How are real electrode coordinates taken in, and what is checked about them? | [`onset_review/coordinates.py`](../onset_review/coordinates.py) |

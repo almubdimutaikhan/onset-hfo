@@ -67,10 +67,9 @@ python -m onset_agent.cli --results artifacts/demo/sim-01_simulated_run-01 \
     --question "which channels have the highest ripple rate?"
 ```
 
-Then open the [live app](https://onsetnu.streamlit.app/) and ask the assistant
-which channels to resect. Watching it refuse conveys the design philosophy
-faster than any document. Locally: `streamlit run app/Home.py` (needs
-`pip install -e ".[app]"`).
+Then open the desktop application (`pip install -e ".[review]"`, then
+`onset-review`) and ask the assistant which channels to resect. Watching it
+refuse conveys the design philosophy faster than any document.
 
 For the research framing rather than the code, read
 [**Where do seizures start?**](https://berdakh.github.io/onset-hfo/TUTORIAL.html)
@@ -84,7 +83,6 @@ For the research framing rather than the code, read
 |---|---|
 | `onset_hfo/` | the pipeline — see the table below |
 | `onset_agent/` | the agent and the S0–S3 orchestration ladder |
-| `app/` | Streamlit app: `Home.py` plus nine pages |
 | `onset_review/` | **the desktop reviewer** — the thing a clinician opens. `session`/`trends`/`report` are Qt-free and hold every number it shows; `panels`/`window`/`launcher` render and compute nothing |
 | `packaging/` | `install-ubuntu.sh`, the `.desktop` entry and the icon |
 | `docs/` | nineteen documents; reading order at the end of this file |
@@ -188,11 +186,10 @@ All of these are load-bearing and none is obvious from reading the code.
    weighted score and it truncates to `int` and returns something meaningless
    that still looks like an answer. This is why §6c reports
    `candidates_resected` for one arm only.
-4. **Tests must never import the Streamlit half of the app.** CI installs only
-   `.[dev]`, which has no Streamlit, so `import app.common` fails there while
-   passing locally. Logic lives in `app/panels.py`, which imports no Streamlit;
-   a test enforces this. To reproduce CI locally, put a `streamlit.py` that
-   raises `ImportError` on `PYTHONPATH`.
+4. **The study pages' logic must not import Qt.** CI's main job installs only
+   `.[dev]`, which has no Qt. Everything the study pages decide lives in
+   `onset_review/studytables.py` and `onset_review/studies.py`, which import no
+   interface toolkit; a test enforces this for the loaders.
 5. **`ONSET_HFO_OFFLINE=1` plus explicit `--subjects` runs most studies with no
    network at all**, because only the subject *listing* touches the archive.
    Two roadmap items sat marked "blocked on network" for weeks because nobody

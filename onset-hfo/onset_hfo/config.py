@@ -752,7 +752,7 @@ THRESHOLDS: dict[str, float] = {
     # mean detection count at 5.0 SD, not the expert count, and the same
     # sentence in EVALUATION.md said 228. Three copies, two of them wrong;
     # ``data/benchmark/cohort.csv`` now carries the per-subject counts so the
-    # number has a file behind it. See ``tests/test_app.py``.
+    # number has a file behind it. See ``tests/test_studytables.py``.
     "interictal-agreement-fast-ripple": 5.0,
 }
 

@@ -1,5 +1,11 @@
 # Two repositories, and what to do about it
 
+> **Historical record.** In October 2026 this repository retired its Streamlit
+> site (<https://onsetnu.streamlit.app/>) in favour of the desktop application,
+> whose Library pages already showed the same studies. The plan below, written
+> while both repositories had a Streamlit app, is kept as it was; what still
+> has to match the prototype is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 There are two repositories, two deployed Streamlit apps and two GitHub Pages
 sites under one project name. Before the expo that has to read as one project
 rather than as a thing that was built twice. This document measures what is

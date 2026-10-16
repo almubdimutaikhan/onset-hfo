@@ -1,9 +1,7 @@
-"""The reading interface's view model.
+"""The study pages' view model (:mod:`onset_review.studytables`).
 
-Offline, and deliberately free of Streamlit: everything the page decides
-lives in :mod:`app.panels`, so all of it can be tested without a browser.
-What the page itself does — arranging these results — is verified by driving
-a real browser against a real server, which is not something to run in CI.
+Offline and free of any interface toolkit: everything a study page decides
+lives in that module, so all of it can be tested without a display.
 
 The rule under test throughout is the one in that module's docstring: the
 interface shows what the pipeline wrote and does not compute a second answer.
@@ -16,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from app import panels
+from onset_review import studytables as panels
 
 
 @pytest.fixture(scope="module")
@@ -156,13 +154,11 @@ def test_an_invented_citation_is_flagged_rather_than_dropped(store):
 
 # -- what ships with the source -------------------------------------------
 
-def test_panels_never_imports_streamlit():
-    """The whole reason `panels.py` exists, asserted rather than assumed.
+def test_the_study_tables_import_no_interface_toolkit():
+    """The view model stays testable without a display.
 
-    CI installs the `dev` extra, which has no Streamlit. A path constant put
-    in `common.py` (which does import it) failed there while passing locally,
-    because the local environment happened to have Streamlit installed. This
-    is the guard that stops that recurring.
+    CI's main job installs the `dev` extra, which has no Qt; a loader that
+    imported a toolkit would pass locally and fail there.
     """
     import ast
 
@@ -173,31 +169,10 @@ def test_panels_never_imports_streamlit():
             imported |= {alias.name.split(".")[0] for alias in node.names}
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module.split(".")[0])
-    assert "streamlit" not in imported, \
-        "app/panels.py must import no Streamlit: the tests run where it is absent"
+    assert not imported & {"streamlit", "qtpy", "PySide6", "PyQt5", "PyQt6"}, \
+        "studytables.py must import no interface toolkit: the tests run where it is absent"
 
 
-def test_no_test_in_this_file_imports_the_streamlit_half_of_the_app():
-    """The other direction of the same rule, and the one that bit twice.
-
-    `test_panels_never_imports_streamlit` stops a constant drifting into
-    `common.py`. It does not stop a *test* importing `common.py` to reach one,
-    which passes locally -- where Streamlit happens to be installed -- and
-    fails in CI, where the `dev` extra does not install it. Three tests did
-    exactly that; the constants they wanted now live in `panels.py`.
-    """
-    import ast
-
-    tree = ast.parse(Path(__file__).read_text())
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("app"):
-            names = {alias.name for alias in node.names}
-            assert "common" not in names and node.module != "app.common", \
-                "this file must not import app.common: CI has no Streamlit"
-        elif isinstance(node, ast.Import):
-            assert not any(alias.name.startswith("app.common")
-                           for alias in node.names), \
-                "this file must not import app.common: CI has no Streamlit"
 
 def test_the_example_analysis_ships_and_loads():
     """Every page must work on a fresh clone, with no download.
@@ -205,8 +180,8 @@ def test_the_example_analysis_ships_and_loads():
     The Onset prototype builds a synthetic cohort at startup; this one cannot
     generate real recordings, so a real analysis is committed instead.
     """
-    from app.panels import EXAMPLE
     from onset_hfo.store import ResultStore
+    from onset_review.studytables import EXAMPLE
 
     assert EXAMPLE.exists(), "the shipped example analysis is missing"
     shipped = ResultStore(EXAMPLE)
@@ -219,7 +194,7 @@ def test_the_committed_studies_are_readable():
     """The Outcome page reads these rather than rerunning a 90-minute sweep."""
     import pandas as pd
 
-    from app.panels import STUDIES
+    from onset_review.studytables import STUDIES
 
     groups = pd.read_csv(STUDIES / "outcome_groups_300s.csv")
     assert {"source", "metric", "auc", "p_permutation", "p_bonferroni"} <= set(groups.columns)
@@ -572,31 +547,11 @@ def test_the_sweep_is_empty_rather_than_raising_when_the_extract_is_gone(monkeyp
     assert panels.sweep_grid().empty
 
 
-# -- the four things that must stay in step with berdakh/onset --------------
-#
-# DUPLICATION.md item 5 and item 8. Nothing can enforce a convention across two
-# repositories, but the half that lives in this one can be enforced here: the
-# banner must be built from the canonical constants rather than from a fourth
-# copy of the sentence, and the wording the plan quotes must be the wording the
-# code ships. A checklist the code already contradicts is worse than none.
+# -- the disclaimer ------------------------------------------------------------
 
 
-def _duplication_plan() -> str:
-    return (Path(__file__).resolve().parents[1] / "docs" / "DUPLICATION.md").read_text()
 
 
-def test_the_disclaimer_is_assembled_from_the_canonical_constants():
-    """No page may carry a second copy of the sentence that matters most.
-
-    Read as text rather than imported: `app/common.py` imports Streamlit and
-    CI does not install it. That is also why the constants live in
-    `panels.py`.
-    """
-    source = (Path(__file__).resolve().parents[1] / "app" / "common.py").read_text()
-    assert panels.DISCLAIMER_LEAD not in source, \
-        "the banner restates the disclaimer instead of using DISCLAIMER_LEAD"
-    assert "{DISCLAIMER_LEAD}" in source and "{DATA_SENTENCE}" in source, \
-        "the banner does not interpolate the canonical constants"
 
 
 def test_the_disclaimer_still_says_there_is_no_recommendation():
@@ -608,49 +563,14 @@ def test_the_disclaimer_still_says_there_is_no_recommendation():
     assert "the clinician decides" in whole
 
 
-def test_the_duplication_plan_quotes_the_wording_the_code_ships():
-    """The plan is the other repository's only source for this text."""
-    plan = _duplication_plan()
-    assert panels.DATA_SENTENCE in plan, \
-        "DUPLICATION.md quotes a DATA_SENTENCE the app no longer uses"
-    assert "There is no " in panels.DISCLAIMER_TAIL
 
 
-def test_the_plan_is_closed_out_rather_than_left_half_done():
-    """Items 5-8 had two halves each; both sides have now shipped.
-
-    This asserted `count("**half done**") == 4` while only this repository was
-    reachable. The other half shipped in berdakh/onset#3, so the assertion is
-    the opposite one: nothing in the table may still be waiting.
-    """
-    plan = _duplication_plan()
-    assert "**half done**" not in plan and "| todo |" not in plan, \
-        "an item is still open; the table must say which half"
-    assert plan.count("**done**") >= 8, "the eight planned actions must all be recorded"
-    assert "berdakh/onset#3" in plan, "the table must name the PR that closed items 4-8"
 
 
-def test_the_theme_file_names_its_twin():
-    theme = Path(__file__).resolve().parents[2] / ".streamlit" / "config.toml"
-    assert theme.exists()
-    assert "TWIN FILE" in theme.read_text()
 
 
-def test_the_contributing_notes_carry_the_four_item_checklist():
-    notes = (Path(__file__).resolve().parents[1] / "docs" / "CONTRIBUTING.md").read_text()
-    assert "stay in step with" in notes
-    for item in ("DATA_SENTENCE", ".streamlit/config.toml", "Architecture"):
-        assert item in notes, f"the checklist does not name {item}"
 
 
-def test_the_sidebar_opens_with_the_four_shared_destinations_in_order():
-    """Checklist item 3, which item 3 of the plan says is done."""
-    source = (Path(__file__).resolve().parents[1] / "app" / "common.py").read_text()
-    names = ["Clinical guide", "Implementation walkthrough", "Results & docs",
-             "Onset project"]
-    positions = [source.index(f"[{name}]") for name in names]
-    assert positions == sorted(positions), \
-        "the shared link row is out of order; the two apps must match"
 
 
 # The four-detector family and the two studies that followed it
@@ -681,18 +601,6 @@ def test_adding_two_detectors_bought_nothing_and_the_page_says_so():
             f"the added features bought nothing and would need rewriting")
 
 
-def test_the_detectors_page_computes_the_margin_rather_than_quoting_it():
-    """The margin must not be typed into the page.
-
-    A hardcoded "+0.003" would be correct today and unowned tomorrow, which is
-    the failure mode the whole read-from-the-file convention exists to avoid.
-    The page must call `family_margin` and render whatever it returns.
-    """
-    source = (Path(__file__).resolve().parents[1] / "app" / "pages"
-              / "4_Detectors.py").read_text()
-    assert "panels.family_margin()" in source
-    margin = panels.family_margin()
-    assert {f"{m['margin']:.3f}" for m in margin.values()} == {"0.003"}
 
 
 def test_the_fast_ripple_coupled_population_is_the_unmeasurable_one():
@@ -739,30 +647,8 @@ def test_a_silent_re_test_no_longer_destroys_a_ranking():
     assert (rescued["score_mass"] > 0).all()
 
 
-def test_the_research_page_quotes_the_collapse_it_computes():
-    source = (Path(__file__).resolve().parents[1] / "app" / "pages"
-               / "9_Research.py").read_text()
-    # The page no longer leads with a collapse count, because the collapse it
-    # described is fixed. What it must still do is name the fast-ripple harm
-    # with the numbers the extract carries.
-    assert "0.753" in source
-    # Phrases are matched short because the page wraps its prose.
-    assert "refuses to fire on a re-test" in source
-    assert "alphabetical tie-break" in source
 
 
-def test_no_page_still_claims_only_two_detectors():
-    """The whole point of this revision. A regression here is a stale page."""
-    stale = []
-    app_dir = Path(__file__).resolve().parents[1] / "app"
-    for path in sorted(app_dir.rglob("*.py")):
-        text = path.read_text()
-        for phrase in ("Two deliberately plain detectors",
-                       "two detectors that differ",
-                       "three or four would show"):
-            if phrase in text:
-                stale.append(f"{path.name}: {phrase!r}")
-    assert not stale, stale
 
 
 def test_the_two_sweeps_agree_wherever_they_overlap():
@@ -786,17 +672,6 @@ def test_the_two_sweeps_agree_wherever_they_overlap():
     assert isinstance(shared, pd.DataFrame)
 
 
-def test_the_outcome_page_reads_the_group_table_rather_than_hardcoding_it():
-    """A table typed into a page is correct today and unowned tomorrow.
-
-    This was briefly hardcoded, and the round trip through a 4-decimal CSV
-    moved two cells (0.311 -> 0.310, 0.527 -> 0.528) before anyone looked.
-    That is the whole argument for reading the file.
-    """
-    source = (Path(__file__).resolve().parents[1] / "app" / "pages"
-              / "5_Outcome.py").read_text()
-    assert "panels.subpopulation_groups(" in source
-    assert "0.747, 0.072, 0.644" not in source, "the table is hardcoded again"
 
 
 def test_the_committed_group_tables_match_what_the_scripts_compute():
@@ -817,42 +692,8 @@ def test_the_committed_group_tables_match_what_the_scripts_compute():
         "the Research page says the rule helps in the ripple band at every point"
 
 
-def test_every_panels_function_a_page_calls_actually_exists():
-    """The check that would have caught the live AttributeError before deploy.
-
-    A page calling `panels.something_new` is fine locally the moment the
-    function is written, and fine on a clean deploy. It is *not* fine when
-    Streamlit re-runs a changed page script while keeping the previously
-    imported module, which is how a new page met an old module in production
-    and blanked the Detectors page. This test fails in CI for the related and
-    simpler mistake of referencing a function that was never added at all.
-    """
-    import re
-
-    app_dir = Path(__file__).resolve().parents[1] / "app"
-    missing = []
-    for path in sorted(app_dir.rglob("*.py")):
-        for name in sorted(set(re.findall(r"\bpanels\.([a-z_][a-z0-9_]*)",
-                                          path.read_text()))):
-            if not hasattr(panels, name):
-                missing.append(f"{path.name} calls panels.{name}, which does not exist")
-    assert not missing, missing
 
 
-def test_the_pages_degrade_rather_than_crash_on_a_stale_module():
-    """The guard itself, so nobody removes it as redundant.
-
-    It is not redundant: the failure it handles is a property of how Streamlit
-    reloads, not of this repository, and it recurs on every deploy that adds a
-    panels function.
-    """
-    app_dir = Path(__file__).resolve().parents[1] / "app"
-    for page, attribute in (("4_Detectors.py", "family_operating_points"),
-                            ("5_Outcome.py", "subpopulation_groups")):
-        source = (app_dir / "pages" / page).read_text()
-        assert "hasattr(panels" in source, f"{page} lost its stale-module guard"
-        assert attribute in source
-        assert "Reboot" in source, f"{page} no longer names the remedy"
 
 
 def test_the_montage_extract_keeps_every_patient_in_every_arm():
@@ -867,14 +708,3 @@ def test_the_montage_extract_keeps_every_patient_in_every_arm():
     assert (outcome["n_SF"] == 13).all() and (outcome["n_rec"] == 7).all()
 
 
-def test_the_research_page_quotes_the_montage_result_it_rests_on():
-    source = (Path(__file__).resolve().parents[1] / "app" / "pages"
-              / "9_Research.py").read_text()
-    assert "Four questions" in source
-    assert "15 of 20 patients" in source and "18 of 20" in source
-    assert "seven of eight" in source
-    # The numbers the page quotes are the extract's, not remembered ones.
-    groups = panels.montage_groups()
-    rho = groups[(groups["kind"] == "agreement") & (groups["metric"] == "spearman_rho")]
-    best = rho.loc[rho.groupby("band")["value"].idxmax(), "montage"]
-    assert set(best) == {"bipolar"}

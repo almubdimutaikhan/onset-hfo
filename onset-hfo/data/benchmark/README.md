@@ -55,7 +55,7 @@ many* expert events there were had to be transcribed. It was transcribed three
 times and two of them were wrong: `docs/EVALUATION.md` said 228, and
 `onset_hfo/config.py` said ~70 — which is this detector's own mean detection
 count at 5.0 SD, not the expert count at all. The Detectors page now reads both
-files instead of restating either, and `tests/test_app.py` pins the numbers the
+files instead of restating either, and `tests/test_studytables.py` pins the numbers the
 prose quotes against what is committed here.
 
 ---

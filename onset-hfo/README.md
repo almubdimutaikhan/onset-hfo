@@ -29,12 +29,10 @@ the schema**.
 
 ## Start here
 
-**[Open the live app](https://onsetnu.streamlit.app/)** — ten pages over real recordings, no install.
+**Install the desktop application** — the signal itself, with the marks on it.
 A channel's rate leads to the events behind it, an event leads to the signal it
 was measured on, and the assistant's every citation opens to both. Ask it which
 channels to resect and watch it refuse.
-
-**Or install the desktop reviewer** — the signal itself, with the marks on it:
 
 ```bash
 ./packaging/install-ubuntu.sh --with-sample && onset-review
@@ -171,11 +169,8 @@ python -m onset_hfo.cli benchmark
 # 9. test the HFO map against what happened to the patients after surgery
 python -m onset_hfo.cli outcome
 
-# 10. read a saved analysis on a page, with the signal behind every number
-#     (or just open https://onsetnu.streamlit.app/)
-pip install -e ".[app]" && streamlit run app/Home.py
-
-# 11. sit with the signal itself: the desktop reviewer, installed on Ubuntu
+# 10. sit with the signal itself: the desktop application, installed on Ubuntu
+#     (its Library pages read the committed study tables)
 ./packaging/install-ubuntu.sh --with-sample
 onset-review                                  # or the applications menu
 onset-review --subject sub-01 --window 0 60 --expert    # straight in
@@ -361,8 +356,6 @@ chance — see [`docs/EVALUATION.md`](docs/EVALUATION.md).
 | [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) | what this must not be used for |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | the clinical and signal-processing vocabulary, defined |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | what to build next, in order, with the reasoning |
-| [**the live app**](https://onsetnu.streamlit.app/) | the interface itself, deployed — ten pages over real recordings |
-| [`app/README.md`](app/README.md) | the reading interface: what it shows, the one rule it is built on, and how to deploy it |
 | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | how to add a detector, a dataset or a tool without breaking the contracts |
 
 ## Layout
@@ -418,14 +411,6 @@ onset_agent/          the agent
   verifier.py         deterministic + language-model verifiers, and their delta
   scoring.py          ranking vs clinician SOZ labels, with a permutation null
   orchestrate.py      python -m onset_agent.orchestrate ...
-
-app/                  the reading interface (Streamlit), ten pages
-  Home.py             the landing page
-  common.py           banner, analysis picker, committed-study loader
-  panels.py           everything the page decides; imports no Streamlit, so it is tested
-  signal.py           the one place the interface touches the recording again
-  pages/              Recording · Report · Assistant · Detectors · Outcome
-                      Patients · Data · Architecture · Research
 
 onset_review/         the desktop reviewer (Qt), installable on Ubuntu
   session.py          a loaded window: the recording, the detections, the findings

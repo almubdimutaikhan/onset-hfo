@@ -44,11 +44,10 @@ cp docs/images/onset-review.png docs/images/onset-review-analysis.png \
 # The manual's own pictures, so docs/MANUAL.md reads offline.
 grep -o 'images/[A-Za-z0-9_.-]*' docs/MANUAL.md | sort -u \
   | while read -r image; do cp "docs/${image}" "${STAGE}/docs/images/"; done
-# The study pages: the site's loaders, the committed tables they read, and
-# the two figures the Outcome page shows. install.sh copies site/ next to the
-# environment and the reviewer finds it there (onset_review.studies.site_root).
-mkdir -p "${STAGE}/site/app" "${STAGE}/site/data" "${STAGE}/site/docs/img"
-cp app/panels.py "${STAGE}/site/app/"
+# The study pages: the committed tables they read, and the two figures the
+# Outcome page shows. install.sh copies site/ next to the environment and the
+# reviewer finds it there (onset_review.studies.site_root).
+mkdir -p "${STAGE}/site/data" "${STAGE}/site/docs/img"
 for table in benchmark outcome stability cohort ictal template hup imaging; do
   cp -R "data/${table}" "${STAGE}/site/data/"
 done

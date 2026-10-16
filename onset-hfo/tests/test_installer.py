@@ -178,8 +178,8 @@ def test_bundle_mode_installs_the_wheel_beside_the_script(tmp_path):
     (bundle / "onset_hfo-9.9.9-py3-none-any.whl").write_bytes(b"not really a wheel")
     for asset in ("onset-review.desktop", "onset-review.svg"):
         (bundle / asset).write_text((REPO / "packaging" / asset).read_text())
-    (bundle / "site" / "app").mkdir(parents=True)
-    (bundle / "site" / "app" / "panels.py").write_text("# the loaders\n")
+    (bundle / "site" / "data" / "outcome").mkdir(parents=True)
+    (bundle / "site" / "data" / "outcome" / "subjects.csv").write_text("subject\n")
     env = _home(tmp_path)
     done = subprocess.run(["bash", str(script), "--no-apt", "--dry-run",
                            "--prefix", str(tmp_path / "p")],

@@ -19,7 +19,7 @@ ones to [`data/outcome/`](../data/outcome), so every number here can be
 checked from a fresh clone with no download.
 
 **To read this study one patient at a time**, rather than as the group tables
-below, run the app and open **Patients** (`app/pages/6_Patients.py`): same
+below, open **Library › Patients** in the desktop application: same
 study, one row per person, with the caveats that apply to each of them —
 resection coverage, tie-set size, and whether their answer held across the
 minutes of a run and across nights.

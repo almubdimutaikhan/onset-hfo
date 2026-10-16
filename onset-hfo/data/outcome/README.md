@@ -8,7 +8,7 @@ removed, and whether their seizures stopped.
 `data/stability/` already carried the *group* tables: one row per
 band × scope × source × metric, which is what a paper reports. These four
 files are the rows underneath them, committed for the same reason — so the
-[Patients screen](../../app/pages/6_Patients.py) and anyone checking a number
+desktop application's Patients page (Library) and anyone checking a number
 can work from a fresh clone with no 700 MB download and no 90-minute rerun.
 
 | file | grain | rows |
@@ -126,8 +126,8 @@ group tables for the screens above: AUC, bootstrap interval, exact
 permutation `p` and a Bonferroni column, with the realised `n_SF`/`n_rec` per
 arm. They exist for the same reason `../stability/` holds group tables beside
 the per-subject ones: reducing the per-window rows takes a bootstrap and an
-exact permutation, which is seconds of work and not something the Streamlit app
-should do on a page load. Regenerate either by re-running its script and writing
+exact permutation, which is seconds of work and not something a study page
+should do each time it is opened. Regenerate either by re-running its script and writing
 `analyse(rows)` to the file; write them at full precision, since rounding to
 four decimals on the way out moved two cells when it was first tried.
 
