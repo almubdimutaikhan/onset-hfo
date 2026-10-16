@@ -33,7 +33,7 @@ mkdir -p "${STAGE}/docs"
 cp docs/INSTALL.md docs/CLINICAL_GUIDE.md docs/AGENT.md docs/LIMITATIONS.md \
    docs/GLOSSARY.md docs/METHODS.md docs/EVALUATION.md docs/OUTCOME.md docs/ICTAL.md \
    docs/TEMPLATE_MAP.md docs/IMAGING.md docs/MANUAL.md docs/MODALITIES.md docs/DATA.md \
-   docs/ARCHITECTURE.md "${STAGE}/docs/"
+   docs/ARCHITECTURE.md docs/EVENTML.md "${STAGE}/docs/"
 # The pictures the pages show before a recording is open (onset_review.guide).
 mkdir -p "${STAGE}/docs/images"
 cp docs/images/onset-review.png docs/images/onset-review-analysis.png \

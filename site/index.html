@@ -91,7 +91,7 @@ footer { border-top: 1px solid var(--line); margin-top: 34px; padding: 22px 0 42
 
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="#">Onset Review<span>v0.3.18</span></a>
+    <a class="brand" href="#">Onset Review<span>v0.3.19</span></a>
     <nav>
       <a href="#overview">Overview</a>
       <a href="#methods">Methods</a>
@@ -120,11 +120,11 @@ footer { border-top: 1px solid var(--line); margin-top: 34px; padding: 22px 0 42
     the Epileptogenicity Index of seizure onset, and recording a reader's
     event-level review.</p>
   <div class="meta">
-    <span><b>Version</b> 0.3.18 (October 2026)</span>
+    <span><b>Version</b> 0.3.19 (October 2026)</span>
     <span><b>Licence</b> MIT</span>
     <span><b>Language</b> Python ≥ 3.10</span>
     <span><b>Platform</b> Linux (tested on Ubuntu)</span>
-    <span><b>DOI</b> <a href="https://doi.org/10.5281/zenodo.23417172">10.5281/zenodo.23417172</a></span>
+    <span><b>DOI</b> (v0.3.18) <a href="https://doi.org/10.5281/zenodo.23417172">10.5281/zenodo.23417172</a></span>
   </div>
   <ul class="links">
     <li><a href="https://github.com/berdakh/onset-hfo/releases/latest">Download (Linux)</a></li>
@@ -161,7 +161,11 @@ footer { border-top: 1px solid var(--line); margin-top: 34px; padding: 22px 0 42
     (<code>onset_review</code>), and an optional assistant
     (<code>onset_agent</code>) that answers questions about a saved analysis
     with a locally run open-weight language model, under checks described in
-    §2.7. All analyses can also be run from the command line.</p>
+    §2.7. All analyses can also be run from the command line. For research,
+    the application's analysis page includes scripts that train a learned
+    second stage, including any braindecode network, on candidate events; no
+    trained model is used in the clinical views
+    (<a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/EVENTML.md">EVENTML.md</a>).</p>
 
   <figure>
     <img src="img/app-recording.png" width="1680" height="980"
@@ -255,9 +259,14 @@ footer { border-top: 1px solid var(--line); margin-top: 34px; padding: 22px 0 42
     invents are removed, and every number in an answer other than a whole
     number from 0 to 20 must match, up to rounding, a value the tools
     returned; an answer that fails is returned once for correction and is
-    otherwise withheld. The checks cannot detect a correct number attributed to
-    the wrong channel. The exported report, not the assistant, is the
-    authoritative output.</p>
+    otherwise withheld. When the assistant drafts the report's findings or
+    limitations paragraph, its statements about the busiest channel, the tied
+    set, the quality checks and the reader's verdicts are also checked against
+    the analysis, and each sentence is listed with the evidence windows and
+    queries it rests on. Elsewhere the checks cannot detect a correct number
+    attributed to the wrong channel. The report's Methods paragraph is written
+    from the analysis settings, not by the model. The exported report, not the
+    assistant, is the authoritative output.</p>
 
   <div class="figs">
     <figure>
@@ -301,7 +310,7 @@ footer { border-top: 1px solid var(--line); margin-top: 34px; padding: 22px 0 42
 
   <div class="table-scroll">
   <table>
-    <caption>Table 1. Summary of validation results (version 0.3.18).</caption>
+    <caption>Table 1. Summary of validation results (version 0.3.19).</caption>
     <thead>
       <tr><th>Analysis</th><th>Data</th><th>n</th><th>Result</th></tr>
     </thead>
@@ -350,7 +359,7 @@ footer { border-top: 1px solid var(--line); margin-top: 34px; padding: 22px 0 42
   </div>
 
   <h3>Software testing</h3>
-  <p>The test suite (1,629 tests) runs without network access or patient
+  <p>The test suite (1,686 tests) runs without network access or patient
     recordings, on synthetic recordings with events at known times, on the
     committed result tables, and against local stand-ins for OpenNeuro and
     Ollama. Continuous integration runs it on Python 3.10 and 3.12 and builds
@@ -422,7 +431,7 @@ onset-review</pre>
 <section id="cite">
   <h2>6. Citation</h2>
   <p>If you use Onset Review in published work, please cite the archived
-    release you used. Version 0.3.18:</p>
+    release you used. The most recent release with a DOI is 0.3.18:</p>
 <pre>Abibullaev, B. (2026). Onset Review (version 0.3.18) [Computer software].
 Zenodo. https://doi.org/10.5281/zenodo.23417172</pre>
 <pre>@software{abibullaev_onset_review_2026,
