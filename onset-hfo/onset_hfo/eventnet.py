@@ -37,7 +37,8 @@ import pandas as pd
 from onset_hfo import eventml
 from onset_hfo.config import BANDS, RESULTS_DIR
 
-__all__ = ["WINDOW_S", "extract_windows", "evaluate"]
+__all__ = ["WINDOW_S", "MODEL", "extract_windows", "windows_from_prepared", "train",
+           "predict", "save", "load", "evaluate", "available_models"]
 
 #: The window the network sees, centred on the candidate: long enough for the
 #: slowest ripple (80 Hz, 12.5 ms a cycle) to show sixteen cycles and the
@@ -52,9 +53,44 @@ PATIENCE = 4
 BATCH = 256
 PER_EPOCH = 60_000
 VALIDATION_PATIENTS = 3
+#: The braindecode model trained by default. Any class in
+#: ``braindecode.models`` that takes ``n_chans``, ``n_outputs``, ``n_times``
+#: and ``sfreq`` can be named instead (`available_models` lists them).
+MODEL = "EEGNet"
 
 
 # -- windows ------------------------------------------------------------------
+
+def windows_from_prepared(prep, frame: pd.DataFrame) -> np.ndarray:
+    """The (n, 2, width) float32 windows of one prepared recording's
+    candidates, in `frame`'s order: the prepared signal and the signal
+    band-passed to each candidate's band, each in its channel's robust SD.
+    What `extract_windows` writes for the cohort, for one recording."""
+    from onset_hfo.detectors.base import bandpass, robust_scale
+
+    half = int(round(WINDOW_S * prep.sfreq / 2))
+    out = np.zeros((len(frame), 2, 2 * half), dtype=np.float32)
+    if not len(frame):
+        return out
+    channels = sorted(frame["channel"].unique())
+    idx = [prep.ch_names.index(c) for c in channels]
+    raw = prep.data[idx]
+    _, raw_scale = robust_scale(raw)
+    raw_n = np.pad(raw / np.maximum(raw_scale, 1e-12), ((0, 0), (half, half)))
+    position = {c: i for i, c in enumerate(channels)}
+    for band, rows in frame.groupby("band"):
+        filtered = bandpass(raw, prep.sfreq, getattr(BANDS, band))
+        _, band_scale = robust_scale(filtered)
+        band_n = np.pad(filtered / np.maximum(band_scale, 1e-12), ((0, 0), (half, half)))
+        for k, row in zip(np.flatnonzero((frame["band"] == band).to_numpy()),
+                          rows.itertuples(), strict=True):
+            centre = int(round((0.5 * (row.start + row.stop) - prep.t_offset)
+                               * prep.sfreq)) + half
+            i = position[row.channel]
+            out[k, 0] = np.clip(raw_n[i, centre - half:centre + half], -60, 60)
+            out[k, 1] = np.clip(band_n[i, centre - half:centre + half], -60, 60)
+    return out
+
 
 def extract_windows(candidates: pd.DataFrame, out: Path = OUT,
                     verbose: bool = True) -> dict[str, Path]:
@@ -123,12 +159,29 @@ def extract_windows(candidates: pd.DataFrame, out: Path = OUT,
 
 # -- the network --------------------------------------------------------------
 
-def _network(n_times: int, sfreq: float, seed: int):
-    import torch
-    from braindecode.models import EEGNet
+def available_models() -> list[str]:
+    """The model classes braindecode offers, by name."""
+    import braindecode.models as models
 
+    return sorted(name for name in getattr(models, "__all__", dir(models))
+                  if name[:1].isupper() and isinstance(getattr(models, name, None), type))
+
+
+def _network(n_times: int, sfreq: float, seed: int, model: str | None = None):
+    import braindecode.models as models
+    import torch
+
+    name = model or MODEL
+    cls = getattr(models, name, None)
+    if cls is None:
+        raise ValueError(f"braindecode has no model {name!r}; available_models() lists them")
     torch.manual_seed(seed)
-    return EEGNet(n_chans=2, n_outputs=2, n_times=n_times, sfreq=sfreq)
+    return cls(n_chans=2, n_outputs=2, n_times=n_times, sfreq=sfreq)
+
+
+def predict(model, X: np.ndarray, rows: np.ndarray | None = None) -> np.ndarray:
+    """Each window's probability of being an expert-marked event."""
+    return _predict(model, X, np.arange(len(X)) if rows is None else np.asarray(rows))
 
 
 def _predict(model, X: np.ndarray, rows: np.ndarray) -> np.ndarray:
@@ -143,16 +196,53 @@ def _predict(model, X: np.ndarray, rows: np.ndarray) -> np.ndarray:
     return out
 
 
+def train(X: np.ndarray, labels: np.ndarray, train_rows: np.ndarray, val_rows: np.ndarray,
+          sfreq: float, model: str | None = None, seed: int = 0, epochs: int | None = None,
+          per_epoch: int | None = None) -> tuple[object, dict]:
+    """Train any braindecode model (`model` by name, `MODEL` by default) on
+    the windows in `train_rows`, early-stopped on `val_rows`. Returns the
+    model at its best validation loss and the training log."""
+    return _train(X, labels, train_rows, val_rows, sfreq, seed, model=model,
+                  epochs=epochs, per_epoch=per_epoch)
+
+
+def save(model, path, **meta) -> Path:
+    """The trained weights with what is needed to rebuild the model: its
+    class, input size and sampling rate, and whatever `meta` adds."""
+    import torch
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save({"state_dict": model.state_dict(), "class": type(model).__name__,
+                "n_times": int(getattr(model, "n_times", 0) or 0),
+                "sfreq": float(getattr(model, "sfreq", 0) or 0), "window_s": WINDOW_S,
+                **meta}, path)
+    return path
+
+
+def load(path):
+    """A model saved by `save`, ready to `predict`, and its metadata."""
+    import torch
+
+    saved = torch.load(Path(path), map_location="cpu", weights_only=False)
+    model = _network(saved["n_times"], saved["sfreq"], 0, model=saved["class"])
+    model.load_state_dict(saved["state_dict"])
+    model.eval()
+    return model, {k: v for k, v in saved.items() if k != "state_dict"}
+
+
 def _train(X: np.ndarray, labels: np.ndarray, train_rows: np.ndarray,
-           val_rows: np.ndarray, sfreq: float, seed: int) -> tuple[object, dict]:
-    """EEGNet with a class-balanced loss, early-stopped on the validation
+           val_rows: np.ndarray, sfreq: float, seed: int, model: str | None = None,
+           epochs: int | None = None, per_epoch: int | None = None) -> tuple[object, dict]:
+    """The model with a class-balanced loss, early-stopped on the validation
     patients' loss. Returns the best model and the training log."""
     import copy
 
     import torch
 
     rng = np.random.default_rng(seed)
-    model = _network(X.shape[-1], sfreq, seed)
+    name = model
+    model = _network(X.shape[-1], sfreq, seed, model=name)
     positive = labels[train_rows].mean()
     weight = torch.tensor([0.5 / (1 - positive), 0.5 / positive], dtype=torch.float32)
     loss_fn = torch.nn.CrossEntropyLoss(weight=weight)
@@ -160,9 +250,10 @@ def _train(X: np.ndarray, labels: np.ndarray, train_rows: np.ndarray,
     val_X = torch.from_numpy(X[val_rows].astype(np.float32))
     val_y = torch.from_numpy(labels[val_rows].astype(np.int64))
     best, best_loss, waited, log = None, float("inf"), 0, []
-    for epoch in range(EPOCHS):
+    for epoch in range(epochs or EPOCHS):
         model.train()
-        chosen = rng.choice(train_rows, size=min(PER_EPOCH, len(train_rows)), replace=False)
+        chosen = rng.choice(train_rows, size=min(per_epoch or PER_EPOCH, len(train_rows)),
+                            replace=False)
         started = time.time()
         for i in range(0, len(chosen), BATCH):
             batch = chosen[i:i + BATCH]
@@ -193,11 +284,16 @@ def _train(X: np.ndarray, labels: np.ndarray, train_rows: np.ndarray,
 
 def evaluate(candidates: pd.DataFrame, reference: pd.DataFrame, out: Path = OUT,
              bands=("ripple", "fast_ripple"), seed: int = 0, verbose: bool = True,
-             subjects: list[str] | None = None) -> pd.DataFrame:
+             subjects: list[str] | None = None, model: str | None = None) -> pd.DataFrame:
     """Leave one patient out, per band: train on the others (three of them
     held back for early stopping and for choosing the probability cut), score
     the held-out patient against the experts, and compare it, patient by
-    patient, with the rules and with the gradient-boosted model."""
+    patient, with the rules and with the gradient-boosted model. `model`
+    names any braindecode model (`MODEL` by default); its results are
+    written with its name, ``per_subject_<model>.csv`` and so on, the
+    default's without."""
+    name = model or MODEL
+    suffix = "" if name == MODEL else f"_{name}"
     import torch
 
     torch.set_num_threads(4)
@@ -221,12 +317,12 @@ def evaluate(candidates: pd.DataFrame, reference: pd.DataFrame, out: Path = OUT,
             val_rows = np.flatnonzero(cands["subject"].isin(validation).to_numpy())
             test_rows = np.flatnonzero((cands["subject"] == held).to_numpy())
             started = time.time()
-            model, log = _train(X, labels, train_rows, val_rows, sfreq, seed)
-            val_prob = _predict(model, X, val_rows)
+            net_model, log = _train(X, labels, train_rows, val_rows, sfreq, seed, model=name)
+            val_prob = _predict(net_model, X, val_rows)
             val_frame = cands.iloc[val_rows]
             cut = eventml._best_threshold(val_prob, val_frame,
                                           experts_b[experts_b["subject"].isin(validation)])
-            prob = _predict(model, X, test_rows)
+            prob = _predict(net_model, X, test_rows)
             test = cands.iloc[test_rows]
             ex = experts_b[experts_b["subject"] == held]
             net = eventml.score_selection(test[prob >= cut], ex)
@@ -239,14 +335,14 @@ def evaluate(candidates: pd.DataFrame, reference: pd.DataFrame, out: Path = OUT,
                              "minutes": round((time.time() - started) / 60, 1)})
             logs.append({"subject": held, "band": band, **log})
             if verbose:
-                print(f"[eventnet] {band} {held}: F1 {net.f1:.3f} (rules {rule.f1:.3f}), "
+                print(f"[eventnet] {name} {band} {held}: F1 {net.f1:.3f} (rules {rule.f1:.3f}), "
                       f"AUC {auc:.3f}, {log['epochs']} epochs, "
                       f"{rows_out[-1]['minutes']} min", flush=True)
-            pd.DataFrame(rows_out).to_csv(out / "per_subject.csv", index=False)
+            pd.DataFrame(rows_out).to_csv(out / f"per_subject{suffix}.csv", index=False)
     per_subject = pd.DataFrame(rows_out)
-    (out / "training_log.json").write_text(json.dumps(logs, indent=1, default=float))
-    summary = summarise(per_subject)
-    summary.to_csv(out / "summary.csv", index=False)
+    (out / f"training_log{suffix}.json").write_text(json.dumps(logs, indent=1, default=float))
+    summary = summarise(per_subject).assign(model=name)
+    summary.to_csv(out / f"summary{suffix}.csv", index=False)
     if verbose:
         print(summary.round(3).to_string(index=False))
     return summary
@@ -294,6 +390,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=OUT)
     parser.add_argument("--bands", nargs="*", default=["ripple", "fast_ripple"])
     parser.add_argument("--subjects", nargs="*", default=None)
+    parser.add_argument("--model", default=MODEL,
+                        help="any braindecode model class, e.g. EEGNet, ShallowFBCSPNet")
     args = parser.parse_args(argv)
     candidates = pd.read_csv(args.candidates / "candidates.csv")
     if args.step == "windows":
@@ -301,7 +399,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     reference = pd.read_csv(args.candidates / "reference.csv")
     evaluate(candidates, reference, out=args.out, bands=tuple(args.bands),
-             subjects=args.subjects)
+             subjects=args.subjects, model=args.model)
     return 0
 
 

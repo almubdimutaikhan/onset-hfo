@@ -128,6 +128,43 @@ The full table, including 50 and 200 verdicts, is in
   each tests what comes after its own last verdict. Compare a row's model
   column with its own rules column, not one row with another.
 
+## From the Analysis page
+
+Learned detection stays out of the clinical pages. Ranking, events and the
+report always come from the rules. For researchers, the Analysis page's
+template library has a group, **Learned detection (research)**, with three
+scripts that run on the recording on screen:
+
+| Template | What it does |
+|---|---|
+| A learned second stage on this recording's candidates | Every candidate with its ten measurements, then the gradient-boosted stage trained on the first 60 % of the recording and scored on the rest, against the rules, with which measurements it leans on |
+| Train a braindecode network on HFO candidates | The 200-ms windows of every candidate fed to **any braindecode model by name** (`MODEL = "EEGNet"`, `"ShallowFBCSPNet"`, `"Deep4Net"`, `"EEGNeX"`, `"ATCNet"`, `"EEGConformer"` …). It trains on the first 60 % of the recording, stops early on the next 20 % and is scored on the last 20 % against the rules. The network is saved to `models/hfo-<MODEL>.pt` |
+| Score this recording with a saved network | Loads a saved network, refuses a recording at another sampling rate or band, scores every candidate and lists where the network and the rules decided differently |
+
+* **Training needs labels.** They come from expert markings: `ds003498`
+  windows and the synthetic recordings carry them. A single recording is
+  rarely enough; the training template says so when the validation loss
+  stays at chance, or when the cut it chooses keeps everything.
+* **For a result that means something, use the cohort protocols**, a
+  patient held out at a time:
+
+  ```bash
+  pip install 'onset-hfo[dl]'          # torch and braindecode; nothing else needs them
+  python -m onset_hfo.eventml candidates
+  python -m onset_hfo.eventnet windows
+  python -m onset_hfo.eventnet evaluate --model ShallowFBCSPNet
+  ```
+
+* **The library calls the templates use**, so the same steps can be
+  scripted elsewhere:
+  * `eventml.candidates_from_prepared(prep, channels, band, experts=...)`;
+  * `eventml.experts_for(recording, band, channels)`;
+  * `eventml.fit_boosted` and `eventml.predict_boosted`;
+  * `eventnet.windows_from_prepared(prep, candidates)`;
+  * `eventnet.train(X, labels, train_rows, val_rows, sfreq, model="EEGNet")`;
+  * `eventnet.predict`, `eventnet.save`, `eventnet.load`, and
+    `eventnet.available_models()`.
+
 ## Next
 
 Two steps, in this order:

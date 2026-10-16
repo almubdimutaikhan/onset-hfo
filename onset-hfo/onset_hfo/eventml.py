@@ -56,7 +56,8 @@ import pandas as pd
 from onset_hfo.config import BANDS, RESULTS_DIR, DetectorConfig
 
 __all__ = ["FEATURES", "CANDIDATE_SD", "RULE_SD", "build_candidates", "evaluate",
-           "score_selection"]
+           "score_selection", "candidates_from_prepared", "fit_boosted", "predict_boosted",
+           "experts_for", "best_cut"]
 
 DATASET = "ds003498"
 RUN = "01"
@@ -84,12 +85,95 @@ OUT = RESULTS_DIR / "eventml"
 
 # -- the candidate table -----------------------------------------------------
 
-def _window_candidates(subject: str, t_start: float, t_stop: float, band_name: str,
-                       verbose: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Candidates and the expert events of one window, one band."""
-    from onset_hfo.datasets import fetch_slice
+def candidates_from_prepared(prep, channels: list[str], band_name: str,
+                             threshold_sd: float | None = None,
+                             experts: pd.DataFrame | None = None, subject: str = "",
+                             window_start: float = 0.0,
+                             detector: str = DETECTOR) -> pd.DataFrame:
+    """The candidate table of one prepared recording: every event `detector`
+    finds on `channels` at `threshold_sd` (the band's candidate threshold by
+    default), with the measurements in `FEATURES`, what the validation rules
+    decided, and -- when `experts` (rows with ``channel``, ``start``,
+    ``stop``, ``expert_id``) is given -- whether it matches an expert event.
+    Without experts ``label`` is -1: unlabelled, ready to be scored."""
     from onset_hfo.detectors import HFO_DETECTORS
     from onset_hfo.detectors.base import bandpass, robust_scale
+    from onset_hfo.evaluate import _overlapping
+    from onset_hfo.validate import validate_events
+
+    band = getattr(BANDS, band_name)
+    threshold = CANDIDATE_SD[band_name] if threshold_sd is None else float(threshold_sd)
+    cfg = DetectorConfig(band=band, threshold_sd=threshold)
+    events = HFO_DETECTORS[detector](prep, cfg, channels=channels)
+    validate_events(events, prep)
+
+    # The input of the 1-30 Hz rule, as a number rather than a yes/no.
+    idx = [prep.ch_names.index(c) for c in channels]
+    low = bandpass(prep.data[idx], prep.sfreq, BANDS.low)
+    _, scale = robust_scale(low)
+    low_rows = dict(zip(channels, low, strict=True))
+    low_scale = dict(zip(channels, scale.ravel(), strict=True))
+
+    rows = []
+    for e in events:
+        i0 = max(0, int(round((e.start - prep.t_offset) * prep.sfreq)))
+        i1 = max(i0 + 1, int(round((e.stop - prep.t_offset) * prep.sfreq)))
+        segment = low_rows[e.channel][i0:i1]
+        # By channel name for expert markings (``channel``), by contact for
+        # markings placed on a contact (synthetic recordings' ``contact``).
+        hits = (_overlapping(experts, e, set(e.contacts or [e.channel]), TOLERANCE_S)
+                if experts is not None else [])
+        rows.append({
+            "subject": subject, "band": band_name, "window_start": window_start,
+            "channel": e.channel, "start": float(e.start), "stop": float(e.stop),
+            "score": float(e.score), "duration_ms": float(e.duration_ms),
+            "peak_amplitude_uv": float(e.peak_amplitude_uv),
+            "peak_frequency_hz": float(e.peak_frequency_hz),
+            "spectral_prominence_db": float(e.spectral_prominence_db),
+            "n_peaks": int(e.n_peaks), "n_cycles": float(e.n_cycles),
+            "low_band_sd": (float(np.max(np.abs(segment)) / low_scale[e.channel])
+                            if segment.size and low_scale[e.channel] > 0 else float("nan")),
+            "rule_accepted": bool(e.accepted),
+            "label": int(bool(hits)) if experts is not None else -1,
+            "expert_ids": (";".join(experts["expert_id"].iloc[hits])
+                           if experts is not None else ""),
+        })
+    frame = pd.DataFrame(rows)
+    if len(frame):
+        # Context from the same recording, unlabelled and so available at
+        # test time: how this candidate compares with its channel's others.
+        minutes = prep.data.shape[1] / prep.sfreq / 60.0
+        by_channel = frame.groupby("channel")["peak_amplitude_uv"].transform("median")
+        frame["rel_amplitude"] = frame["peak_amplitude_uv"] / by_channel.replace(0, np.nan)
+        frame["channel_candidates_per_min"] = (
+            frame.groupby("channel")["start"].transform("size") / minutes)
+    return frame
+
+
+def experts_for(recording, band_name: str, channels: list[str] | None = None,
+                prefix: str = "") -> pd.DataFrame | None:
+    """The recording's expert-marked events of one band, as the candidate
+    table matches against them (each with an ``expert_id``); None when the
+    recording carries no markings. Restricted to `channels` when the
+    markings name channels."""
+    truth = getattr(recording, "ground_truth", None)
+    if truth is None or not len(truth):
+        return None
+    rows = truth[truth["kind"] == band_name]
+    if channels is not None and "channel" in rows.columns:
+        rows = rows[rows["channel"].isin(channels)]
+    rows = rows.reset_index(drop=True)
+    ids = [f"{prefix}{i}" for i in range(len(rows))]
+    # ``expert_id`` is what candidates are matched against, ``expert_ids``
+    # what `score_selection` counts found events by: the same ids.
+    return rows.assign(expert_id=ids, expert_ids=ids)
+
+
+def _window_candidates(subject: str, t_start: float, t_stop: float, band_name: str,
+                       verbose: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Candidates and the expert events of one cohort window, one band."""
+    from onset_hfo.datasets import fetch_slice
+    from onset_hfo.detectors import HFO_DETECTORS
     from onset_hfo.evaluate import _overlapping
     from onset_hfo.preprocess import prepare
     from onset_hfo.validate import validate_events
@@ -105,46 +189,8 @@ def _window_candidates(subject: str, t_start: float, t_stop: float, band_name: s
     experts = truth[(truth["kind"] == band_name) & truth["channel"].isin(reviewed)] \
         .reset_index(drop=True)
     experts = experts.assign(expert_id=[f"{subject}:{t_start:g}:{i}" for i in range(len(experts))])
-
-    cfg = DetectorConfig(band=band, threshold_sd=CANDIDATE_SD[band_name])
-    events = HFO_DETECTORS[DETECTOR](prep, cfg, channels=reviewed)
-    validate_events(events, prep)
-
-    # The input of the 1-30 Hz rule, as a number rather than a yes/no.
-    idx = [prep.ch_names.index(c) for c in reviewed]
-    low = bandpass(prep.data[idx], prep.sfreq, BANDS.low)
-    _, scale = robust_scale(low)
-    low_rows = dict(zip(reviewed, low, strict=True))
-    low_scale = dict(zip(reviewed, scale.ravel(), strict=True))
-
-    rows = []
-    for e in events:
-        i0 = max(0, int(round((e.start - prep.t_offset) * prep.sfreq)))
-        i1 = max(i0 + 1, int(round((e.stop - prep.t_offset) * prep.sfreq)))
-        segment = low_rows[e.channel][i0:i1]
-        hits = _overlapping(experts, e, {e.channel}, TOLERANCE_S)
-        rows.append({
-            "subject": subject, "band": band_name, "window_start": t_start,
-            "channel": e.channel, "start": float(e.start), "stop": float(e.stop),
-            "score": float(e.score), "duration_ms": float(e.duration_ms),
-            "peak_amplitude_uv": float(e.peak_amplitude_uv),
-            "peak_frequency_hz": float(e.peak_frequency_hz),
-            "spectral_prominence_db": float(e.spectral_prominence_db),
-            "n_peaks": int(e.n_peaks), "n_cycles": float(e.n_cycles),
-            "low_band_sd": (float(np.max(np.abs(segment)) / low_scale[e.channel])
-                            if segment.size and low_scale[e.channel] > 0 else float("nan")),
-            "rule_accepted": bool(e.accepted),
-            "label": int(bool(hits)),
-            "expert_ids": ";".join(experts["expert_id"].iloc[hits]),
-        })
-    frame = pd.DataFrame(rows)
-    if len(frame):
-        # Context from the same window, unlabelled and so available at test
-        # time: how this candidate compares with its channel's others.
-        by_channel = frame.groupby("channel")["peak_amplitude_uv"].transform("median")
-        frame["rel_amplitude"] = frame["peak_amplitude_uv"] / by_channel.replace(0, np.nan)
-        frame["channel_candidates_per_min"] = (
-            frame.groupby("channel")["start"].transform("size") / ((t_stop - t_start) / 60.0))
+    frame = candidates_from_prepared(prep, reviewed, band_name, experts=experts,
+                                     subject=subject, window_start=t_start)
 
     # The rule baseline at its own best threshold, on the same window.
     rule_cfg = DetectorConfig(band=band, threshold_sd=RULE_SD[band_name])
@@ -267,6 +313,24 @@ def _predict(model, frame: pd.DataFrame) -> np.ndarray:
         return np.zeros(len(frame))
     with threadpool_limits(1):
         return model.predict_proba(frame[list(FEATURES)].to_numpy(float))[:, 1]
+
+
+def fit_boosted(frame: pd.DataFrame, seed: int = 0):
+    """The gradient-boosted second stage, fitted on labelled candidates
+    (``label`` 0 or 1; unlabelled rows are left out). None when only one
+    class is present."""
+    return _fit(frame[frame["label"] >= 0], seed)
+
+
+def predict_boosted(model, frame: pd.DataFrame) -> np.ndarray:
+    """Each candidate's probability of matching an expert event."""
+    return _predict(model, frame)
+
+
+def best_cut(prob: np.ndarray, frame: pd.DataFrame, experts: pd.DataFrame) -> float:
+    """The probability cut with the highest F1 against `experts`; choose it on
+    data the scored set never sees."""
+    return _best_threshold(prob, frame, experts)
 
 
 def _best_threshold(prob: np.ndarray, frame: pd.DataFrame, experts: pd.DataFrame) -> float:

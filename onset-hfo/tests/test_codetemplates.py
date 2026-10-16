@@ -167,3 +167,27 @@ def test_the_ictal_template_explains_a_window_too_short_for_its_baseline(
         assert names["table"] is None and "needs 30 s of baseline" in out
     else:
         assert names["table"] is not None
+
+
+def test_the_learned_templates_train_save_and_score_on_a_labelled_recording(
+        session, tmp_path, monkeypatch):
+    """The research templates: the boosted stage reports itself against the
+    rules; a braindecode network is trained, saved, and the scoring template
+    loads it and lists where it and the rules disagree -- all in the folder
+    the console works in, nothing changed on screen."""
+    names, out = _run(codetemplates.find("h70_learned_features"), session, tmp_path,
+                      monkeypatch)
+    assert names["experts"] is not None and len(names["cands"])
+    assert "learned F1" in out and "rules F1" in out
+    before = [(e.channel, e.start, e.accepted) for e in session.events]
+    pytest.importorskip("braindecode")
+    names, out = _run(codetemplates.find("h71_train_braindecode"), session, tmp_path,
+                      monkeypatch)
+    assert names["trainable"], out
+    assert (tmp_path / "models" / "hfo-EEGNet.pt").exists()
+    names, out = _run(codetemplates.find("h72_score_with_saved_model"), session, tmp_path,
+                      monkeypatch)
+    assert "Same sampling rate and band" in out and "decided differently" in out
+    assert "score_net" in names["cands"].columns
+    assert [(e.channel, e.start, e.accepted) for e in session.events] == before, \
+        "the templates leave the window's analysis alone"
