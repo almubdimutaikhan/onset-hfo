@@ -447,7 +447,8 @@ class OnsetAgent:
     def ask(self, question: str, should_stop: Callable[[], bool] | None = None,
             on_event: Callable[[dict], None] | None = None,
             history: list[tuple[str, str]] | None = None,
-            extra_briefing: list[tuple[str, dict]] | None = None) -> AgentAnswer:
+            extra_briefing: list[tuple[str, dict]] | None = None,
+            claim_check: Callable[[str], list[str]] | None = None) -> AgentAnswer:
         """Answer one question, or refuse and say why.
 
         `should_stop` is polled between steps; when it answers True, or when
@@ -464,6 +465,10 @@ class OnsetAgent:
         cache still covers the briefing. `extra_briefing` names queries the
         caller wants run for this question (the window's "explain this
         event", say), run after the question whatever the backend.
+        `claim_check` reads a finished answer and returns what it claims
+        wrongly -- the desktop window's check of a drafted paragraph against
+        its ranking, tied set, quality checks and the reader's verdicts --
+        and its problems fail the answer and are sent back like any other.
         """
         from onset_agent.backends import Interrupted
 
@@ -652,6 +657,14 @@ class OnsetAgent:
             # ids and refused for them: a citation to nothing is not nothing.
             check = guard.verify_answer(text, ids or dropped, set(retrieved), numbers_seen,
                                         self.store)
+            # The caller's own check of what the text claims ("X led", "Y is
+            # tied"), against facts the store does not hold; its problems go
+            # back to the model like a number that traced to nothing.
+            if check.ok and claim_check is not None:
+                claimed = list(claim_check(text) or [])
+                if claimed:
+                    check = guard.GuardResult(False, "a claim does not match the analysis",
+                                              claimed)
             note({"type": "answer", "step": step, "verified": check.ok,
                   "problems": check.problems, "text": text[:600], "evidence_ids": ids})
             if check.ok:
@@ -664,8 +677,9 @@ class OnsetAgent:
             retries += 1
             messages.append({"role": "user", "content":
                              "Your answer failed verification: " + "; ".join(check.problems) +
-                             ". Every number must be copied from a tool result. Answer "
-                             "again using only numbers that appear in the results above."})
+                             ". Every number must be copied from a tool result, and every "
+                             "statement about which channel leads or is tied must match the "
+                             "results. Answer again using only what the results above say."})
 
         note({"type": "gave_up", "steps": self.max_steps, "retries": retries})
         return AgentAnswer(

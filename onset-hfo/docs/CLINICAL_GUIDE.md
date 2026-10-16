@@ -490,6 +490,15 @@ settings, a paragraph written before is marked as written for an earlier
 analysis — its numbers are not this analysis's — until you draft or write it
 again.
 
+A draft is also checked for what it *says*: if it names the wrong busiest
+channel, puts a channel in the tied set that is not there, says no contacts
+were set aside when some were, or misstates your verdicts, it is sent back to
+the model with the reason and refused if the second try is no better. The
+statements that passed are listed under each sentence as *checked*. And if
+you judge more events after the assistant drafted a paragraph that quotes
+your verdicts, the report says your verdicts have changed since and marks
+those sentences; draft it again, or edit them.
+
 The report also has a **Methods** paragraph. No model writes it: the
 software writes it from the settings the analysis ran with, so it cannot
 describe a different analysis from the one on the page.

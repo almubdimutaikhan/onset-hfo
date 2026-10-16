@@ -263,12 +263,17 @@ class Adjudication:
     #: the analysis, so a re-run at another threshold reopens the same read;
     #: this is how the report knows the paragraph's numbers are from before.
     draft_basis: str = ""
+    #: The reader's verdicts when the assistant drafted it
+    #: (`verdict_state`). A draft that quotes them ("agreed with 12 of 14")
+    #: goes stale when the reader judges more, and the report says so.
+    draft_verdicts: dict = field(default_factory=dict)
     #: The limitations paragraph, kept exactly like the findings one.
     limits: str = ""
     limits_by: str = ""
     limits_at: str = ""
     limits_evidence: list = field(default_factory=list)
     limits_basis: str = ""
+    limits_verdicts: dict = field(default_factory=dict)
 
     # -- recording a verdict ----------------------------------------------
     def judge_event(self, key: str, verdict: str, reader: str = "",
@@ -300,7 +305,7 @@ class Adjudication:
         return judged
 
     def set_draft(self, text: str, by: str, evidence: list | None = None,
-                  basis: str | None = None) -> None:
+                  basis: str | None = None, verdicts: dict | None = None) -> None:
         """Record the findings paragraph and who it is by: the assistant (named
         with its model) or the reader. Empty text clears it.
 
@@ -309,19 +314,37 @@ class Adjudication:
         unchanged keep theirs and the rest have none. `basis` is the analysis
         the text was written against; when it is not the one the evidence was
         found under, no evidence is kept, because those windows and queries
-        belong to another analysis.
+        belong to another analysis. `verdicts` is the reader's verdicts as
+        the draft saw them; a reader's edit keeps the snapshot for as long as
+        any of the assistant's sentences survive it.
         """
         (self.draft, self.draft_by, self.draft_at, self.draft_evidence,
-         self.draft_basis) = _paragraph(text, by, evidence, basis,
-                                        self.draft_evidence, self.draft_basis)
+         self.draft_basis, self.draft_verdicts) = _paragraph(
+            text, by, evidence, basis, verdicts, self.draft_evidence,
+            self.draft_basis, self.draft_verdicts)
 
     def set_limits(self, text: str, by: str, evidence: list | None = None,
-                   basis: str | None = None) -> None:
+                   basis: str | None = None, verdicts: dict | None = None) -> None:
         """The limitations paragraph, recorded exactly as `set_draft` records
         the findings."""
         (self.limits, self.limits_by, self.limits_at, self.limits_evidence,
-         self.limits_basis) = _paragraph(text, by, evidence, basis,
-                                         self.limits_evidence, self.limits_basis)
+         self.limits_basis, self.limits_verdicts) = _paragraph(
+            text, by, evidence, basis, verdicts, self.limits_evidence,
+            self.limits_basis, self.limits_verdicts)
+
+    def verdict_state(self) -> dict:
+        """The verdicts as counts, with a digest of every one of them: two
+        reads with the same counts but a verdict moved from one event to
+        another are different reads, and per-channel numbers would differ."""
+        import hashlib
+
+        counts = self.counts()
+        listed = sorted((key, j.verdict) for key, j in self.events.items())
+        listed += sorted(("channel:" + key, j.verdict) for key, j in self.channels.items())
+        digest = hashlib.sha1(repr(listed).encode()).hexdigest()[:12]
+        return {"judged": counts["judged"], "agree": counts["agree"],
+                "disagree": counts["disagree"], "unsure": counts["unsure"],
+                "channels": len(self.channels), "digest": digest}
 
     @property
     def draft_is_assistants(self) -> bool:
@@ -425,6 +448,8 @@ class Adjudication:
             "limits_evidence": list(self.limits_evidence),
             "draft_basis": self.draft_basis,
             "limits_basis": self.limits_basis,
+            "draft_verdicts": dict(self.draft_verdicts),
+            "limits_verdicts": dict(self.limits_verdicts),
             # Orphans are written back among the events they came from: under
             # their own original keys, so that re-running the settings they
             # were given under finds them again.
@@ -451,6 +476,8 @@ class Adjudication:
             limits_evidence=list(data.get("limits_evidence") or []),
             draft_basis=str(data.get("draft_basis", "")),
             limits_basis=str(data.get("limits_basis", "")),
+            draft_verdicts=dict(data.get("draft_verdicts") or {}),
+            limits_verdicts=dict(data.get("limits_verdicts") or {}),
             events={str(key): Judgement.from_json(value)
                     for key, value in (data.get("events") or {}).items()},
             channels={str(key): Judgement.from_json(value)
@@ -504,13 +531,14 @@ def save(request, read: Adjudication) -> Path:
     return path
 
 
-def _paragraph(text, by, evidence, basis, old_evidence, old_basis):
-    """(text, by, at, evidence, basis) for a paragraph being recorded."""
+def _paragraph(text, by, evidence, basis, verdicts, old_evidence, old_basis,
+               old_verdicts):
+    """(text, by, at, evidence, basis, verdicts) for a paragraph being recorded."""
     from onset_review.draftevidence import keep_unchanged
 
     text = str(text or "").strip()
     if not text:
-        return "", "", "", [], ""
+        return "", "", "", [], "", {}
     basis = old_basis if basis is None else str(basis)
     if evidence is not None:
         kept = list(evidence)
@@ -518,7 +546,13 @@ def _paragraph(text, by, evidence, basis, old_evidence, old_basis):
         kept = keep_unchanged(old_evidence, text)
     else:
         kept = []
-    return text, str(by or ""), now(), kept, basis
+    if verdicts is not None:
+        snapshot = dict(verdicts)
+    else:
+        # The snapshot belongs to the assistant's sentences: it lasts as long
+        # as one of them does, and a paragraph wholly the reader's has none.
+        snapshot = dict(old_verdicts or {}) if kept else {}
+    return text, str(by or ""), now(), kept, basis, snapshot
 
 
 def reconcile(read: Adjudication, events,
@@ -575,5 +609,7 @@ def reconcile(read: Adjudication, events,
                   for key in sorted(orphans)},
         draft=read.draft, draft_by=read.draft_by, draft_at=read.draft_at,
         draft_evidence=list(read.draft_evidence), draft_basis=read.draft_basis,
+        draft_verdicts=dict(read.draft_verdicts),
         limits=read.limits, limits_by=read.limits_by, limits_at=read.limits_at,
-        limits_evidence=list(read.limits_evidence), limits_basis=read.limits_basis)
+        limits_evidence=list(read.limits_evidence), limits_basis=read.limits_basis,
+        limits_verdicts=dict(read.limits_verdicts))

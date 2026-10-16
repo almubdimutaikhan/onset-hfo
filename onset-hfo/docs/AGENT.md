@@ -115,6 +115,28 @@ the window, not the analysis, so a paragraph saved before a re-analysis at
 other settings comes back marked as written for an earlier analysis, with no
 evidence listed.
 
+A draft is also held to what it **claims**, not only to its numbers
+([`onset_review/claims.py`](../onset_review/claims.py)). The number check
+cannot see "AR2-AR3 led at 52 events/min" when 52 is AR1-AR2's rate; this
+check reads the sentences that name the busiest channel ("X led", "the
+busiest channel is X"), say a channel stands out or that nothing does, put
+channels in or out of the tied set (and count them), say no contacts were set
+aside or flagged, or describe the reader's verdicts ("has not judged any",
+"agreed with all"), and checks each against the window on screen. A claim
+that does not hold fails the draft and goes back to the model with the
+reason, like a number that traced to nothing; one retry, then a refusal. The
+patterns are deliberately narrow: a sentence they do not recognise is left to
+the number and citation checks, so a missed claim is unchecked, never
+wrongly refused. The claims that held are listed under each sentence in the
+report (*checked: AR1-AR2 is the busiest channel*). Only drafts are held to
+it; ordinary answers are not.
+
+A draft that quotes the **reader's verdicts** keeps a snapshot of them. When
+the reader judges more events afterwards, the report and the Evidence tab say
+the verdicts have changed since the draft (then and now, as counts) and mark
+the sentences that quote them, until the paragraph is drafted again or those
+sentences are rewritten.
+
 The report's **Methods** paragraph is not drafted by a model at all: it is
 written by the software from the settings the analysis ran with (window,
 sampling rate, preprocessing, band, each detector's threshold, the
