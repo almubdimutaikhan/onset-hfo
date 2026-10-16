@@ -148,7 +148,7 @@ re-measurement is not reviewable.
 
 ## Notebooks
 
-The four notebooks are generated:
+The eight notebooks are generated:
 
 ```bash
 python scripts/build_notebooks.py     # writes notebooks/*.ipynb without outputs

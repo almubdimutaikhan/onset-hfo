@@ -111,7 +111,11 @@ result and what it does and does not support. One file, opens in a browser.
 
 Otherwise, run something:
 
-## Five notebooks, no setup
+## Eight notebooks, runnable in Colab
+
+Each notebook is the scriptable route to something the desktop application
+does; the badge opens it in Google Colab, where the first cell installs the
+package.
 
 | | Notebook | What it does | Needs |
 |---|---|---|---|
@@ -119,7 +123,10 @@ Otherwise, run something:
 | 2 | [**Agentic analysis**](notebooks/02_agentic_analysis.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/02_agentic_analysis.ipynb) | An open-weight model answering questions about those results, with citations, refusals and guards | nothing (a model is optional) |
 | 3 | [**Validation and benchmark**](notebooks/03_validation_and_benchmark.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/03_validation_and_benchmark.ipynb) | Precision/recall against known truth, threshold curves, what each check buys | nothing |
 | 4 | [**Orchestration and localization**](notebooks/04_orchestration_and_localization.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/04_orchestration_and_localization.ipynb) | The agent choosing what to measure, a learned per-contact model, conformal sets, and trying to break all of it | nothing |
-| 5 | [**Surgical outcome study**](notebooks/05_surgical_outcome_study.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/05_surgical_outcome_study.ipynb) | Did the HFO map point at the tissue whose removal cured the patient? Reproduces a published finding, then shows our detector missing it | ~480 MB download |
+| 5 | [**Surgical outcome study**](notebooks/05_surgical_outcome_study.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/05_surgical_outcome_study.ipynb) | Did the HFO map point at the tissue whose removal cured the patient? The study on whole runs, against the published markings | ~2.5 GB download |
+| 6 | [**Agent benchmark**](notebooks/06_agent_benchmark.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/06_agent_benchmark.ipynb) | Tool-use competence of an open-weight model, by size and quantization | GPU runtime |
+| 7 | [**Annotation**](notebooks/07_annotation.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/07_annotation.ipynb) | Blinded, stratified marking of detector windows by two readers, and their agreement | one 60 s slice |
+| 8 | [**Assistant evaluation**](notebooks/08_assistant_evaluation.ipynb) [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/berdakh/onset-hfo/blob/master/onset-hfo/notebooks/08_assistant_evaluation.ipynb) | The 111-question evaluation of the assistant under Qwen2.5 | GPU runtime, Ollama |
 
 ## Or, locally, in two minutes
 

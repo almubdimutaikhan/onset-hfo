@@ -520,7 +520,7 @@ conclusion that held identically at both window lengths.
 difference between a result and noise.** The first version of this analysis
 used 2.0 SD in both bands, because that is the value the ripple benchmark
 prefers. In the fast-ripple band 2.0 SD runs at precision 0.086 — a mean of
-1,142 detections per 60 s against a mean of 228 expert-marked fast ripples —
+1,142 detections per 60 s against a mean of 278 expert-marked fast ripples —
 and the detector's outcome arm was correspondingly flat. At the fast-ripple
 band's own measured operating point (5.0 SD, rank ρ 0.610) the same code
 recovers a usable ranking. Nothing about the outcome data was used to pick
