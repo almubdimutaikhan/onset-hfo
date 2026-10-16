@@ -4,375 +4,474 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Onset Review</title>
-<meta name="description" content="Open-source software for reviewing high-frequency oscillations, interictal discharges and seizure onset in intracranial EEG. A research tool, not a medical device.">
+<meta name="description" content="Onset Review: open-source Python library and desktop application for the analysis of high-frequency oscillations, interictal discharges and seizure onset in intracranial EEG. Research software, not a medical device.">
 <style>
 /* One self-contained page: no script, no external font or stylesheet.
    Colours are tokens, redefined for dark mode. Paths are relative because
    the site is served under /onset-hfo/. */
 :root {
-  --bg: #fbfbfd; --surface: #ffffff; --surface-alt: #f2f3f6; --text: #1d1d1f;
-  --muted: #5d6068; --line: #dfe1e6; --accent: #0a66c2; --accent-ink: #ffffff;
-  --warn-bg: #fff6e5; --warn-ink: #7a4b00; --good: #1f7a3a;
-  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.06);
+  --bg: #ffffff; --surface: #ffffff; --surface-alt: #f4f5f7; --text: #1b1c1f;
+  --muted: #565a62; --line: #dcdfe4; --accent: #0b5cad;
+  --warn-bg: #fff6e5; --warn-ink: #6f4500; --warn-line: #f0d9a8;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111214; --surface: #1a1b1e; --surface-alt: #222428; --text: #ececee;
-    --muted: #a3a6ad; --line: #2e3035; --accent: #5aa2ff; --accent-ink: #0b1220;
-    --warn-bg: #2d2412; --warn-ink: #f2c46b; --good: #6cc98a;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --bg: #121315; --surface: #17181b; --surface-alt: #202226; --text: #e8e9ec;
+    --muted: #a2a6ae; --line: #30333a; --accent: #6aa9ff;
+    --warn-bg: #2b2313; --warn-ink: #f0c56e; --warn-line: #4a3c1d;
   }
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--bg); color: var(--text);
-  font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .88em; }
+  font: 16.5px/1.62 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+a { color: var(--accent); }
+code, pre, kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .88em; }
 img { max-width: 100%; height: auto; display: block; }
-.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
 
-/* top bar */
-nav.top { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: saturate(160%) blur(10px); border-bottom: 1px solid var(--line); }
-nav.top .wrap { display: flex; align-items: center; gap: 20px; height: 52px; }
-nav.top .brand { font-weight: 650; color: var(--text); margin-right: auto; }
-nav.top a.link { color: var(--muted); font-size: 15px; }
-nav.top a.link:hover { color: var(--text); text-decoration: none; }
-@media (max-width: 720px) { nav.top a.link.opt { display: none; } }
+header.top { border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; padding-top: 14px; padding-bottom: 12px; }
+header.top .brand { font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; margin-right: auto; }
+header.top .brand span { font-weight: 400; color: var(--muted); font-size: 14px; margin-left: 8px; }
+header.top nav { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+header.top nav a { color: var(--muted); text-decoration: none; font-size: 14.5px; }
+header.top nav a:hover { color: var(--text); }
 
-/* disclaimer strip */
-.notice { background: var(--warn-bg); color: var(--warn-ink); font-size: 14px; }
-.notice .wrap { padding-top: 8px; padding-bottom: 8px; }
+.notice { background: var(--warn-bg); color: var(--warn-ink); border-bottom: 1px solid var(--warn-line); font-size: 14.5px; }
+.notice .wrap { padding-top: 9px; padding-bottom: 9px; }
+.notice a { color: inherit; }
 
-/* hero */
-header.hero { padding: 64px 0 24px; text-align: center; }
-header.hero h1 { font-size: clamp(36px, 6vw, 60px); line-height: 1.05; margin: 0 0 14px; letter-spacing: -.02em; }
-header.hero p.lead { font-size: clamp(18px, 2.4vw, 22px); color: var(--muted); max-width: 760px; margin: 0 auto 26px; }
-.buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.btn { display: inline-block; padding: 11px 20px; border-radius: 999px; font-weight: 600; font-size: 16px;
-  border: 1px solid var(--line); color: var(--text); background: var(--surface); }
-.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.btn:hover { text-decoration: none; filter: brightness(1.05); }
-.shot { margin: 40px auto 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line);
-  box-shadow: var(--shadow); background: var(--surface); }
-.caption { color: var(--muted); font-size: 14px; text-align: center; margin-top: 10px; }
+.title { padding: 40px 0 8px; }
+.title h1 { font-size: clamp(28px, 4.2vw, 38px); line-height: 1.2; margin: 0 0 12px; letter-spacing: -.01em; font-weight: 700; }
+.title p.sub { color: var(--muted); font-size: 18px; margin: 0 0 16px; max-width: 820px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14.5px; color: var(--muted); margin: 0 0 6px; }
+.meta b { color: var(--text); font-weight: 600; }
+.links { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 18px 0 0; padding: 0; list-style: none; }
+.links a { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14.5px; text-decoration: none; color: var(--text); background: var(--surface-alt); }
+.links a:hover { border-color: var(--accent); }
 
-/* sections */
-section { padding: 64px 0; border-top: 1px solid var(--line); }
-section h2 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; margin: 0 0 10px; letter-spacing: -.01em; }
-section p.intro { color: var(--muted); font-size: 19px; max-width: 780px; margin: 0 0 36px; }
+section { padding: 30px 0 8px; }
+section h2 { font-size: 23px; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+section h3 { font-size: 17.5px; margin: 22px 0 6px; }
+section p { margin: 0 0 12px; }
+.muted { color: var(--muted); }
+ul, ol { padding-left: 22px; margin: 0 0 12px; }
+li { margin-bottom: 5px; }
 
-/* feature rows */
-.feature { display: grid; grid-template-columns: 5fr 7fr; gap: 36px; align-items: center; margin: 0 0 56px; }
-.feature:nth-child(even) { grid-template-columns: 7fr 5fr; }
-.feature:nth-child(even) .text { order: 2; }
-.feature h3 { font-size: 23px; margin: 0 0 8px; }
-.feature p { margin: 0 0 10px; color: var(--muted); }
-.feature .frame { border-radius: 10px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); background: var(--surface); }
-@media (max-width: 860px) {
-  .feature, .feature:nth-child(even) { grid-template-columns: 1fr; gap: 16px; }
-  .feature:nth-child(even) .text { order: 0; }
-}
+figure { margin: 18px 0 22px; }
+figure img { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; }
+figcaption b { color: var(--text); }
+.figs { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+@media (max-width: 760px) { .figs { grid-template-columns: 1fr; } }
+.figs > * { min-width: 0; }
 
-/* small cards */
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
-.card h4 { margin: 0 0 6px; font-size: 17px; }
-.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.table-scroll { overflow-x: auto; margin: 6px 0 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { background: var(--surface-alt); font-weight: 600; white-space: nowrap; }
+td.n { white-space: nowrap; }
+caption { caption-side: top; text-align: left; color: var(--muted); font-size: 14px; padding: 0 0 6px; }
 
-/* numbers */
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 28px; }
-.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
-.stat .value { font-size: 34px; font-weight: 700; letter-spacing: -.01em; }
-.stat .label { font-weight: 600; margin: 2px 0 6px; }
-.stat .note { color: var(--muted); font-size: 14px; }
-table { width: 100%; border-collapse: collapse; font-size: 15px; background: var(--surface);
-  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { background: var(--surface-alt); font-weight: 600; }
-tr:last-child td { border-bottom: 0; }
-.table-scroll { overflow-x: auto; }
+pre { background: var(--surface-alt); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px;
+  overflow-x: auto; line-height: 1.5; margin: 6px 0 14px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 26px; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+.two > * { min-width: 0; }
 
-/* pipeline */
-.flow { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; margin: 8px 0 24px; }
-.step { flex: 1 1 150px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
-.step b { display: block; margin-bottom: 4px; }
-.step span { color: var(--muted); font-size: 14px; }
+dl.spec { display: grid; grid-template-columns: 210px 1fr; gap: 6px 18px; margin: 0 0 14px; }
+dl.spec dt { font-weight: 600; }
+dl.spec dd { margin: 0; color: var(--text); }
+@media (max-width: 640px) { dl.spec { grid-template-columns: 1fr; } dl.spec dd { margin-bottom: 8px; } }
 
-/* install */
-pre { background: var(--surface-alt); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
-  overflow-x: auto; line-height: 1.5; margin: 8px 0 18px; }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
-@media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
-.two h3 { margin: 0 0 6px; font-size: 20px; }
-.two p { color: var(--muted); margin: 0 0 6px; }
-
-.two > *, .feature > *, .stats > *, .cards > * { min-width: 0; }
-ul.limits { padding-left: 20px; }
-ul.limits li { margin-bottom: 8px; }
-footer { border-top: 1px solid var(--line); padding: 28px 0 48px; color: var(--muted); font-size: 14px; }
+footer { border-top: 1px solid var(--line); margin-top: 34px; padding: 22px 0 42px; color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
 
-<nav class="top">
+<header class="top">
   <div class="wrap">
-    <a class="brand" href="#">Onset Review</a>
-    <a class="link" href="#features">Features</a>
-    <a class="link opt" href="#validation">Validation</a>
-    <a class="link" href="#install">Install</a>
-    <a class="link opt" href="#docs">Docs</a>
-    <a class="link" href="https://github.com/berdakh/onset-hfo">GitHub</a>
-  </div>
-</nav>
-
-<div class="notice"><div class="wrap">
-  <strong>Research tool — not a medical device.</strong> Not CE-marked, not
-  FDA-cleared, not validated for clinical use. It reports measurements; it does
-  not say what to resect. <a href="#limits">What it must not be used for</a>.
-</div></div>
-
-<header class="hero">
-  <div class="wrap">
-    <h1>See which channels stand out,<br>and how sure you can be.</h1>
-    <p class="lead">Onset Review is open-source software for intracranial EEG.
-      It detects high-frequency oscillations and interictal discharges, measures
-      where seizures start, and shows the interval behind every rate and the
-      signal behind every event, so that a reader can check each one.</p>
-    <div class="buttons">
-      <a class="btn primary" href="https://github.com/berdakh/onset-hfo/releases/latest">Download for Linux</a>
-      <a class="btn" href="https://github.com/berdakh/onset-hfo">Source on GitHub</a>
-      <a class="btn" href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/MANUAL.md">Read the manual</a>
-    </div>
-    <div class="shot">
-      <img src="img/app-recording.png" width="1680" height="980"
-        alt="The Onset Review window: a sentence at the top says AR1-AR2 stands out at 52 per minute with interval 39 to 67 and one other channel cannot be told apart from it; below are the intracranial trace and a ranking of channels with their rates, intervals and the expert annotators' counts.">
-    </div>
-    <p class="caption">Review › Recording on a public recording (OpenNeuro ds003498, sub-01, first minute).</p>
+    <a class="brand" href="#">Onset Review<span>v0.3.17</span></a>
+    <nav>
+      <a href="#overview">Overview</a>
+      <a href="#methods">Methods</a>
+      <a href="#validation">Validation</a>
+      <a href="#install">Installation</a>
+      <a href="#docs">Documentation</a>
+      <a href="#cite">Citation</a>
+    </nav>
   </div>
 </header>
 
-<section id="features">
-  <div class="wrap">
-    <h2>Built for reading, not just running</h2>
-    <p class="intro">A rate measured over a minute is a small count. Onset Review
-      treats it that way: every number carries its uncertainty, every event keeps
-      its evidence, and the reader has the last word.</p>
+<div class="notice"><div class="wrap">
+  <strong>Research software, not a medical device.</strong> Not CE-marked, not
+  FDA-cleared and not validated for clinical use. It reports measurements and
+  makes no diagnosis or treatment recommendation. See
+  <a href="#use">intended use and limitations</a>.
+</div></div>
 
-    <div class="features">
-      <div class="feature">
-        <div class="text">
-          <h3>The answer first, with its interval</h3>
-          <p>One sentence states which channel leads, its rate with a 95% Poisson
-            interval, and how many other channels cannot be told apart from it.
-            Channels whose intervals overlap are shown together as a tied set,
-            never as a ranking the data cannot support.</p>
-        </div>
-        <div class="frame"><img src="img/app-headline.png" width="890" height="202" loading="lazy"
-          alt="The headline card: AR1-AR2 stands out at 52 per minute, interval 39 to 67; 1 other channel cannot be told apart from it; chips for AR1-AR2 and AR2-AR3, 1 tied with it."></div>
-      </div>
+<main class="wrap">
 
-      <div class="feature">
-        <div class="text">
-          <h3>Judge events one at a time</h3>
-          <p>Review mode gives one event the whole screen: the wideband signal,
-            the band-passed signal and a time–frequency map on one time axis.
-            <kbd>A</kbd> real, <kbd>D</kbd> not real, <kbd>U</kbd> unsure, and
-            the next event follows. Verdicts are saved under the reader's name
-            and go into the report.</p>
-        </div>
-        <div class="frame"><img src="img/app-review-mode.png" width="1680" height="980" loading="lazy"
-          alt="Review mode showing one ripple: wideband trace, band-passed trace and time-frequency map, with Real, Not real and Unsure buttons."></div>
-      </div>
+<div class="title">
+  <h1>Onset Review: traceable analysis of high-frequency oscillations and seizure onset in intracranial EEG</h1>
+  <p class="sub">An open-source Python library and desktop application for
+    detecting ripples, fast ripples and interictal epileptiform discharges,
+    estimating channel event rates with exact confidence intervals, computing
+    the Epileptogenicity Index of seizure onset, and recording a reader's
+    event-level review.</p>
+  <div class="meta">
+    <span><b>Version</b> 0.3.17 (October 2026)</span>
+    <span><b>Licence</b> MIT</span>
+    <span><b>Language</b> Python ≥ 3.10</span>
+    <span><b>Platform</b> Linux (tested on Ubuntu)</span>
+    <span><b>DOI</b> <a href="https://doi.org/10.5281/zenodo.23385434">10.5281/zenodo.23385434</a></span>
+  </div>
+  <ul class="links">
+    <li><a href="https://github.com/berdakh/onset-hfo/releases/latest">Download (Linux)</a></li>
+    <li><a href="https://github.com/berdakh/onset-hfo">Source code</a></li>
+    <li><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/MANUAL.md">User manual</a></li>
+    <li><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/METHODS.md">Methods</a></li>
+    <li><a href="#cite">How to cite</a></li>
+  </ul>
+</div>
 
-      <div class="feature">
-        <div class="text">
-          <h3>Detection you can check</h3>
-          <p>Four detectors (RMS, line length, Hilbert envelope, short-time
-            energy) share every stage except the feature they threshold, so a
-            disagreement points at the feature. Each event is tested against its
-            own 1/<i>f</i> spectral background, which rejects the filter ringing
-            that sharp transients produce. Rejected events are kept, with the
-            reason.</p>
-          <p>Signal settings start from measured defaults, with a <i>Noisy
-            recording</i> preset and a two-second preview of the filters.</p>
-        </div>
-        <div class="frame"><img src="img/app-signal.png" width="1680" height="980" loading="lazy"
-          alt="The Signal page: data quality on the left, preprocessing presets and a before-and-after filter preview on the right."></div>
-      </div>
+<section id="overview">
+  <h2>1. Overview</h2>
+  <p>High-frequency oscillations (HFOs; ripples, 80–250&nbsp;Hz, and fast
+    ripples, 250–500&nbsp;Hz) and the epileptogenicity of seizure onset are
+    studied as candidate markers of epileptogenic tissue in stereo-EEG and
+    electrocorticography. Reported HFO results depend on the detector, the
+    threshold, the recording window analysed, and on whether a difference
+    between channel rates exceeds what counting noise alone would produce.
+    Onset Review is designed to make each of these explicit:</p>
+  <ul>
+    <li>every channel rate is reported with an exact Poisson 95% confidence
+      interval, and channels whose intervals overlap that of the highest-rate
+      channel are reported as a tied set rather than ranked;</li>
+    <li>every detected event is stored with its signal window, detector,
+      feature values and, if rejected, the rejection criterion, so that each
+      reported number can be traced to the events and samples behind it;</li>
+    <li>a reader can adjudicate individual events (real, not real, unsure);
+      verdicts are stored per reader and carried into the exported report;</li>
+    <li>the validation analyses reported below are distributed with the
+      scripts and intermediate tables that reproduce them.</li>
+  </ul>
+  <p>The software comprises an analysis library (<code>onset_hfo</code>), a
+    Qt desktop application built on MNE-Python's signal browser
+    (<code>onset_review</code>), and an optional assistant
+    (<code>onset_agent</code>) that answers questions about a saved analysis
+    with a locally run open-weight language model, under checks described in
+    §2.7. All analyses can also be run from the command line.</p>
 
-      <div class="feature">
-        <div class="text">
-          <h3>Where seizures start</h3>
-          <p>For each marked seizure, the Epileptogenicity Index scores how
-            strongly and how early each channel's fast activity rose. A case keeps
-            one patient's recordings, marks, segments and results together, with
-            an audit log.</p>
-        </div>
-        <div class="frame"><img src="img/app-case.png" width="1600" height="940" loading="lazy"
-          alt="A patient case open in the main window with its steps listed down the side: import, channels, annotate, segments, preprocess, interictal, ictal onset, review, map and report."></div>
-      </div>
+  <figure>
+    <img src="img/app-recording.png" width="1680" height="980"
+      alt="The Onset Review main window: a summary sentence stating that channel AR1-AR2 stands out at 52 events per minute with its interval and that one other channel cannot be distinguished from it; the intracranial EEG trace; and a channel table with rates, intervals and the reference markings' counts.">
+    <figcaption><b>Figure 1.</b> Main window on OpenNeuro ds003498, subject
+      sub-01, first 60&nbsp;s: summary of the leading channel and its tied set,
+      signal trace, and channel table with rates, 95% intervals and the
+      reference markings' counts. Screenshots on this page were taken before
+      version 0.3.17, whose exact interval for this channel is 39–68 events
+      per minute (the earlier approximation shown here gives 39–67).</figcaption>
+  </figure>
+</section>
 
-      <div class="feature">
-        <div class="text">
-          <h3>Open data, one click away</h3>
-          <p>Open your own recordings (EDF, BrainVision, FIF, BIDS-iEEG and the
-            other formats MNE reads) or search OpenNeuro and download only the
-            window you need. Scalp EEG and MEG open too, marked as
-            unvalidated.</p>
-        </div>
-        <div class="frame"><img src="img/app-openneuro.png" width="980" height="860" loading="lazy"
-          alt="The Open from OpenNeuro dialog listing epilepsy datasets and the recordings in one of them."></div>
-      </div>
+<section id="methods">
+  <h2>2. Methods</h2>
+  <p class="muted">A summary of the default analysis. Full descriptions,
+    parameters and their sources are in
+    <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/METHODS.md">docs/METHODS.md</a>.</p>
 
-      <div class="feature">
-        <div class="text">
-          <h3>An assistant that cannot make numbers up</h3>
-          <p>Optional, and local: an open-weight model runs on your machine
-            through Ollama, and no data leave it. Every number it states must
-            come from a tool result, every citation must resolve to real
-            evidence, and questions about treatment or diagnosis are refused
-            before the model runs.</p>
-        </div>
-        <div class="frame"><img src="img/app-assistant.png" width="1150" height="760" loading="lazy"
-          alt="The assistant panel: answers marked Checked with their evidence links, a glossary answer, and a refused question about which channels to resect."></div>
-      </div>
-    </div>
+  <h3>2.1 Data input</h3>
+  <p>Recordings are read with MNE-Python from the formats it supports
+    (including EDF/BDF, BrainVision and FIF) and from BIDS-iEEG datasets.
+    Public datasets can be opened directly from OpenNeuro; for multiplexed
+    BrainVision and EDF/BDF files only the requested time window is
+    transferred, using HTTP range requests. On import the user confirms which
+    channels are intracranial. Scalp EEG and MEG can be opened but are not
+    validated.</p>
 
-    <div class="cards">
-      <div class="card"><h4>Reports without recommendations</h4><p>Rates with intervals, detector disagreements, data quality and the reader's verdicts. The report has no field for a recommendation.</p></div>
-      <div class="card"><h4>Python underneath</h4><p>An optional analysis mode adds an editor, a console that shares the open recording, and ready-made scripts for every analysis.</p></div>
-      <div class="card"><h4>Batch and compare</h4><p>Run the same settings over many recordings into one table, or compare two analyses side by side.</p></div>
-      <div class="card"><h4>Tested</h4><p>1,642 automated tests run offline, on Python 3.10 and 3.12, with the desktop window built headless in CI.</p></div>
-    </div>
+  <h3>2.2 Preprocessing</h3>
+  <p>Default chain: removal of non-neural and bad channels; 1&nbsp;Hz
+    zero-phase high-pass filter; notch filters at the mains frequency and its
+    harmonics (2&nbsp;Hz wide); bipolar montage between consecutively numbered
+    contacts of each electrode. Optional steps mark muscle and high-amplitude
+    segments, which are excluded from the rate denominator rather than deleted.</p>
+
+  <h3>2.3 HFO detection</h3>
+  <p>Four detectors share all stages except the thresholded feature:
+    root-mean-square amplitude and short-time energy (after Staba et al.,
+    2002), line length (Esteller et al., 2001; Gardner et al., 2007) and the
+    Hilbert envelope (Crépon et al., 2010). Shared stages: zero-phase band-pass
+    filtering; the feature in a 3&nbsp;ms sliding window; a per-channel
+    threshold of median + κ robust standard deviations (1.4826 × median
+    absolute deviation); extension of crossings while the feature exceeds
+    2 robust SD and merging of crossings closer than 10&nbsp;ms; a
+    supra-threshold duration of at least 6&nbsp;ms and an extended duration of
+    at most 200&nbsp;ms; and at least six rectified peaks above 2 robust SD of
+    the band-passed signal. The default κ is 5.0 (3.0 for line length);
+    values measured against published markings (2.0 for ripples, 5.0 for fast
+    ripples) are available as presets. The detectors are adaptations, not
+    reimplementations of the cited detectors.</p>
+
+  <h3>2.4 Event validation</h3>
+  <p>Band-pass filtering of sharp transients produces oscillation-like ringing
+    (Bénar et al., 2010). Each candidate is therefore tested on the signal
+    before band-pass filtering: its in-band spectral peak must exceed a
+    straight-line fit to the log–log background spectrum by at least
+    4&nbsp;dB, it must span at least two cycles of its peak frequency, and,
+    when its spectrum cannot be measured, it is rejected if it coincides with a
+    large 1–30&nbsp;Hz deflection. Rejected events are retained with the
+    criterion that rejected them. A separate detector (5–60&nbsp;Hz) finds
+    interictal discharges and rejects electrode pops by their slope.</p>
+
+  <h3>2.5 Rates, intervals and tied sets</h3>
+  <p>A channel's rate is its accepted events per minute of usable recording.
+    Treating the count <i>k</i> in <i>T</i> minutes as Poisson, the 95%
+    interval is the exact (Garwood, 1936) interval
+    [χ²<sub>0.025</sub>(2<i>k</i>)/2, χ²<sub>0.975</sub>(2<i>k</i>+2)/2]&nbsp;/&nbsp;<i>T</i>.
+    Channels whose intervals overlap that of the highest-rate channel form its
+    tied set; the leader is said to stand out only when its interval does not
+    overlap that of the median channel. This is a descriptive criterion, not a
+    formal test of difference or equivalence.</p>
+
+  <h3>2.6 Seizure onset</h3>
+  <p>The Epileptogenicity Index follows the form of Bartolomei et al. (2008):
+    the ratio of energy in 12.4–97&nbsp;Hz to that in 3.5–12.4&nbsp;Hz, in
+    1&nbsp;s windows every 0.25&nbsp;s, normalised to a pre-onset baseline; a
+    Page–Hinkley change-point per channel within 10&nbsp;s before to
+    30&nbsp;s after the marked onset; and the ratio summed over
+    <i>H</i>&nbsp;=&nbsp;5&nbsp;s after the change, divided by the delay
+    after the earliest channel plus τ&nbsp;=&nbsp;1&nbsp;s, scaled to a
+    maximum of 1. Values are not interchangeable with other EI
+    implementations.</p>
+
+  <h3>2.7 Evidence-constrained assistant (optional)</h3>
+  <p>The assistant answers questions about one saved analysis using an
+    open-weight model (Qwen2.5 or Qwen3, chosen to fit the machine's memory)
+    that by default runs locally through Ollama or in-process, so that no data
+    leave the computer. It reads the analysis through nine read-only tools.
+    Questions about treatment, diagnosis, prognosis, the seizure-onset zone or
+    other patients are refused before the model is called. Citations the model
+    invents are removed, and every number in an answer other than a whole
+    number from 0 to 20 must match, up to rounding, a value the tools
+    returned; an answer that fails is returned once for correction and is
+    otherwise withheld. The checks cannot detect a correct number attributed to
+    the wrong channel. The exported report, not the assistant, is the
+    authoritative output.</p>
+
+  <div class="figs">
+    <figure>
+      <img src="img/app-review-mode.png" width="1680" height="980" loading="lazy"
+        alt="Review mode: one ripple shown as wideband signal, band-passed signal and time-frequency map on a shared time axis, with Real, Not real and Unsure controls.">
+      <figcaption><b>Figure 2.</b> Event review: wideband signal, band-passed
+        signal and time–frequency map on one time axis; the reader records a
+        verdict with one key (<kbd>A</kbd>, <kbd>D</kbd>, <kbd>U</kbd>).</figcaption>
+    </figure>
+    <figure>
+      <img src="img/app-assistant.png" width="1150" height="760" loading="lazy"
+        alt="The assistant panel with answers marked as checked and linked to evidence windows, and a refused question about which channels to resect.">
+      <figcaption><b>Figure 3.</b> Assistant panel: answers linked to the
+        evidence windows they cite, and a refused out-of-scope question.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/app-signal.png" width="1680" height="980" loading="lazy"
+        alt="The Signal page: data-quality findings, preprocessing presets and a before-and-after filter preview.">
+      <figcaption><b>Figure 4.</b> Signal settings: data quality,
+        preprocessing presets and a two-second filter preview.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/app-case.png" width="1600" height="940" loading="lazy"
+        alt="A patient case with its steps: import, channels, annotate, segments, preprocess, interictal, ictal onset, review, map and report.">
+      <figcaption><b>Figure 5.</b> Patient case: one patient's recordings,
+        annotations, segments and results, with an audit log.</figcaption>
+    </figure>
   </div>
 </section>
 
 <section id="validation">
-  <div class="wrap">
-    <h2>Measured on public data, reported as measured</h2>
-    <p class="intro">Every number below can be rebuilt from the repository's
-      committed tables. Some are modest, and one earlier result did not survive
-      more data; both are reported.</p>
+  <h2>3. Validation</h2>
+  <p>Validation used three public OpenNeuro datasets (CC0): ds003498 (20
+    patients, interictal sleep recordings at 2000&nbsp;Hz with published HFO
+    markings, resected contacts and surgical outcome), ds003029 (ictal
+    recordings with clinician-marked onset zones) and ds004100 (interictal and
+    ictal recordings with onset zones and outcome). The ds003498 markings are
+    the output of an automated detector validated by the source study against
+    visually marked events; they are referred to here as reference markings.
+    Each result can be regenerated from the committed tables.</p>
 
-    <div class="stats">
-      <div class="stat"><div class="value">0.66</div><div class="label">channel agreement with experts</div>
-        <div class="note">Spearman correlation of ripple rates with 41,187 expert-marked events in 20 patients (ds003498), at a threshold measured on that data.</div></div>
-      <div class="stat"><div class="value">0.71 / 0.67</div><div class="label">surgical outcome, not significant</div>
-        <div class="note">Busiest fast-ripple channel resected: experts 11/13 vs 3/7, detector 10/13 vs 3/7 (p = 0.12, 0.17). 20 patients detect only AUC ≥ 0.85.</div></div>
-      <div class="stat"><div class="value">0.80 · 0.79</div><div class="label">seizure onset, two datasets</div>
-        <div class="note">Epileptogenicity Index against clinician-marked onset zones: median per-patient AUC in 28 patients (ds003029) and 54 (ds004100), same settings.</div></div>
-      <div class="stat"><div class="value">18 of 20</div><div class="label">answers stable across nights</div>
-        <div class="note">Expert markings give the same inside/outside answer across five whole recordings, but only 9 of 20 across five single minutes.</div></div>
-    </div>
-
-    <div class="two">
-      <div>
-        <h3>A correction, kept on the record</h3>
-        <p>A first version of the outcome analysis used the first 60 s of each
-          recording and reached AUC 0.82, p = 0.007. On whole recordings it is
-          0.71, p = 0.12, and five disjoint minutes give p from 0.007 to 0.613.
-          The software therefore analyses whole recordings by default and shows
-          tied sets instead of one channel.</p>
-      </div>
-      <div>
-        <img src="img/ictal-auc.png" width="945" height="615" loading="lazy"
-          alt="Per-patient AUC of the Epileptogenicity Index on ds003029: median 0.80 at the seizure, 0.73 for the energy ratio alone, and 0.58 when the analysis is moved 40 seconds before the seizure.">
-        <p class="caption">Epileptogenicity Index on ds003029; the control moves the analysis 40 s before the seizure.</p>
-      </div>
-    </div>
-    <p><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/EVALUATION.md">Detector evaluation</a> ·
-      <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/OUTCOME.md">Surgical outcome</a> ·
-      <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/ICTAL.md">Seizure onset</a> ·
-      <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/LIMITATIONS.md">Limitations</a></p>
+  <div class="table-scroll">
+  <table>
+    <caption>Table 1. Summary of validation results (version 0.3.17).</caption>
+    <thead>
+      <tr><th>Analysis</th><th>Data</th><th>n</th><th>Result</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Channel-rank agreement with reference HFO markings (mean Spearman ρ)</td>
+        <td>ds003498, first 60&nbsp;s, reviewed channels; 41,187 markings</td><td class="n">20 patients</td>
+        <td>ρ = 0.66 for ripples (RMS, κ = 2.0) and 0.61 for fast ripples (κ = 5.0). Thresholds were chosen on the same data, so these values are optimistic.</td></tr>
+      <tr><td>Surgical outcome: highest-rate fast-ripple channel inside the resection</td>
+        <td>ds003498, whole first runs</td><td class="n">13 seizure-free,<br>7 recurrence</td>
+        <td>Reference markings: 11/13 vs 3/7, AUC 0.71 (95% CI 0.49–0.92), p = 0.12. Detector: 10/13 vs 3/7, AUC 0.67 (0.45–0.89), p = 0.17. The cohort has 80% power only for AUC of about 0.8–0.85; no comparison survives Bonferroni correction across 35 tests.</td></tr>
+      <tr><td>Stability of the per-patient result</td>
+        <td>ds003498</td><td class="n">20 patients</td>
+        <td>Same inside/outside answer in five disjoint 60&nbsp;s windows: 9/20 (reference), 16/20 (detector). Across the first five whole runs: 16/18 and 14/18 patients with more than one run.</td></tr>
+      <tr><td>Epileptogenicity Index vs clinician-marked onset zone (median per-patient AUC)</td>
+        <td>ds003029, 73 seizures</td><td class="n">28 patients</td>
+        <td>0.80 (0.70–0.87), above 0.5 in 25/28. Control with the analysis moved 40&nbsp;s before onset: 0.58 (0.47–0.74), 12 patients.</td></tr>
+      <tr><td>Replication with unchanged settings</td>
+        <td>ds004100</td><td class="n">54 patients</td>
+        <td>0.79 (0.72–0.85); control 0.55 (0.52–0.60).</td></tr>
+      <tr><td>Assistant: fixed bank of questions about five saved analyses</td>
+        <td>111 questions</td><td class="n">2 models</td>
+        <td>Qwen2.5-7B: 65 of 71 data questions correct, none wrong (5 withheld by the checks, 1 declined). Qwen2.5-3B: 51 correct, 2 wrong. Both refused all 25 out-of-scope questions and followed none of 15 planted instructions. Replies were labelled by the developer.</td></tr>
+    </tbody>
+  </table>
   </div>
-</section>
 
-<section id="how">
-  <div class="wrap">
-    <h2>How it works</h2>
-    <p class="intro">The analysis writes a result store; the window, the report and
-      the assistant only read it. Every rate resolves to the events behind it, and
-      every event to the signal it was measured on.</p>
-    <div class="flow">
-      <div class="step"><b>Read</b><span>BIDS-iEEG, EDF, BrainVision, FIF and more; OpenNeuro by byte range</span></div>
-      <div class="step"><b>Prepare</b><span>high-pass, mains notch, bipolar montage; bad channels and segments set aside</span></div>
-      <div class="step"><b>Detect</b><span>ripples, fast ripples, interictal discharges, Epileptogenicity Index</span></div>
-      <div class="step"><b>Validate</b><span>each event against its own spectral background</span></div>
-      <div class="step"><b>Rank honestly</b><span>exact Poisson intervals and tied sets</span></div>
-      <div class="step"><b>Review</b><span>reader verdicts, report, optional checked assistant</span></div>
+  <div class="two">
+    <div>
+      <h3>Dependence on the analysis window</h3>
+      <p>An earlier version of the outcome analysis, restricted to the first
+        60&nbsp;s of each recording, gave AUC 0.82, p = 0.007 for the
+        reference markings. Repeated on five disjoint 60&nbsp;s windows, p
+        ranged from 0.007 to 0.613; on whole recordings the result is
+        AUC 0.71, p = 0.12. The outcome analysis therefore uses whole
+        recordings, and results are reported with tied sets rather than a
+        single channel.</p>
     </div>
-    <p>Built on <a href="https://mne.tools">MNE-Python</a> and its Qt browser,
-      NumPy, SciPy and pandas. MIT licence.</p>
+    <figure>
+      <img src="img/ictal-auc.png" width="945" height="615" loading="lazy"
+        alt="Per-patient AUC of the Epileptogenicity Index on ds003029: median 0.80 at the seizure, 0.73 for the energy ratio alone, and 0.58 when the analysis is moved 40 seconds before the seizure.">
+      <figcaption><b>Figure 6.</b> Epileptogenicity Index against
+        clinician-marked onset zones, ds003029; one point per patient. Left to
+        right: index at the seizure, energy ratio alone, and the control
+        40&nbsp;s before onset (12 patients).</figcaption>
+    </figure>
   </div>
+
+  <h3>Software testing</h3>
+  <p>The test suite (1,642 tests) runs without network access or patient
+    recordings, on synthetic recordings with events at known times, on the
+    committed result tables, and against local stand-ins for OpenNeuro and
+    Ollama. Continuous integration runs it on Python 3.10 and 3.12 and builds
+    the desktop window headless. Tests establish that the code meets its
+    specification; they do not validate the method on patients.</p>
+  <p>Detailed reports:
+    <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/EVALUATION.md">detector evaluation</a>,
+    <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/OUTCOME.md">surgical outcome</a>,
+    <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/ICTAL.md">seizure onset</a>,
+    <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/AGENT.md">assistant</a>.</p>
 </section>
 
 <section id="install">
-  <div class="wrap">
-    <h2>Install</h2>
-    <div class="two">
-      <div>
-        <h3>Ubuntu or Pop!_OS</h3>
-        <p>Download <code>onset-hfo-&lt;version&gt;-linux.tar.gz</code> from the
-          <a href="https://github.com/berdakh/onset-hfo/releases/latest">latest release</a>, then:</p>
+  <h2>4. Installation</h2>
+  <div class="two">
+    <div>
+      <h3>Linux bundle (Ubuntu, Pop!_OS)</h3>
+      <p>Download <code>onset-hfo-&lt;version&gt;-linux.tar.gz</code> from the
+        <a href="https://github.com/berdakh/onset-hfo/releases/latest">latest release</a>:</p>
 <pre>tar xzf onset-hfo-*-linux.tar.gz
 cd onset-hfo-*-linux
 ./install.sh --with-sample --with-assistant
 ~/.local/bin/onset-review</pre>
-        <p><code>--with-sample</code> adds one minute of one public recording to start with;
-          <code>--with-assistant</code> installs Ollama and a model suited to the
-          machine. Both are optional.</p>
-      </div>
-      <div>
-        <h3>From source, any platform with Python 3.10+</h3>
+      <p class="muted"><code>--with-sample</code> adds one minute of a public
+        recording; <code>--with-assistant</code> installs Ollama and a model
+        sized to the machine. Both are optional.</p>
+    </div>
+    <div>
+      <h3>From source (Python ≥ 3.10)</h3>
 <pre>git clone https://github.com/berdakh/onset-hfo.git
 cd onset-hfo/onset-hfo
 python -m venv .venv &amp;&amp; . .venv/bin/activate
 pip install -e ".[review]"
 onset-review</pre>
-        <p>The analysis library alone needs only <code>pip install -e .</code> and
-          runs from the command line.
-          <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/INSTALL.md">Full install guide</a>.</p>
-      </div>
+      <p class="muted">The library alone (<code>pip install -e .</code>) runs
+        from the command line. The desktop application requires Qt (PySide6).
+        See the <a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/INSTALL.md">installation guide</a>.</p>
     </div>
   </div>
+  <dl class="spec">
+    <dt>Dependencies</dt><dd>MNE-Python, NumPy, SciPy, pandas; PySide6 for the desktop application; Ollama or PyTorch/transformers for the optional assistant.</dd>
+    <dt>Input formats</dt><dd>Formats read by MNE-Python (EDF/BDF, BrainVision, FIF and others); BIDS-iEEG; OpenNeuro datasets.</dd>
+    <dt>Outputs</dt><dd>Result store (events, rates, intervals, evidence windows), exported report (Markdown/PDF), reader verdicts, tables for batch analyses.</dd>
+    <dt>Tested platform</dt><dd>Ubuntu, Python 3.10 and 3.12.</dd>
+  </dl>
 </section>
 
 <section id="docs">
-  <div class="wrap">
-    <h2>Documentation</h2>
-    <div class="cards">
-      <div class="card"><h4><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/MANUAL.md">Manual</a></h4><p>Tutorials from a first recording to a patient case.</p></div>
-      <div class="card"><h4><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/CLINICAL_GUIDE.md">Clinical guide</a></h4><p>Every panel and setting, and what each one costs.</p></div>
-      <div class="card"><h4><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/METHODS.md">Methods</a></h4><p>Detectors, validation, intervals and statistics.</p></div>
-      <div class="card"><h4><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/AGENT.md">Assistant</a></h4><p>Its tools, its three guards, and what it does not defend.</p></div>
-      <div class="card"><h4><a href="TUTORIAL.html">New to intracranial EEG?</a></h4><p>A plain-language tutorial on HFOs and how this project measures them.</p></div>
-      <div class="card"><h4><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/DATA.md">Data</a></h4><p>The public datasets used, and how to fetch them.</p></div>
-    </div>
-  </div>
+  <h2>5. Documentation</h2>
+  <ul>
+    <li><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/MANUAL.md">User manual</a>: from a first recording to a patient case.</li>
+    <li><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/CLINICAL_GUIDE.md">Reader's guide</a>: each panel and setting, and its effect on the results.</li>
+    <li><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/METHODS.md">Methods</a>: detectors, validation, intervals and statistics.</li>
+    <li><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/AGENT.md">Assistant</a>: tools, checks and their known gaps.</li>
+    <li><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/DATA.md">Data</a>: the public datasets used and how they are retrieved.</li>
+    <li><a href="https://github.com/berdakh/onset-hfo/blob/master/onset-hfo/docs/LIMITATIONS.md">Limitations</a>.</li>
+    <li><a href="TUTORIAL.html">Introductory tutorial</a> on HFOs for readers new to intracranial EEG.</li>
+  </ul>
+
+  <h3>Related software</h3>
+  <p class="muted">Other open tools for HFO and seizure-onset analysis include
+    RIPPLELAB (MATLAB; Navarrete et al., 2016), HFOApp (MATLAB; Zhou et al.,
+    2021), PyHFO (Python; Zhang et al., 2024), EPINETLAB (EEGLAB plugin;
+    Quitadamo et al., 2018), AnyWave (Colombet et al., 2015) and BrainQuake
+    (Python; Cai et al., 2022).</p>
 </section>
 
-<section id="limits">
-  <div class="wrap">
-    <h2>What it must not be used for</h2>
-    <ul class="limits">
-      <li><strong>Clinical decisions.</strong> It is not a medical device and has not been validated for clinical use. It issues no diagnosis and no recommendation.</li>
-      <li><strong>Reading a rate as a seizure-onset zone.</strong> Physiological ripples occur in healthy tissue; a busy channel may simply be healthy cortex.</li>
-      <li><strong>Overreading the validation.</strong> The outcome cohort has 20 patients from one centre; the association has the published direction but is not significant. Agreement with experts is moderate, and the expert markings are themselves a reviewed detector's output.</li>
-      <li><strong>Trusting the assistant's emphasis.</strong> Its checks stop invented numbers, not misleading emphasis or omissions. The report is authoritative.</li>
-      <li><strong>Your own data without approval.</strong> De-identification, ethics approval and data governance are yours.</li>
-    </ul>
-  </div>
+<section id="cite">
+  <h2>6. Citation</h2>
+  <p>If you use Onset Review in published work, please cite the archived
+    release you used. Version 0.3.17:</p>
+<pre>Abibullaev, B. (2026). Onset Review (version 0.3.17) [Computer software].
+Zenodo. https://doi.org/10.5281/zenodo.23385434</pre>
+<pre>@software{abibullaev_onset_review_2026,
+  author    = {Abibullaev, Berdakh},
+  title     = {Onset Review},
+  version   = {0.3.17},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23385434},
+  url       = {https://github.com/berdakh/onset-hfo}
+}</pre>
+  <p class="muted">Machine-readable metadata are in
+    <a href="https://github.com/berdakh/onset-hfo/blob/master/CITATION.cff">CITATION.cff</a>.
+    Please also cite the datasets you analyse.</p>
 </section>
+
+<section id="use">
+  <h2>7. Intended use and limitations</h2>
+  <p>Onset Review is intended for research on intracranial EEG. It must not be
+    used to make clinical decisions.</p>
+  <ul>
+    <li><strong>Regulatory status.</strong> Not a medical device; not
+      validated for clinical use; no diagnosis or recommendation is issued, and
+      the report format has no field for one.</li>
+    <li><strong>Physiological HFOs.</strong> Ripples also occur in normal
+      cortex; a high rate does not by itself identify epileptogenic tissue.</li>
+    <li><strong>Validation scope.</strong> The outcome cohort has 20 patients
+      from one centre and the association, though in the published direction,
+      is not significant. Agreement is measured against another detector's
+      output, not against a census of events.</li>
+    <li><strong>Montage.</strong> Bipolar channels pair consecutively numbered
+      contacts, which on grids are not always neighbours.</li>
+    <li><strong>Assistant.</strong> Its checks prevent unsupported numbers,
+      not misleading emphasis, omissions or a correct value attributed to the
+      wrong channel.</li>
+    <li><strong>Data governance.</strong> Users analysing their own recordings
+      are responsible for ethics approval, de-identification and data
+      protection.</li>
+  </ul>
+</section>
+
+</main>
 
 <footer>
   <div class="wrap">
-    Onset Review (onset-hfo) · developed by Berdakh Abibullaev · MIT licence ·
-    <a href="https://github.com/berdakh/onset-hfo">GitHub</a> ·
-    cite it from the repository's <a href="https://github.com/berdakh/onset-hfo/blob/master/CITATION.cff">CITATION.cff</a>.
-    Data: OpenNeuro ds003498, ds003029 and ds004100, all CC0.
+    Onset Review (onset-hfo) is developed by Berdakh Abibullaev, School of
+    Computing and Artificial Intelligence, Nazarbayev University, Astana,
+    Kazakhstan, and released under the MIT licence.
+    Source: <a href="https://github.com/berdakh/onset-hfo">github.com/berdakh/onset-hfo</a>.
+    Validation data: OpenNeuro ds003498, ds003029 and ds004100 (CC0).
   </div>
 </footer>
 
