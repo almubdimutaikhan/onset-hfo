@@ -19,13 +19,13 @@ from __future__ import annotations
 
 import html
 
-from qtpy.QtCore import QThread
+from qtpy.QtCore import Qt, QThread
 from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QSizePolicy,
+    QSplitter,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -36,6 +36,7 @@ from onset_agent.prompts import CHAT_PROMPT
 from onset_review import theme
 from onset_review.assistant import ANSWER_TIMEOUT, SMALL_PT, TEXT_PT, _paragraphs, _run
 from onset_review.assistant_config import load_defaults
+from onset_review.promptbox import PromptBox
 from onset_review.theme import muted
 
 __all__ = ["ChatPanel", "BANNER", "CHAT_TOKENS"]
@@ -116,9 +117,10 @@ class ChatPanel(QWidget):
         self._fresh = True
         self._note = ""
 
-        self.question = QLineEdit()
+        self.question = PromptBox()
         self.question.setObjectName("onset_chat_question")
-        self.question.setPlaceholderText("Ask the model anything. It cannot see this recording.")
+        self.question.setPlaceholderText("Ask the model anything. It cannot see this recording. "
+                                         "Enter sends; Shift+Enter starts a new line.")
         self.question.returnPressed.connect(lambda: self.ask())
         self.ask_button = QPushButton("Send")
         self.ask_button.setObjectName("onset_chat_send")
@@ -136,19 +138,39 @@ class ChatPanel(QWidget):
         top = QHBoxLayout()
         top.addWidget(self.model_line, 1)
         top.addWidget(self.new_button)
-        row = QHBoxLayout()
+        buttons = QVBoxLayout()
+        buttons.setSpacing(4)
+        buttons.addStretch(1)
+        buttons.addWidget(self.clock)
+        sending = QHBoxLayout()
+        sending.addWidget(self.ask_button)
+        sending.addWidget(self.stop_button)
+        buttons.addLayout(sending)
+        compose = QWidget()
+        row = QHBoxLayout(compose)
+        row.setContentsMargins(0, 0, 0, 0)
         row.addWidget(self.question, 1)
-        row.addWidget(self.ask_button)
-        row.addWidget(self.stop_button)
-        row.addWidget(self.clock)
+        row.addLayout(buttons)
+
+        # The transcript and the question box share a splitter: dragging the
+        # line between them makes the box taller for a long question, or
+        # gives the room back to the conversation.
+        self.splitter = QSplitter(Qt.Vertical)
+        self.splitter.setObjectName("onset_chat_splitter")
+        self.splitter.setChildrenCollapsible(False)
+        self.splitter.setHandleWidth(8)
+        self.splitter.addWidget(self.transcript)
+        self.splitter.addWidget(compose)
+        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(1, 0)
+        self.splitter.handle(1).setToolTip("Drag to make the question box taller or shorter")
 
         box = QVBoxLayout(self)
         box.setContentsMargins(4, 4, 4, 4)
         box.setSpacing(6)
         box.addWidget(self.banner)
         box.addLayout(top)
-        box.addWidget(self.transcript, 1)
-        box.addLayout(row)
+        box.addWidget(self.splitter, 1)
         self.refresh_model()
         self._welcome()
 
