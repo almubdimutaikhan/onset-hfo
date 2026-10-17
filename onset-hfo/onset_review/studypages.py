@@ -300,10 +300,14 @@ class PageAsk(QWidget):
         tokens = theme.current()
         self._title, self._text, self._lead = "", "", ""
         self._worker = None
-        self.question = QLineEdit()
+        from onset_review.promptbox import GrowHandle, PromptBox
+
+        self.question = PromptBox()
         self.question.setObjectName("onset_page_question")
         self.question.setPlaceholderText(
-            "Ask about this page — summarise it, or ask what a term or a number means")
+            "Ask about this page — summarise it, or ask what a term or a number means. "
+            "Enter asks; Shift+Enter starts a new line.")
+        self.grow = GrowHandle(self.question)
         self.question.returnPressed.connect(lambda: self.ask())
         self.ask_button = QPushButton("Ask")
         self.ask_button.setObjectName("onset_page_ask")
@@ -334,11 +338,24 @@ class PageAsk(QWidget):
             chip.setProperty("suggested", text)
             chip.clicked.connect(lambda _=False, q=text: self.ask(q))
             chips.addWidget(chip)
+        # The box keeps the height its handle gives it; the buttons sit at its
+        # foot, where a question ends.
+        typed = QVBoxLayout()
+        typed.setSpacing(0)
+        typed.addWidget(self.question)
+        typed.addWidget(self.grow)
+        typed.addStretch(1)
+        buttons = QVBoxLayout()
+        buttons.addStretch(1)
+        sending = QHBoxLayout()
+        sending.addWidget(self.ask_button)
+        sending.addWidget(self.stop_button)
+        buttons.addLayout(sending)
+        buttons.addSpacing(self.grow.height())
         row = QHBoxLayout()
         row.setSpacing(theme.SPACING // 2)
-        row.addWidget(self.question, 1)
-        row.addWidget(self.ask_button)
-        row.addWidget(self.stop_button)
+        row.addLayout(typed, 1)
+        row.addLayout(buttons)
         box = QVBoxLayout(self)
         box.setContentsMargins(0, 0, 0, 0)
         box.setSpacing(theme.SPACING // 2)

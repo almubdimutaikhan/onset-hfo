@@ -10,10 +10,10 @@ under the transcript and the reader can drag it as tall as they like.
 from __future__ import annotations
 
 from qtpy.QtCore import Qt, Signal
-from qtpy.QtGui import QTextCursor
-from qtpy.QtWidgets import QPlainTextEdit, QSizePolicy
+from qtpy.QtGui import QPainter, QPalette, QTextCursor
+from qtpy.QtWidgets import QPlainTextEdit, QSizePolicy, QWidget
 
-__all__ = ["PromptBox"]
+__all__ = ["GrowHandle", "PromptBox"]
 
 
 class PromptBox(QPlainTextEdit):
@@ -60,3 +60,64 @@ class PromptBox(QPlainTextEdit):
                 self.returnPressed.emit()
             return
         super().keyPressEvent(event)
+
+
+class GrowHandle(QWidget):
+    """A strip under a box that drags the box taller or shorter.
+
+    For a box with nothing to share a splitter with, such as the question
+    box at the foot of a scrolling study page: the box keeps a fixed height,
+    and dragging this strip sets it, between one line and `MAX_LINES`.
+    """
+
+    MAX_LINES = 20
+
+    def __init__(self, target: PromptBox, parent=None):
+        super().__init__(parent)
+        self._target = target
+        self._grab: tuple[float, int] | None = None
+        self.setObjectName("onset_grow_handle")
+        self.setFixedHeight(8)
+        self.setCursor(Qt.SizeVerCursor)
+        self.setToolTip("Drag to make the question box taller or shorter")
+        target.setFixedHeight(target.sizeHint().height())
+
+    def resize_target(self, height: int) -> None:
+        low = self._target._height(1)
+        high = self._target._height(self.MAX_LINES)
+        self._target.setFixedHeight(max(low, min(high, int(height))))
+
+    def mousePressEvent(self, event):                     # noqa: N802  (Qt's spelling)
+        if event.button() == Qt.LeftButton:
+            self._grab = (_screen_y(event), self._target.height())
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):                      # noqa: N802  (Qt's spelling)
+        if self._grab is not None:
+            start, height = self._grab
+            self.resize_target(height + _screen_y(event) - start)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):                   # noqa: N802  (Qt's spelling)
+        self._grab = None
+        super().mouseReleaseEvent(event)
+
+    def paintEvent(self, event):                          # noqa: N802  (Qt's spelling)
+        # Three short lines in the middle: the usual sign of a grip.
+        painter = QPainter(self)
+        painter.setPen(self.palette().color(QPalette.Mid))
+        middle, width = self.width() // 2, 18
+        for offset in (2, 4, 6):
+            painter.drawLine(middle - width // 2, offset, middle + width // 2, offset)
+        painter.end()
+
+
+def _screen_y(event) -> float:
+    """The pointer's height on screen, under Qt 6 and Qt 5 alike."""
+    if hasattr(event, "globalPosition"):
+        return event.globalPosition().y()
+    return float(event.globalPos().y())
