@@ -321,6 +321,8 @@ tooltip. Under the text, **Ask about
 this page** puts a question to the local model with that page as its only
 material — every number in the answer must be on the page or the answer is
 marked refused — and answers from the page itself when no model is loaded.
+Its box takes more than one line (**Enter** asks, **Shift+Enter** starts a
+new line), and the grip under it drags it taller.
 Band, metric and patient are combo boxes above the text, and the
 Patients page can open a patient's cached window on the Recording page, which
 is the one link the site cannot make.

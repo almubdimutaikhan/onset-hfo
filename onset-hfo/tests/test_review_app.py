@@ -3656,6 +3656,45 @@ def test_the_assistant_question_box_takes_lines_and_can_be_dragged_taller(qapp, 
         panel.deleteLater()
 
 
+def test_the_study_page_question_box_has_a_grip_that_drags_it_taller(qapp, monkeypatch):
+    from qtpy.QtCore import QEvent, QPoint, Qt
+    from qtpy.QtGui import QKeyEvent
+    from qtpy.QtTest import QTest
+
+    from onset_review.promptbox import GrowHandle, PromptBox
+    from onset_review.studypages import PageAsk
+
+    box = PageAsk()
+    asked = []
+    monkeypatch.setattr(box, "ask", lambda question=None: asked.append(box.question.text()))
+    box.question.returnPressed.disconnect()
+    box.question.returnPressed.connect(box.ask)
+    try:
+        box.resize(900, 200)
+        box.show()
+        qapp.processEvents()
+        assert isinstance(box.question, PromptBox) and isinstance(box.grow, GrowHandle)
+        box.question.setText("Summarise this page.")
+        box.question.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.ShiftModifier))
+        box.question.insertPlainText("Then the main number.")
+        box.question.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.NoModifier))
+        assert asked == ["Summarise this page.\nThen the main number."]
+
+        before = box.question.height()
+        QTest.mousePress(box.grow, Qt.LeftButton, Qt.NoModifier, QPoint(40, 4))
+        QTest.mouseMove(box.grow, QPoint(40, 124))
+        QTest.mouseRelease(box.grow, Qt.LeftButton, Qt.NoModifier, QPoint(40, 124))
+        qapp.processEvents()
+        assert box.question.height() == before + 120
+        # Never shorter than a line, never taller than its limit.
+        box.grow.resize_target(1)
+        assert box.question.height() == box.question._height(1)
+        box.grow.resize_target(10_000)
+        assert box.question.height() == box.question._height(GrowHandle.MAX_LINES)
+    finally:
+        box.deleteLater()
+
+
 # The Apple pass: a source list with glyphs, a toolbar that names the page and
 # carries its buttons, panels on cards, and colour spent on the exceptions.
 
