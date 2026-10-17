@@ -688,6 +688,10 @@ returned, and a number no query returned is refused rather than shown. Ask it
 which channels to resect and it refuses — before the model is even called. Ask
 it *What can you do?* and it tells you, also without a model.
 
+The question box takes more than one line, as on the Chat page: **Enter**
+asks, **Shift+Enter** starts a new line, and dragging the line above the box
+makes it taller or shorter.
+
 ![An answer, with the work under it](images/onset-review-assistant-answer.png)
 
 **You see the work.** Each exchange is a card: the question, the answer, and
@@ -783,7 +787,10 @@ between minutes is the usual case and the tied sets are what to compare.
 The second page under **Assistant** (*Assistant › Chat*), there whether or
 not a recording is open. It talks to the same local model the Assistant uses,
 with none of the Assistant's machinery: no briefing, no tools, no number or
-citation check, no refusals. Ask it what you like.
+citation check, no refusals. Ask it what you like. The question box takes
+more than one line: **Enter** sends, **Shift+Enter** starts a new line, and
+dragging the line between the conversation and the box makes the box taller
+or shorter.
 
 Three things keep it honest beside the rest of the window, and none of them
 is a restriction on you. A line at the top says, permanently, that the

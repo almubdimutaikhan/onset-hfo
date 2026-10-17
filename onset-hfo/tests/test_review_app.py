@@ -3572,6 +3572,90 @@ def test_the_chat_page_opens_with_something_to_try(qapp, monkeypatch):
         panel.deleteLater()
 
 
+def test_the_chat_question_box_takes_lines_and_can_be_dragged_taller(qapp, monkeypatch):
+    from qtpy.QtCore import QEvent, Qt
+    from qtpy.QtGui import QKeyEvent
+    from qtpy.QtWidgets import QSplitter
+
+    from onset_review import chatview
+    from onset_review.assistant_config import AssistantDefaults
+
+    talker = _Talker()
+    monkeypatch.setattr(chatview, "load_defaults",
+                        lambda: AssistantDefaults(kind="ollama", model="qwen2.5:3b-instruct",
+                                                  base_url="http://127.0.0.1:11434/v1"))
+    monkeypatch.setattr(chatview, "make_backend", lambda *a, **k: talker)
+    panel = chatview.ChatPanel()
+    try:
+        panel.resize(900, 500)
+        panel.show()
+        qapp.processEvents()
+
+        def press(modifiers=Qt.NoModifier):
+            panel.question.keyPressEvent(
+                QKeyEvent(QEvent.KeyPress, Qt.Key_Return, modifiers))
+
+        panel.question.setText("first line")
+        press(Qt.ShiftModifier)
+        panel.question.insertPlainText("second line")
+        assert panel.question.text() == "first line\nsecond line", "Shift+Enter is a newline"
+        assert not talker.calls
+        press()
+        assert talker.calls, "Enter sends"
+        assert talker.calls[-1][0][-1]["content"] == "first line\nsecond line"
+        assert panel.question.text() == ""
+
+        # The transcript and the box share a splitter whose handle the reader drags.
+        assert isinstance(panel.splitter, QSplitter)
+        assert panel.splitter.orientation() == Qt.Vertical
+        assert panel.splitter.widget(0) is panel.transcript
+        assert not panel.splitter.childrenCollapsible()
+        before = panel.question.height()
+        total = sum(panel.splitter.sizes())
+        panel.splitter.setSizes([total - 220, 220])
+        qapp.processEvents()
+        assert panel.question.height() > before + 100
+    finally:
+        panel.deleteLater()
+
+
+def test_the_assistant_question_box_takes_lines_and_can_be_dragged_taller(qapp, monkeypatch):
+    from qtpy.QtCore import QEvent, Qt
+    from qtpy.QtGui import QKeyEvent
+    from qtpy.QtWidgets import QSplitter
+
+    from onset_review.assistant import AssistantPanel
+    from onset_review.promptbox import PromptBox
+
+    panel = AssistantPanel(session=object())
+    asked = []
+    monkeypatch.setattr(panel, "ask", lambda question=None: asked.append(panel.question.text()))
+    panel.question.returnPressed.disconnect()
+    panel.question.returnPressed.connect(panel.ask)
+    try:
+        panel.resize(900, 560)
+        panel.show()
+        qapp.processEvents()
+        assert isinstance(panel.question, PromptBox)
+        panel.question.setText("Which channel leads?")
+        panel.question.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.ShiftModifier))
+        panel.question.insertPlainText("And what was rejected?")
+        assert not asked
+        panel.question.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.NoModifier))
+        assert asked == ["Which channel leads?\nAnd what was rejected?"]
+
+        assert isinstance(panel.splitter, QSplitter)
+        assert panel.splitter.orientation() == Qt.Vertical
+        assert not panel.splitter.childrenCollapsible()
+        before = panel.question.height()
+        total = sum(panel.splitter.sizes())
+        panel.splitter.setSizes([total - 220, 220])
+        qapp.processEvents()
+        assert panel.question.height() > before + 100
+    finally:
+        panel.deleteLater()
+
+
 # The Apple pass: a source list with glyphs, a toolbar that names the page and
 # carries its buttons, panels on cards, and colour spent on the exceptions.
 
