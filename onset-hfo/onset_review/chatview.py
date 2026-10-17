@@ -138,11 +138,12 @@ class ChatPanel(QWidget):
         top = QHBoxLayout()
         top.addWidget(self.model_line, 1)
         top.addWidget(self.new_button)
+        # The buttons sit at the box's foot, so a taller box keeps them where
+        # the eye ends a question; one row keeps the panel as short as before.
         buttons = QVBoxLayout()
-        buttons.setSpacing(4)
         buttons.addStretch(1)
-        buttons.addWidget(self.clock)
         sending = QHBoxLayout()
+        sending.addWidget(self.clock)
         sending.addWidget(self.ask_button)
         sending.addWidget(self.stop_button)
         buttons.addLayout(sending)
@@ -220,7 +221,7 @@ class ChatPanel(QWidget):
             self._say_system("No model is loaded; choose one under Assistant › This recording.")
             return
         self.question.clear()
-        self._append(f"<div style='margin:6px 0 2px;'><b>You:</b> {html.escape(text)}</div>")
+        self._append(f"<div style='margin:6px 0 2px;'><b>You:</b> {html.escape(text).replace(chr(10), '<br>')}</div>")
         self._worker = _ChatWorker(self._kind, self._model, self._base_url,
                                    self.messages(text), self)
         self._set_busy(True)

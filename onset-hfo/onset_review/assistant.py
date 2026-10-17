@@ -34,7 +34,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from qtpy.QtCore import QThread, QTimer, Signal
+from qtpy.QtCore import Qt, QThread, QTimer, Signal
 from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -43,6 +43,7 @@ from qtpy.QtWidgets import (
     QLineEdit,
     QPushButton,
     QSizePolicy,
+    QSplitter,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -405,9 +406,13 @@ class AssistantPanel(QWidget):
         font.setPointSizeF(TEXT_PT)
         self.transcript.setFont(font)
 
-        self.question = QLineEdit()
+        from onset_review.promptbox import PromptBox
+
+        self.question = PromptBox()
+        self.question.setObjectName("onset_assistant_question")
         self.question.setPlaceholderText(
-            "Ask about this window — a channel, a rate, what was rejected…")
+            "Ask about this window — a channel, a rate, what was rejected… "
+            "Enter sends; Shift+Enter starts a new line.")
         self.question.returnPressed.connect(self.ask)
         self.send = QPushButton("Ask")
         self.send.clicked.connect(self.ask)
@@ -428,11 +433,20 @@ class AssistantPanel(QWidget):
         self._clock.timeout.connect(self._tick)
         self._started = 0.0
 
-        row = QHBoxLayout()
-        row.addWidget(self.question)
-        row.addWidget(self.send)
-        row.addWidget(self.stop_button)
-        row.addWidget(self.busy)
+        # The buttons sit at the box's foot, so a taller box keeps them where
+        # the eye ends a question; one row keeps the panel as short as before.
+        buttons = QVBoxLayout()
+        buttons.addStretch(1)
+        sending = QHBoxLayout()
+        sending.addWidget(self.busy)
+        sending.addWidget(self.send)
+        sending.addWidget(self.stop_button)
+        buttons.addLayout(sending)
+        compose = QWidget()
+        row = QHBoxLayout(compose)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(self.question, 1)
+        row.addLayout(buttons)
 
         prompts = QHBoxLayout()
         prompts.setSpacing(3)
@@ -469,11 +483,23 @@ class AssistantPanel(QWidget):
         box.addWidget(self.transcript)
         box.addLayout(prompts)
 
+        # The conversation and the question box share a splitter: dragging
+        # the line between them makes the box taller for a long question, or
+        # gives the room back to the transcript. Neither side collapses.
+        self.splitter = QSplitter(Qt.Vertical)
+        self.splitter.setObjectName("onset_assistant_splitter")
+        self.splitter.setChildrenCollapsible(False)
+        self.splitter.setHandleWidth(8)
+        self.splitter.addWidget(theme.scrolled(conversation))
+        self.splitter.addWidget(compose)
+        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(1, 0)
+        self.splitter.handle(1).setToolTip("Drag to make the question box taller or shorter")
+
         outer = QVBoxLayout(self)
         outer.setContentsMargins(4, 4, 4, 4)
         outer.setSpacing(4)
-        outer.addWidget(theme.scrolled(conversation))
-        outer.addLayout(row)
+        outer.addWidget(self.splitter)
 
         self.backend.currentIndexChanged.connect(self._backend_changed)
         self._apply_defaults()

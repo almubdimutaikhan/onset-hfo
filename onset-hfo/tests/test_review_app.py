@@ -3619,6 +3619,43 @@ def test_the_chat_question_box_takes_lines_and_can_be_dragged_taller(qapp, monke
         panel.deleteLater()
 
 
+def test_the_assistant_question_box_takes_lines_and_can_be_dragged_taller(qapp, monkeypatch):
+    from qtpy.QtCore import QEvent, Qt
+    from qtpy.QtGui import QKeyEvent
+    from qtpy.QtWidgets import QSplitter
+
+    from onset_review.assistant import AssistantPanel
+    from onset_review.promptbox import PromptBox
+
+    panel = AssistantPanel(session=object())
+    asked = []
+    monkeypatch.setattr(panel, "ask", lambda question=None: asked.append(panel.question.text()))
+    panel.question.returnPressed.disconnect()
+    panel.question.returnPressed.connect(panel.ask)
+    try:
+        panel.resize(900, 560)
+        panel.show()
+        qapp.processEvents()
+        assert isinstance(panel.question, PromptBox)
+        panel.question.setText("Which channel leads?")
+        panel.question.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.ShiftModifier))
+        panel.question.insertPlainText("And what was rejected?")
+        assert not asked
+        panel.question.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.NoModifier))
+        assert asked == ["Which channel leads?\nAnd what was rejected?"]
+
+        assert isinstance(panel.splitter, QSplitter)
+        assert panel.splitter.orientation() == Qt.Vertical
+        assert not panel.splitter.childrenCollapsible()
+        before = panel.question.height()
+        total = sum(panel.splitter.sizes())
+        panel.splitter.setSizes([total - 220, 220])
+        qapp.processEvents()
+        assert panel.question.height() > before + 100
+    finally:
+        panel.deleteLater()
+
+
 # The Apple pass: a source list with glyphs, a toolbar that names the page and
 # carries its buttons, panels on cards, and colour spent on the exceptions.
 
