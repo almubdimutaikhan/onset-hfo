@@ -16,7 +16,13 @@ limitations paragraph makes, and checks each against the analysis:
   N other channels" must count them right;
 * **the quality checks** -- "no contacts were set aside / flagged";
 * **the reader's verdicts** -- "the reader has not judged any events", "agreed
-  with all", "judged every event".
+  with all", "judged every event";
+* **the numbers given to a channel** -- a rate, an event count or an interval
+  written right after a channel's name ("AR1-AR2 at 52 events/min, interval
+  39-68, n=52") must be that channel's. The number check cannot see this: 52
+  came out of a query either way. A number that is another channel's value
+  and not the named one's is refused as given to the wrong channel; one that
+  is nobody's is left to the number check.
 
 The patterns are deliberately narrow. A sentence they do not recognise is not
 checked here -- it still goes through the number and citation checks -- so a
@@ -96,6 +102,12 @@ class Facts:
     disagree: int = 0
     unsure: int = 0
     accepted: int = 0                   #: events the reader could judge
+    #: Channel -> {"rate", "n", "low", "high"} from the primary detector's
+    #: findings, upper-case names: what a number given to a channel is held to.
+    values: dict[str, dict[str, float]] = field(default_factory=dict)
+    #: Detectors other than the primary one: a clause that names one is about
+    #: their numbers, not the findings', and its numbers are not checked here.
+    other_detectors: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -121,6 +133,18 @@ def facts_from_session(session) -> Facts:
     if quality is not None and len(quality):
         facts.set_aside = int((~quality["good"]).sum())
         facts.flagged = int(quality["flagged"].sum()) if "flagged" in quality else 0
+    findings = getattr(session, "findings", None)
+    if findings is not None and len(findings) and "rate_per_min" in findings:
+        for row in findings.to_dict("records"):
+            entry = {"rate": row.get("rate_per_min"), "n": row.get("n_events"),
+                     "low": row.get("rate_ci_low"), "high": row.get("rate_ci_high")}
+            facts.values[str(row["channel"]).upper()] = {
+                k: float(v) for k, v in entry.items()
+                if v is not None and v == v}           # drop NaN: no clean time
+    request = getattr(session, "request", None)
+    primary = str(getattr(request, "primary", "") or "")
+    facts.other_detectors = sorted(
+        {str(e.detector) for e in getattr(session, "events", []) or []} - {primary})
     read = getattr(session, "read", None)
     if read is not None:
         counts = read.counts()
@@ -177,7 +201,95 @@ def check(text: str, facts: Facts) -> ClaimCheck:
     for sentence in split_sentences(text):
         for clause in _CLAUSE.split(sentence):
             _check_clause(sentence, clause, facts, out)
+            _check_values(sentence, clause, facts, out)
     return out
+
+
+# -- numbers given to a channel ----------------------------------------------
+_RATE = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(?:events?\s*)?(?:/\s*min\b|per\s+min(?:ute)?\b)", re.IGNORECASE)
+_COUNT = re.compile(
+    r"\bn\s*=\s*(\d+)\b|\b(\d+)\s+(?:detected\s+|accepted\s+)?events?\b(?!\s*(?:/|per\b))",
+    re.IGNORECASE)
+_INTERVAL = re.compile(
+    r"\b(?:interval|CI|confidence interval)\b[^\d]{0,12}(\d+(?:\.\d+)?)\s*"
+    r"(?:-|\u2013|\u2014|to)\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
+#: Words after a channel's name that hand the sentence to something else: what
+#: follows "the median channel at 5/min" is not the named channel's.
+_HANDOVER = re.compile(
+    r"\b(?:median|mean|average|other|others|rest|remaining|next|second|third|than|"
+    r"compared|versus|vs|whereas|while|followed|ahead|behind|against|across|overall|"
+    r"total|together|combined|expert|experts|annotators?|marked|threshold)\b",
+    re.IGNORECASE)
+#: A clause about the archive's own markings or another detector is about
+#: numbers the findings do not hold.
+_ELSEWHERE = re.compile(r"\b(?:expert|experts|annotators?|annotated|marked|markings)\b",
+                        re.IGNORECASE)
+_KINDS = {"rate": "a rate of {v}/min", "n": "{v} events",
+          "low": "an interval from {v}", "high": "an interval up to {v}"}
+_SHOW = {"rate": "{v:.1f}/min", "n": "{v:.0f} events", "low": "{v:.1f}", "high": "{v:.1f}"}
+
+
+def _same(said: float, actual: float) -> bool:
+    """The number check's rounding rule: 52 is 52.0, 12.3 is 12.345."""
+    return (abs(actual - said) <= max(0.05, 0.01 * abs(actual))
+            or abs(round(actual, 1) - said) <= 0.051 or abs(round(actual) - said) < 1e-9)
+
+
+def _quantities(tail: str) -> list[tuple[str, float]]:
+    """(kind, value) for the rates, counts and interval bounds in `tail`."""
+    found: list[tuple[int, str, float]] = []
+    taken: list[tuple[int, int]] = []
+    for match in _INTERVAL.finditer(tail):
+        found += [(match.start(1), "low", float(match.group(1))),
+                  (match.start(2), "high", float(match.group(2)))]
+        taken.append(match.span())
+    for match in _RATE.finditer(tail):
+        if any(a <= match.start() < b for a, b in taken):
+            continue
+        found.append((match.start(), "rate", float(match.group(1))))
+        taken.append(match.span())
+    for match in _COUNT.finditer(tail):
+        if any(a <= match.start() < b for a, b in taken):
+            continue
+        found.append((match.start(), "n", float(match.group(1) or match.group(2))))
+    return [(kind, value) for _, kind, value in sorted(found)]
+
+
+def _check_values(sentence: str, clause: str, facts: Facts, out: ClaimCheck) -> None:
+    if not facts.values or _ELSEWHERE.search(clause):
+        return
+    for name in facts.other_detectors:
+        pattern = r"\b" + re.escape(name).replace("_", "[ _-]?") + r"\b"
+        if re.search(pattern, clause, re.IGNORECASE):
+            return
+    names = list(_CHANNEL_RE.finditer(clause))
+    for i, match in enumerate(names):
+        channel = match.group(0).upper()
+        own = facts.values.get(channel)
+        if own is None:
+            continue
+        stop = names[i + 1].start() if i + 1 < len(names) else len(clause)
+        tail = clause[match.end():stop]
+        handover = _HANDOVER.search(tail)
+        if handover:
+            tail = tail[:handover.start()]
+        # Close to the name only: "AR1-AR2 led the ranking at 52 events/min".
+        tail = " ".join(tail.split()[:10])
+        for kind, said in _quantities(tail):
+            if kind not in own:
+                continue
+            if _same(said, own[kind]):
+                out.confirmed.append(
+                    (sentence, f"{channel}: {_KINDS[kind].format(v=f'{said:g}')}"))
+                continue
+            owners = [c for c, v in facts.values.items()
+                      if c != channel and kind in v and _same(said, v[kind])]
+            if owners:
+                out.problems.append(
+                    f'"{sentence}" gives {channel} {_KINDS[kind].format(v=f"{said:g}")}, '
+                    f"which is {owners[0]}'s; {channel}'s is "
+                    + _SHOW[kind].format(v=own[kind]))
 
 
 def _check_clause(sentence: str, clause: str, facts: Facts, out: ClaimCheck) -> None:
