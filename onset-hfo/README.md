@@ -484,4 +484,7 @@ docs/                 everything above
 
 MIT for the code. The data is CC0 from OpenNeuro `ds003029`; if you publish
 anything derived from it, cite the dataset and its paper — the citation is
-printed in every report and stored in `provenance.json`.
+printed in every report and stored in `provenance.json`. The interface's
+typeface, Inter (`onset_review/fonts/`), is © The Inter Project Authors and
+ships under the SIL Open Font License 1.1, whose text is beside it in
+`OFL.txt`.

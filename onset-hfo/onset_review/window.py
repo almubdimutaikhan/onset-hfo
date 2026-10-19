@@ -277,11 +277,52 @@ def open_trace(session: ReviewSession, duration: float = DEFAULT_DURATION,
         # unreferenced sensor carries far more than a bipolar contact does.
         scalings=dict(seeg=DEFAULT_SCALING, eeg=DEFAULT_SCALING,
                       ecog=DEFAULT_SCALING, grad=4e-11, mag=1e-12),
-        title=session.request.label(), block=False, show=show, verbose="ERROR")
+        title=session.request.label(), block=False, show=show, verbose="ERROR",
+        **trace_style())
     _colour_annotations(figure)
+    _quiet_overview(figure)
     _keep_labels_readable(figure)
     hide_load_bar_when_done(figure)
     return figure
+
+
+def _quiet_overview(figure) -> bool:
+    """Show only the events on the overview strip when the trace has one ink.
+
+    `raw.plot(overview_mode=...)` does not reach the browser's own state in
+    the installed mne-qt-browser, so the mode is set on the figure after it is
+    built. Not through its menu handler: that also writes the choice into
+    MNE's saved settings, which belong to the reader. True when changed."""
+    if trace_style().get("overview_mode") != "empty":
+        return False
+    state = getattr(figure, "mne", None)
+    bar = getattr(state, "overview_bar", None)
+    if bar is None or getattr(state, "overview_mode", None) == "empty":
+        return False
+    state.overview_mode = "empty"
+    try:
+        bar.set_background()
+    except Exception:
+        return False
+    return True
+
+
+def trace_style() -> dict:
+    """The theme's look for MNE's browser, as `raw.plot` arguments.
+
+    With a trace ink in the palette, every signal is drawn in it rather than
+    MNE's per-type colours (brown for sEEG), so the coloured event bands are
+    the only colour on the trace; and the overview strip under it shows the
+    events alone, since one ink on every channel would make it a solid bar.
+    Empty when the palette leaves the trace to MNE.
+    """
+    from onset_review import theme
+
+    ink = theme.current().trace_ink
+    if not ink:
+        return {}
+    kinds = ("seeg", "ecog", "eeg", "dbs", "eog", "ecg", "emg", "misc", "grad", "mag")
+    return {"color": dict.fromkeys(kinds, ink), "overview_mode": "empty"}
 
 
 def hide_load_bar_when_done(figure) -> bool:
@@ -446,6 +487,14 @@ def _colour_annotations(figure) -> None:
                 region.update_color()
             except Exception:
                 pass
+    # The overview strip drew its ticks before these colours were written, in
+    # MNE's rotating palette; it re-reads them when asked.
+    bar = getattr(state, "overview_bar", None)
+    if bar is not None:
+        try:
+            bar.update_annotations()
+        except Exception:
+            pass
 
 
 def goto(figure, t: float, channel: str | None = None,

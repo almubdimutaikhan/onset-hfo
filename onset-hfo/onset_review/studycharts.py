@@ -8,7 +8,7 @@ in the text is something a reader can see rather than take on trust.
 Both are drawn with matplotlib's Agg backend into a PNG the page embeds, from
 the same frames the tables beside them render, so the figure and the table
 cannot disagree. Two hues only, validated for colour-vision deficiency and
-for contrast on the page's white: the window's accent blue for the first
+for contrast on the page's white: the window's indigo accent for the first
 series and an orange for the second. Everything else is ink: text in the
 text colours, grid and axes recessive, no title inside the figure (the page
 heading above it is the title).
@@ -21,9 +21,10 @@ from pathlib import Path
 __all__ = ["sweep_chart", "outcome_chart", "draw_sweep", "draw_outcome", "SERIES",
            "DETECTOR_LABELS", "MARK", "YOURS"]
 
-#: Categorical hues, in fixed order: the accent, then an orange. Checked with
-#: the palette validator: adjacent-pair CVD separation 26.6, contrast >= 3:1.
-SERIES = ("#0B6BCB", "#C2410C")
+#: Categorical hues, in fixed order: the accent, then an orange. Under
+#: simulated protan, deutan and tritan vision (Machado 2009, full severity) the
+#: pair stays at least 111 CIE76 Delta-E apart; contrast on white 6.3:1 and 5.2:1.
+SERIES = ("#4F46E5", "#C2410C")
 #: This recording's point, and a reader's own re-run: ink, not a third hue,
 #: so neither is mistaken for a published series.
 MARK = "#1D1D1F"

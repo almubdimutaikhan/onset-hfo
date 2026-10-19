@@ -59,8 +59,8 @@ __all__ = ["ReviewRequest", "ReviewSession", "load_session",
 #: telling the band apart, because every mark already carries its band in its
 #: own label text.
 BAND_COLOURS = {
-    "ripple": "#1f77b4",              # blue
-    "fast ripple": "#d62728",         # red
+    "ripple": "#6366F1",              # indigo
+    "fast ripple": "#DB2777",         # magenta
     "spike": "#7f7f7f",               # grey
     "expert ripple": "#2ca02c",       # green
     "expert fast ripple": "#ff7f0e",  # orange

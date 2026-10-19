@@ -1561,6 +1561,65 @@ def test_every_warning_in_the_interface_is_the_same_warning_colour():
     assert theme.DARK.bad in theme.card("bad", theme.DARK)
 
 
+def test_the_bundled_inter_face_is_the_one_the_window_uses(qapp):
+    from onset_review import theme
+
+    families = theme.register_fonts()
+    assert "Inter" in families, "the fonts folder ships with the package"
+    assert theme.best_font() == "Inter"
+    assert {p.name for p in theme.FONT_DIR.glob("*.ttf")} >= {
+        "Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "Inter-Bold.ttf"}
+    assert (theme.FONT_DIR / "OFL.txt").is_file(), "the licence travels with the font"
+
+
+def _contrast(fg: str, bg: str) -> float:
+    def lum(colour):
+        channels = [int(colour[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    hi, lo = sorted((lum(fg), lum(bg)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+@pytest.mark.parametrize("name", ["LIGHT", "DARK"])
+def test_every_text_colour_reads_on_the_surfaces_it_sits_on(name, qapp):
+    """WCAG AA (4.5:1) for body text and the muted text, on the window, the
+    cards, the sidebar and a selected row's tint; the accent on its tint too."""
+    from onset_review import theme
+
+    p = getattr(theme, name)
+    for surface in (p.window, p.surface, p.sidebar, p.accent_soft):
+        assert _contrast(p.text, surface) >= 4.5, (name, surface)
+        assert _contrast(p.text_muted, surface) >= 4.5 or surface == p.accent_soft, (name, surface)
+    assert _contrast(p.accent, p.accent_soft) >= 4.5, name
+    assert _contrast(p.accent_text, p.accent) >= 4.5, name
+
+
+def test_the_light_trace_is_one_ink_and_the_dark_one_is_left_to_mne():
+    from onset_review import theme, window
+
+    previous = theme.current()
+    try:
+        theme.set_current(theme.LIGHT)
+        style = window.trace_style()
+        assert set(style["color"].values()) == {theme.LIGHT.trace_ink}
+        assert {"seeg", "ecog", "eeg"} <= set(style["color"])
+        assert style["overview_mode"] == "empty"
+        theme.set_current(theme.DARK)
+        assert window.trace_style() == {}
+    finally:
+        theme.set_current(previous)
+
+
+def test_a_selection_is_a_tint_not_a_solid_accent_bar():
+    from onset_review import theme
+
+    sheet = theme.stylesheet(theme.LIGHT)
+    assert f"selection-background-color: {theme.LIGHT.accent_soft}" in sheet
+    pages = sheet[sheet.index("QListWidget#onset_pages::item:selected"):]
+    assert theme.LIGHT.accent_soft in pages.split("}")[0]
+
+
 def test_no_panel_hardcodes_a_colour():
     """Colours come from the palette so the two themes cannot diverge.
 

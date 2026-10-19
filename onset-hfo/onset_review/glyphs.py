@@ -230,10 +230,10 @@ def glyph(name: str, colour, size: int = 16, scale: float = 2.0) -> QPixmap:
 
 
 def icon(name: str, palette, size: int = 16) -> QIcon:
-    """The glyph as an icon: muted at rest, in the selection's text colour
-    when its row is selected, so a white symbol sits on the accent pill."""
+    """The glyph as an icon: muted at rest, in the accent when its row is
+    selected, matching the selected row's accent text on its tint."""
     out = QIcon()
     out.addPixmap(glyph(name, palette.text_muted, size), QIcon.Normal)
     out.addPixmap(glyph(name, palette.text_muted, size), QIcon.Disabled)
-    out.addPixmap(glyph(name, palette.accent_text, size), QIcon.Selected)
+    out.addPixmap(glyph(name, palette.accent, size), QIcon.Selected)
     return out

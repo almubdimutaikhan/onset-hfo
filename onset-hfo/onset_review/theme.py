@@ -28,13 +28,14 @@ and why there is no blanket `QWidget` rule.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from qtpy.QtGui import QFont, QFontDatabase
 
 __all__ = ["Palette", "LIGHT", "DARK", "apply_theme", "current", "qt_palette",
            "section_label", "plain_buttons", "scrolled", "help_button", "card_frame",
            "SettingsGroup", "segmented", "card", "muted", "SPACING", "RADIUS",
-           "FONT_STACK", "PAGE_MARGIN"]
+           "FONT_STACK", "PAGE_MARGIN", "register_fonts"]
 
 #: The spacing grid, in pixels. Everything is a multiple of four; most things
 #: are a multiple of eight. A layout that picks its margins ad hoc reads as
@@ -47,13 +48,17 @@ RADIUS = 8
 PAGE_MARGIN = 20
 CARD_GAP = 12
 
-#: Preferred UI faces, best first. Inter is the closest freely-available face
-#: to the one this is modelled on and is packaged on most distributions; the
-#: rest are what Ubuntu, GNOME and a minimal container actually ship. Resolved
-#: at runtime against installed fonts rather than named blindly, because a
-#: missing family silently falls back to something with the wrong metrics.
+#: Preferred UI faces, best first. Inter ships with the package (`fonts/`,
+#: SIL Open Font License), so every install draws the same type: left to the
+#: system, a minimal Linux falls back to DejaVu Sans, whose wide 2000s-desktop
+#: shapes are most of why the window looked dated. The rest are what Ubuntu,
+#: GNOME and a minimal container ship, for an install whose fonts folder is
+#: missing. Resolved at runtime against registered fonts rather than named
+#: blindly, because a missing family silently falls back to wrong metrics.
 FONT_STACK = ("Inter", "SF Pro Text", "Helvetica Neue", "Cantarell", "Ubuntu",
               "Noto Sans", "DejaVu Sans")
+#: The bundled faces: regular, medium, semibold and bold.
+FONT_DIR = Path(__file__).resolve().parent / "fonts"
 
 
 @dataclass(frozen=True)
@@ -70,6 +75,9 @@ class Palette:
     separator: str
     accent: str          #: the one colour that means "this is interactive"
     accent_text: str
+    #: A tint of the accent: what a selected row or the current page sits on.
+    #: A solid accent bar across a whole table row shouts; a tint marks it.
+    accent_soft: str
     #: Semantic, and used for nothing else. A green that also means "primary
     #: button" stops meaning "inside the resection".
     good: str
@@ -79,27 +87,33 @@ class Palette:
     bad_surface: str
     info_surface: str
     highlight: str       #: the tied-set tint in the findings table
+    #: The signal's ink on the trace, or "" to leave MNE's per-type colours.
+    trace_ink: str = ""
 
     @property
     def dark(self) -> bool:
         return self.name == "dark"
 
 
+#: Slate neutrals and one indigo accent. Every text colour passes WCAG AA on
+#: the surface it sits on (text 17.9:1 on white; muted 6.0:1 on white, 5.4:1
+#: on the sidebar; the accent 5.6:1 on its own tint); the semantic colours are
+#: unchanged, so a warning reads exactly as loud as before.
 LIGHT = Palette(
     name="light",
-    window="#F5F5F7", surface="#FFFFFF", sidebar="#EBEBEF", surface_alt="#F0F0F3",
-    text="#1D1D1F", text_muted="#5F5F64", separator="#D8D8DE",
-    accent="#0B6BCB", accent_text="#FFFFFF",
+    window="#F7F8FA", surface="#FFFFFF", sidebar="#F2F3F6", surface_alt="#F1F3F6",
+    text="#0F172A", text_muted="#5B6472", separator="#E2E5EA",
+    accent="#4F46E5", accent_text="#FFFFFF", accent_soft="#EEF0FF",
     good="#1D7A33", warn="#8A5300", bad="#B3261E",
-    warn_surface="#FFF6E5", bad_surface="#FDECEA", info_surface="#EDF4FD",
-    highlight="#FFF3CD",
+    warn_surface="#FFF6E5", bad_surface="#FDECEA", info_surface="#EEF2FF",
+    highlight="#FFF3CD", trace_ink="#1E293B",
 )
 
 DARK = Palette(
     name="dark",
     window="#1C1C1E", surface="#2C2C2E", sidebar="#232325", surface_alt="#3A3A3C",
     text="#F2F2F7", text_muted="#A1A1A6", separator="#48484A",
-    accent="#4C9AFF", accent_text="#0B1220",
+    accent="#4C9AFF", accent_text="#0B1220", accent_soft="#1A2A44",
     good="#4ED16B", warn="#FFB84D", bad="#FF6B5E",
     warn_surface="#3A2F16", bad_surface="#3A1F1C", info_surface="#16304A",
     highlight="#4A401C",
@@ -124,6 +138,20 @@ def set_current(palette: Palette) -> Palette:
     global _CURRENT
     _CURRENT = palette
     return _CURRENT
+
+
+_REGISTERED: list[str] = []
+
+
+def register_fonts() -> list[str]:
+    """Add the bundled faces to Qt's font database, once. Returns the families
+    they provide (empty when the folder is missing, e.g. a trimmed install)."""
+    if not _REGISTERED and FONT_DIR.is_dir():
+        for path in sorted(FONT_DIR.glob("*.ttf")):
+            ident = QFontDatabase.addApplicationFont(str(path))
+            if ident >= 0:
+                _REGISTERED.extend(QFontDatabase.applicationFontFamilies(ident))
+    return sorted(set(_REGISTERED))
 
 
 def best_font() -> str:
@@ -158,10 +186,14 @@ def apply_theme(app, palette: Palette | None = None) -> Palette:
     same red as the next.
     """
     chosen = set_current(palette or _detect(app))
+    register_fonts()
     family = best_font()
     font = QFont(family) if family else QFont()
     font.setPointSizeF(pt(10))
-    font.setHintingPreference(QFont.PreferFullHinting)
+    # Inter is drawn to its outlines; full hinting snaps its stems to the
+    # pixel grid and makes it look like the system font it replaces.
+    font.setHintingPreference(QFont.PreferNoHinting if family == "Inter"
+                              else QFont.PreferFullHinting)
     app.setFont(font)
     app.setPalette(qt_palette(chosen))
     app.setStyleSheet(stylesheet(chosen))
@@ -306,15 +338,15 @@ def stylesheet(p: Palette) -> str:
     }}
     QFrame#onset_card {{
         background: {p.surface}; border: 1px solid {p.separator};
-        border-radius: {RADIUS + 2}px;
+        border-radius: {RADIUS + 4}px;
     }}
     QListWidget#onset_pages {{ background: transparent; border: none; outline: 0; }}
     QListWidget#onset_pages::item {{
-        padding: 3px {SPACING}px; border-radius: {RADIUS - 3}px;
-        margin-right: {SPACING}px;
+        padding: 4px {SPACING}px; border-radius: {RADIUS - 1}px;
+        margin-right: {SPACING}px; color: {p.text_muted};
     }}
     QListWidget#onset_pages::item:selected {{
-        background: {p.accent}; color: {p.accent_text};
+        background: {p.accent_soft}; color: {p.accent}; font-weight: 600;
     }}
     QListWidget#onset_pages::item:hover:!selected {{ background: {p.surface_alt}; }}
     /* A case's steps, held on Patient → Case: the same source list, on the
@@ -327,7 +359,7 @@ def stylesheet(p: Palette) -> str:
         padding: 0px {SPACING}px; border-radius: {RADIUS - 3}px;
     }}
     QListWidget#onset_case_steps::item:selected {{
-        background: {p.accent}; color: {p.accent_text};
+        background: {p.accent_soft}; color: {p.accent}; font-weight: 600;
     }}
     QListWidget#onset_case_steps::item:hover:!selected {{ background: {p.surface_alt}; }}
 
@@ -336,13 +368,14 @@ def stylesheet(p: Palette) -> str:
     QTableView {{
         background: {p.surface}; alternate-background-color: {p.surface};
         color: {p.text}; gridline-color: transparent;
-        border: none; selection-background-color: {p.accent};
-        selection-color: {p.accent_text};
+        border: none; selection-background-color: {p.accent_soft};
+        selection-color: {p.text};
     }}
     QHeaderView::section {{
         background: {p.surface}; color: {p.text_muted};
         padding: {SPACING // 2}px {SPACING // 2}px; border: none;
-        border-bottom: 1px solid {p.separator}; font-weight: 600;
+        border-bottom: 1px solid {p.separator}; font-weight: 500;
+        text-transform: uppercase;
     }}
     QTableView::item {{ padding: 2px {SPACING // 2}px; }}
 
@@ -415,7 +448,7 @@ def stylesheet(p: Palette) -> str:
         padding: {SPACING // 2}px;
     }}
     QMenu::item {{ padding: {SPACING // 2}px {SPACING + 8}px; border-radius: {RADIUS - 3}px; }}
-    QMenu::item:selected {{ background: {p.accent}; color: {p.accent_text}; }}
+    QMenu::item:selected {{ background: {p.accent_soft}; color: {p.text}; }}
     """
 
 
