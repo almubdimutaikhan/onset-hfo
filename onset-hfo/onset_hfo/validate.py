@@ -141,10 +141,10 @@ def flag_spike_cooccurrence(hfo_events: list[Event], spike_events: list[Event],
 #: kind, and a data-quality line of over 2,000 characters.
 _REASON_KINDS = (
     (re.compile(r"^only \S+ cycles"), "too few cycles"),
-    (re.compile(r"^in-band spectral peak only"), "no clear spectral peak (probable filter ringing)"),
-    (re.compile(r"^spectrum not measurable"), "low-frequency transient (probable filter ringing)"),
+    (re.compile(r"^in-band spectral peak only"), "no clear spectral peak, probably filter ringing"),
+    (re.compile(r"^spectrum not measurable"), "low-frequency transient, probably filter ringing"),
     (re.compile(r"other channels at once"),
-     "on too many channels at once (probable muscle or movement)"),
+     "on too many channels at once, probably muscle or movement"),
     (re.compile(r"^on a channel set aside"), "on a channel set aside by the quality checks"),
     (re.compile(r"^inside a rejected segment"), "inside a rejected segment"),
 )
