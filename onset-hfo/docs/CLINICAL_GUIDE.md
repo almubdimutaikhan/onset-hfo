@@ -1095,8 +1095,13 @@ commands run.
 
 **Help → Report a problem…** saves one file to send: the software's versions,
 this machine, and the window's own log of what it did — what was opened, each
-background job and its timing, every error. It names the recordings that were
-opened but holds no signal. **Help → Test the local model…** grades the
+background job and its timing, every error. It lists every file it would save,
+shows the exact text of any one you select, and saves only the ones that are
+ticked, exactly as shown. Write a few words on what went wrong in the box at
+the top and they go in `report.txt`. It names the recordings that were opened
+but holds no signal, no screenshot and no record of what you clicked, and
+nothing is sent: you send the file. Untick the logs if a recording's name is
+private. **Help → Test the local model…** grades the
 assistant and *Write code* with the model you use, on this machine, and keeps
 the result for the next report.
 

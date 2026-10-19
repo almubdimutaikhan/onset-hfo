@@ -11,9 +11,16 @@ can reach.
 
 *Help → Report a problem* turns that into one file to send: the versions of
 everything that matters, the machine, the log, the crash log and the latest
-model check, with the home folder written as ``~``. What it does not contain
-is any signal: the log records what was opened (a subject, a window, a file
-name) and what happened, never data.
+model check, with the home folder written as ``~``, and a few words from the
+person on what went wrong. What it does not contain is any signal: the log
+records what was opened (a subject, a window, a file name) and what happened,
+never data.
+
+**What is shown is what is saved.** The report is built once, as a
+:class:`Bundle` -- the exact text of every file -- and both the preview and the
+zip are made from that object, so there is no file in the zip that the person
+did not have the chance to read, and any file can be left out. Nothing is
+sent anywhere: the person sends the file themselves.
 
 The log is for diagnosis, not provenance: the record of an analysis is the
 exported report, as before.
@@ -29,10 +36,11 @@ import platform
 import sys
 import time
 import zipfile
+from dataclasses import dataclass, field
 from pathlib import Path
 
 __all__ = ["log_dir", "setup", "about", "report_text", "write_report", "LOG_NAME",
-           "CRASH_NAME", "logger"]
+           "CRASH_NAME", "logger", "Bundle", "build_bundle", "write_bundle"]
 
 LOG_NAME = "onset-review.log"
 CRASH_NAME = "crash.log"
@@ -208,13 +216,19 @@ def latest_model_check() -> Path | None:
     return found[-1] if found else None
 
 
-def report_text(lines: int = 200) -> str:
-    """The report as one readable text: about, the log's tail, the crash log's."""
+def report_text(lines: int = 200, description: str = "", with_logs: bool = True) -> str:
+    """The report as one readable text: what the person said went wrong, about,
+    the log's tail, the crash log's. `with_logs=False` leaves the window's log
+    out, for a command line tool that never wrote one."""
     flush()
-    parts = ["# Onset Review problem report", time.strftime("%Y-%m-%d %H:%M:%S"), "",
-             "## Versions and machine"]
+    parts = ["# Onset Review problem report", time.strftime("%Y-%m-%d %H:%M:%S"), ""]
+    if description.strip():
+        parts += ["## What happened, in the reporter's words", description.strip(), ""]
+    parts.append("## Versions and machine")
     for key, value in about().items():
         parts.append(f"{key}: {value}")
+    if not with_logs:
+        return _redact("\n".join(parts)) + "\n"
     parts += ["", f"## The last {lines} lines of the log", _tail(log_dir() / LOG_NAME, lines)]
     crash = _tail(log_dir() / CRASH_NAME, 80)
     if crash.strip():
@@ -231,25 +245,79 @@ def flush() -> None:
         handler.flush()
 
 
-def write_report(path: str | Path) -> Path:
-    """One zip to send: report.txt, the logs, the crash log and the latest
-    model check, each with the home folder written as ``~``."""
-    path = Path(path)
-    if path.suffix.lower() != ".zip":
-        path = path.with_suffix(".zip")
-    flush()
+@dataclass
+class Bundle:
+    """Everything a problem report would contain, as the exact text of each file.
+
+    The preview and the zip are both made from this, so they cannot differ.
+    `files` maps a file name to its redacted text, `report.txt` first.
+    """
+
+    files: dict[str, str] = field(default_factory=dict)
+    #: False for a command line report, which carries no window log.
+    with_logs: bool = True
+
+    def manifest(self) -> list[dict]:
+        """One row per file: its name, lines and size, for a person to read
+        before deciding what to send."""
+        return [{"name": name, "lines": len(text.splitlines()),
+                 "bytes": len(text.encode("utf-8"))}
+                for name, text in self.files.items()]
+
+    def with_description(self, description: str) -> Bundle:
+        """The same bundle with a new `report.txt` carrying `description`."""
+        files = dict(self.files)
+        files["report.txt"] = report_text(description=description, with_logs=self.with_logs)
+        return Bundle(files, self.with_logs)
+
+    def only(self, names) -> Bundle:
+        """The bundle restricted to `names`, in the original order."""
+        keep = set(names)
+        return Bundle({n: t for n, t in self.files.items() if n in keep}, self.with_logs)
+
+
+def _log_files() -> list[Path]:
     folder = log_dir()
     files = [folder / LOG_NAME] + [folder / f"{LOG_NAME}.{n}" for n in range(1, BACKUPS + 1)]
     files.append(folder / CRASH_NAME)
     check = latest_model_check()
     if check is not None:
         files += [check, check.with_suffix(".md")]
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
-        bundle.writestr("report.txt", report_text())
-        for file in files:
+    return files
+
+
+def build_bundle(description: str = "", with_logs: bool = True) -> Bundle:
+    """The report for this machine, once: `report.txt` and, when `with_logs`,
+    every log, the crash log and the latest model check that exist.
+
+    Every file is read and redacted here, not later, so what the caller shows
+    is what `write_bundle` writes. `with_logs=False` is for a command line tool
+    that has no window log: the versions, the machine and the description.
+    """
+    flush()
+    files = {"report.txt": report_text(description=description, with_logs=with_logs)}
+    if with_logs:
+        for file in _log_files():
             if file.is_file():
-                text = file.read_text(encoding="utf-8", errors="replace")
-                bundle.writestr(file.name, _redact(text))
-    logger.info("problem report written: %s", _redact(str(path)))
+                files[file.name] = _redact(file.read_text(encoding="utf-8", errors="replace"))
+    return Bundle(files, with_logs)
+
+
+def write_bundle(bundle: Bundle, path: str | Path) -> Path:
+    """Write exactly `bundle` as one zip, and nothing else."""
+    path = Path(path)
+    if path.suffix.lower() != ".zip":
+        path = path.with_suffix(".zip")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zipped:
+        for name, text in bundle.files.items():
+            zipped.writestr(name, text)
+    logger.info("problem report written: %s (%s)", _redact(str(path)),
+                ", ".join(bundle.files))
     return path
+
+
+def write_report(path: str | Path, description: str = "") -> Path:
+    """One zip to send: report.txt, the logs, the crash log and the latest
+    model check, each with the home folder written as ``~``."""
+    return write_bundle(build_bundle(description), path)

@@ -444,13 +444,21 @@ tarball from a checkout:
 
 **Help → Report a problem…** shows, and saves as one zip to send, what a
 developer needs: the versions of everything that matters, this machine, the
-window's own log and the latest model check. The log is written as the window
+window's own log and the latest model check. Every file is listed, any one can
+be read before saving and any one can be left out, and what is saved is exactly
+the text shown. Nothing is sent. The log is written as the window
 runs — what was opened, every background job and how long it took or why it
 was stopped, every warning and error with its traceback, Qt's complaints —
 to `~/.local/state/onset-review/onset-review.log`, rotated at a megabyte; a
 crash that takes the program down is written to `crash.log` beside it. The
 report writes your home folder as `~` and holds no signal, but it does name
 the recordings and files that were opened.
+
+From a terminal, `onset-hfo report-problem --note "what happened"` prints what
+a command line report would hold (the versions, this machine and your note;
+there is no window log to include), then asks before saving it as a zip.
+`--yes` skips the question and `--out FILE.zip` chooses the name. If there is
+no terminal to ask, it saves nothing.
 
 **Help → Test the local model…** measures how well the model chosen on the
 Assistant page serves this software on this machine. It asks the assistant
