@@ -122,7 +122,16 @@ check reads the sentences that name the busiest channel ("X led", "the
 busiest channel is X"), say a channel stands out or that nothing does, put
 channels in or out of the tied set (and count them), say no contacts were set
 aside or flagged, or describe the reader's verdicts ("has not judged any",
-"agreed with all"), and checks each against the window on screen. A claim
+"agreed with all"), and checks each against the window on screen. It also
+holds the **numbers given to a channel**: a rate, an event count or an
+interval written right after a channel's name ("AR1-AR2 at 52 events/min,
+interval 39-68, n=52") must be that channel's in the findings. A number that
+is another channel's value and not the named one's ("PHR1-PHR2 had 52
+events" when 52 is AR1-AR2's count) fails as given to the wrong channel; a
+number that is nobody's is left to the number check. Numbers after "the
+median", "followed by", "compared with" and similar hand-overs are not given
+to the channel before them, and a clause about another detector or the
+experts' markings is not checked against the findings. A claim
 that does not hold fails the draft and goes back to the model with the
 reason, like a number that traced to nothing; one retry, then a refusal. The
 patterns are deliberately narrow: a sentence they do not recognise is left to

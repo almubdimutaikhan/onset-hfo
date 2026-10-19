@@ -261,10 +261,11 @@ footer { border-top: 1px solid var(--line); margin-top: 34px; padding: 22px 0 42
     returned; an answer that fails is returned once for correction and is
     otherwise withheld. When the assistant drafts the report's findings or
     limitations paragraph, its statements about the busiest channel, the tied
-    set, the quality checks and the reader's verdicts are also checked against
+    set, the quality checks and the reader's verdicts, and the rate, event
+    count or interval it gives each channel it names, are also checked against
     the analysis, and each sentence is listed with the evidence windows and
-    queries it rests on. Elsewhere the checks cannot detect a correct number
-    attributed to the wrong channel. The report's Methods paragraph is written
+    queries it rests on. In ordinary answers the checks cannot detect a correct
+    number attributed to the wrong channel. The report's Methods paragraph is written
     from the analysis settings, not by the model. The exported report, not the
     assistant, is the authoritative output.</p>
 
@@ -465,8 +466,9 @@ Zenodo. https://doi.org/10.5281/zenodo.23417172</pre>
     <li><strong>Montage.</strong> Bipolar channels pair consecutively numbered
       contacts, which on grids are not always neighbours.</li>
     <li><strong>Assistant.</strong> Its checks prevent unsupported numbers,
-      not misleading emphasis, omissions or a correct value attributed to the
-      wrong channel.</li>
+      not misleading emphasis or omissions. Only drafted report paragraphs are
+      checked for a correct value attributed to the wrong channel, and only
+      where the value follows the channel's name.</li>
     <li><strong>Data governance.</strong> Users analysing their own recordings
       are responsible for ethics approval, de-identification and data
       protection.</li>

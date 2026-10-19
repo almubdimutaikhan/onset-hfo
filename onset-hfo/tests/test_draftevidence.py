@@ -358,6 +358,70 @@ def test_the_facts_come_from_the_session_on_screen(review):
     assert claims.check(f"{leader} led.", facts).ok
 
 
+VALUES = {"AR1-AR2": {"rate": 52.0, "n": 52, "low": 38.8, "high": 68.2},
+          "AR2-AR3": {"rate": 51.0, "n": 51, "low": 38.0, "high": 67.1},
+          "PHR1-PHR2": {"rate": 18.0, "n": 18, "low": 10.7, "high": 28.4}}
+
+
+@pytest.mark.parametrize("sentence, holds", [
+    ("AR1-AR2 led at 52 events/min (interval 39\u201368, n=52).", True),
+    ("AR1-AR2 at 52.0 events per minute, interval 38.8 to 68.2.", True),
+    ("AR1-AR2 (52/min) and AR2-AR3 (51/min) cannot be told apart.", True),
+    # Each rate given to the other channel: the gap the number check leaves.
+    ("AR1-AR2 (51/min) and AR2-AR3 (52/min) cannot be told apart.", False),
+    ("PHR1-PHR2 had 52 events.", False),
+    ("AR2-AR3's interval runs from 38.8 to 68.2.", False),
+    # A number after the name that the sentence hands to something else.
+    ("AR1-AR2 led at 52 per minute, against a median channel at 18/min.", True),
+    ("AR1-AR2 led at 52/min, followed by PHR1-PHR2 at 18/min.", True),
+    # Another detector's numbers, or the experts': not the findings'.
+    ("The line-length detector gave AR2-AR3 52 events/min.", True),
+    ("The experts marked 52/min on PHR1-PHR2.", True),
+    # Nobody's number: left to the number check, not refused here.
+    ("AR1-AR2 at 49/min.", True),
+])
+def test_a_number_given_to_a_channel_must_be_that_channels(sentence, holds):
+    from onset_review import claims
+
+    facts = claims.Facts(**{**FACTS, "values": VALUES, "other_detectors": ["line_length"]})
+    result = claims.check(sentence, facts)
+    assert result.ok is holds, result.problems
+    if not holds:
+        assert "which is" in result.problems[0], result.problems
+
+
+def test_a_misattributed_rate_says_whose_it_is_and_what_the_channels_is():
+    from onset_review import claims
+
+    facts = claims.Facts(**{**FACTS, "values": VALUES})
+    result = claims.check("PHR1-PHR2 ran at 52/min.", facts)
+    assert result.problems == ['"PHR1-PHR2 ran at 52/min." gives PHR1-PHR2 a rate of 52/min, '
+                               "which is AR1-AR2's; PHR1-PHR2's is 18.0/min"]
+    held = claims.check("PHR1-PHR2 ran at 18/min.", facts)
+    assert held.ok and ("PHR1-PHR2 ran at 18/min.", "PHR1-PHR2: a rate of 18/min") in held.confirmed
+
+
+def test_the_findings_numbers_come_from_the_session_and_its_own_summary_holds(review):
+    from onset_review import claims
+
+    facts = claims.facts_from_session(review)
+    top = review.findings.iloc[0]
+    channel = str(top["channel"]).upper()
+    assert facts.values[channel]["rate"] == pytest.approx(float(top["rate_per_min"]))
+    assert facts.values[channel]["n"] == int(top["n_events"])
+    assert review.request.primary not in facts.other_detectors
+    # The briefing's own wording, with every channel's numbers, passes.
+    line = "; ".join(f"{row['channel']} {row['rate_per_min']:.1f}/min (n={int(row['n_events'])})"
+                     for _, row in review.findings.head(3).iterrows())
+    assert claims.check(f"Highest rates: {line}.", facts).ok
+    # The first two channels' rates swapped, when they differ, does not.
+    if len(review.findings) > 1:
+        second = review.findings.iloc[1]
+        if abs(float(top["rate_per_min"]) - float(second["rate_per_min"])) > 1:
+            swapped = f"{top['channel']} at {float(second['rate_per_min']):.1f}/min."
+            assert not claims.check(swapped, facts).ok
+
+
 def test_a_draft_that_claims_the_wrong_leader_is_sent_back_and_then_refused(store):
     calls = []
 
