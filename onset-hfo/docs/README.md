@@ -112,6 +112,9 @@ Read in this order:
 * [**POSTER.md**](POSTER.md) — the one claim a poster is allowed to make, the
   evidence behind each clause of it, the non-claims, an abstract, and the
   panel plan.
+* [**PILOT.md**](PILOT.md) — a first round of expert feedback on public data:
+  the protocol, the task sheet a participant gets, and the feedback form.
+  A draft until the institutional review decision is in.
 * [**DUPLICATION.md**](DUPLICATION.md) — why there are two repositories, what
   is actually duplicated between them, what must not be merged, and the plan.
 * The printable one-page handout is [`site/handout.html`](../../site/handout.html),
@@ -136,6 +139,7 @@ Read in this order:
 | How are real electrode coordinates taken in, and what is checked about them? | [`onset_review/coordinates.py`](../onset_review/coordinates.py) |
 | Is this event an oscillation or filter ringing, and how is that decided? | [`onset_review/detail.py`](../onset_review/detail.py) |
 | Where does the reviewer's own judgement go, and what happens to it when the analysis changes? | [`onset_review/adjudication.py`](../onset_review/adjudication.py) |
+| How do several readers' verdict files become one table, with their agreement? | [`onset_review/verdictmerge.py`](../onset_review/verdictmerge.py) |
 | Does a result survive a change of analysis window? | [`onset_hfo/stability.py`](../onset_hfo/stability.py) |
 
 ## A note on how this repository is written
