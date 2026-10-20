@@ -264,6 +264,55 @@ def test_the_report_dialog_shows_and_saves_the_report(qapp, tmp_path, monkeypatc
         dialog.close()
 
 
+def _report_dialog(tmp_path, monkeypatch):
+    from onset_review.helpdialogs import ReportDialog
+
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "onset-review.log").write_text("2026-10-08 INFO onset_review: opened sub-07\n")
+    (logs / "crash.log").write_text("Fatal Python error\n")
+    monkeypatch.setenv("ONSET_REVIEW_LOG_DIR", str(logs))
+    return ReportDialog()
+
+
+def test_the_report_dialog_lists_every_file_and_shows_the_one_selected(qapp, tmp_path,
+                                                                       monkeypatch):
+    dialog = _report_dialog(tmp_path, monkeypatch)
+    try:
+        assert dialog.selected_names() == ["report.txt", "onset-review.log", "crash.log"]
+        assert dialog.files.count() == 3
+        assert "3 of 3 files will be saved" in dialog.status.text()
+        dialog.files.setCurrentRow(1)
+        assert dialog.text.toPlainText() == dialog.bundle.files["onset-review.log"]
+        assert "opened sub-07" in dialog.text.toPlainText()
+    finally:
+        dialog.close()
+
+
+def test_what_the_dialog_saves_is_what_it_shows_and_a_ticked_off_file_is_left_out(
+        qapp, tmp_path, monkeypatch):
+    from qtpy.QtCore import Qt
+
+    dialog = _report_dialog(tmp_path, monkeypatch)
+    try:
+        dialog.description.setPlainText("it froze when I pressed Apply")
+        assert "it froze when I pressed Apply" in dialog.bundle.files["report.txt"]
+        dialog.files.setCurrentRow(0)
+        shown = dialog.text.toPlainText()
+        assert "it froze when I pressed Apply" in shown, "the preview follows the words typed"
+
+        dialog.files.item(1).setCheckState(Qt.Unchecked)       # leave the log out
+        assert dialog.selected_names() == ["report.txt", "crash.log"]
+        assert "2 of 3 files will be saved" in dialog.status.text()
+
+        saved = dialog.save(tmp_path / "sent.zip")
+        with zipfile.ZipFile(saved) as zipped:
+            assert zipped.namelist() == ["report.txt", "crash.log"]
+            assert zipped.read("report.txt").decode() == shown, "saved exactly as shown"
+    finally:
+        dialog.close()
+
+
 def test_the_model_check_runs_from_the_window_in_a_process_of_its_own(qapp, tmp_path,
                                                                        monkeypatch):
     from qtpy.QtCore import QThread

@@ -1,9 +1,11 @@
 """Help → Report a problem, and Help → Test the local model.
 
 Two dialogs for when something is wrong or uncertain, each ending in one file
-to send. *Report a problem* shows what the report will hold before anything
-is saved -- versions, the machine, the window's log, any crash -- and saves it
-as a zip (`onset_review.applog`). *Test the local model* runs the model check
+to send. *Report a problem* lists every file the report would hold -- versions,
+the machine, the window's log, any crash -- shows the exact text of whichever
+one you select, lets you leave any of them out, and saves what is ticked as a
+zip (`onset_review.applog`). Nothing is sent: you send the file. *Test the
+local model* runs the model check
 (`onset_review.modelcheck`) in a process of its own, so the window stays
 usable and Stop really stops it, and shows each question and draft as it is
 graded.
@@ -23,8 +25,11 @@ from qtpy.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
+    QSplitter,
     QVBoxLayout,
 )
 
@@ -51,30 +56,57 @@ def _muted(text: str) -> QLabel:
 
 
 class ReportDialog(QDialog):
-    """What a problem report holds, and Save / Copy / the log folder."""
+    """What a problem report holds, file by file, and Save / Copy / the log folder.
+
+    The list on the left is every file that would be saved, each with a
+    checkbox; the box on the right is the exact text of the selected one. What
+    is ticked when you press *Save* is what goes in the zip, no more.
+    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Report a problem")
-        self.resize(820, 600)
+        self.resize(900, 680)
         self.saved: Path | None = None
-        lead = QLabel("<b>Something went wrong, or looked wrong?</b> Save this report and "
-                      "send it with a sentence on what you did and what you expected.")
+        lead = QLabel("<b>Something went wrong, or looked wrong?</b> Say what you did and "
+                      "what you expected, check the files below, and save the report. "
+                      "Nothing is sent: you send the file yourself.")
         lead.setWordWrap(True)
-        note = _muted("It holds the versions of the software, this machine's description, "
-                      "the window's log (what was opened, every background job and its "
-                      "timing, every warning and error) and the latest model check. Your "
-                      "home folder is written as ~. It holds no signal; the log does name "
-                      "the recordings and files that were opened.")
+        self.description = QPlainTextEdit()
+        self.description.setObjectName("onset_report_description")
+        self.description.setPlaceholderText(
+            "What were you doing, what did you expect, and what happened instead?")
+        self.description.setFixedHeight(84)
+        note = _muted("Ticked files are saved exactly as shown. The versions and machine are "
+                      "in report.txt; the logs say what was opened and what each background "
+                      "job did. There is no signal in any of them and no screenshot, but the "
+                      "logs do name the recordings and files that were opened, so untick them "
+                      "if a name is private. Your home folder is written as ~.")
+        self.bundle = applog.build_bundle()
+        self.files = QListWidget()
+        self.files.setObjectName("onset_report_files")
+        self.files.setMaximumWidth(300)
+        for row in self.bundle.manifest():
+            lines = f"{row['lines']} line" + ("" if row["lines"] == 1 else "s")
+            item = QListWidgetItem(f"{row['name']}\n{lines}, {_size(row['bytes'])}")
+            item.setData(Qt.UserRole, row["name"])
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+            self.files.addItem(item)
         self.text = _monospace_box()
         self.text.setObjectName("onset_report_text")
-        self.text.setPlainText(applog.report_text())
         self.status = _muted("")
+        self.files.currentItemChanged.connect(lambda *_: self._show_selected())
+        self.files.itemChanged.connect(lambda *_: self._update_status())
+        self.description.textChanged.connect(self._description_changed)
+        self.files.setCurrentRow(0)
+        self._update_status()
         save = QPushButton("Save report…")
         save.setObjectName("onset_report_save")
         save.setDefault(True)
         save.clicked.connect(lambda _=False: self.save())
         copy = QPushButton("Copy the text")
+        copy.setToolTip("Copy the file shown on the right")
         copy.clicked.connect(lambda _=False: QApplication.clipboard().setText(
             self.text.toPlainText()))
         folder = QPushButton("Open the log folder")
@@ -87,12 +119,39 @@ class ReportDialog(QDialog):
             row.addWidget(button)
         row.addStretch(1)
         row.addWidget(close)
+        split = QSplitter(Qt.Horizontal)
+        split.addWidget(self.files)
+        split.addWidget(self.text)
+        split.setStretchFactor(1, 1)
         box = QVBoxLayout(self)
         box.addWidget(lead)
+        box.addWidget(self.description)
         box.addWidget(note)
-        box.addWidget(self.text, 1)
+        box.addWidget(split, 1)
         box.addWidget(self.status)
         box.addLayout(row)
+
+    # -- what is shown and what is saved -----------------------------------------
+    def selected_names(self) -> list[str]:
+        """The files that are ticked, in the bundle's order."""
+        return [self.files.item(i).data(Qt.UserRole) for i in range(self.files.count())
+                if self.files.item(i).checkState() == Qt.Checked]
+
+    def _show_selected(self) -> None:
+        item = self.files.currentItem()
+        self.text.setPlainText(self.bundle.files.get(item.data(Qt.UserRole), "")
+                               if item is not None else "")
+
+    def _description_changed(self) -> None:
+        self.bundle = self.bundle.with_description(self.description.toPlainText())
+        self._show_selected()
+        self._update_status()
+
+    def _update_status(self) -> None:
+        chosen = self.selected_names()
+        total = sum(len(self.bundle.files[n].encode("utf-8")) for n in chosen)
+        self.status.setText(f"{len(chosen)} of {self.files.count()} files will be saved "
+                            f"({_size(total)}).")
 
     def save(self, path: str | Path | None = None) -> Path | None:
         if path is None:
@@ -103,12 +162,16 @@ class ReportDialog(QDialog):
                 return None
             path = chosen
         try:
-            self.saved = applog.write_report(path)
+            self.saved = applog.write_bundle(self.bundle.only(self.selected_names()), path)
         except OSError as error:
             self.status.setText(f"Could not save the report: {error}")
             return None
         self.status.setText(f"Saved to {self.saved}. Send this file.")
         return self.saved
+
+
+def _size(count: int) -> str:
+    return f"{count} B" if count < 1024 else f"{count / 1024:.0f} KB"
 
 
 class ModelCheckDialog(QDialog):

@@ -660,7 +660,8 @@ A patient case also reads Micromed natively when `neo` is installed.
   public. The error says so; download them from openneuro.org instead.
 - **The assistant does not answer:** *Help → Test the local model…*.
 - **Anything else:** *Help → Report a problem…* gathers the log and the
-  versions into a report you can send.
+  versions into a report you can read, trim and send. From a terminal:
+  `onset-hfo report-problem --note "what happened"`.
 
 ## Five things never to conclude
 

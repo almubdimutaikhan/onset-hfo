@@ -686,7 +686,29 @@ def build_parser() -> argparse.ArgumentParser:
     rep = sub.add_parser("report", help="print a saved report")
     rep.add_argument("results", help="a results directory written by 'run'")
     rep.set_defaults(func=_cmd_report)
+
+    problem = sub.add_parser(
+        "report-problem",
+        help="show a problem report (versions, this machine, your note) and save it "
+             "as a zip if you agree; nothing is sent")
+    try:
+        from onset_review.problemreport import add_arguments
+        add_arguments(problem)
+    except ImportError:      # pragma: no cover - the package ships both
+        pass
+    problem.set_defaults(func=_cmd_report_problem)
     return p
+
+
+def _cmd_report_problem(args) -> int:
+    """The report itself lives in `onset_review.problemreport`."""
+    try:
+        from onset_review.problemreport import run
+    except ImportError as error:      # pragma: no cover - the package ships both
+        print(f"The problem report lives in onset_review, which could not be "
+              f"imported ({error}).", file=sys.stderr)
+        return 2
+    return run(args)
 
 
 def main(argv: list[str] | None = None) -> int:
