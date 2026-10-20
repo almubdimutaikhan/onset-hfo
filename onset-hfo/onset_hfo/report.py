@@ -280,7 +280,7 @@ def build_report(*, provenance: dict, rates: dict[str, pd.DataFrame], comparison
         rejected = total - counts.get("accepted", 0)
         data_quality.append(
             f"{name}: {total} candidate events, {rejected} rejected by artifact validation "
-            f"({', '.join(f'{k}: {v}' for k, v in counts.items() if k != 'accepted') or 'none'})")
+            f"({'; '.join(f'{k}: {v}' for k, v in counts.items() if k != 'accepted') or 'none'})")
     data_quality.append("rates are events per minute over the analysed window; "
                         "confidence intervals assume a Poisson process")
 

@@ -730,11 +730,15 @@ class AnnotatePage(QWidget):
         the case's vocabulary in its annotation list."""
         if self.run is None:
             return None
+        from onset_review.window import _quiet_overview, trace_style
+
         raw = bids.read_run(self.window_.case.where(self.run), preload=False)
         start = max(0.0, float(self.time.value()) - TRACE_SECONDS / 4)
         browser = raw.plot(start=start, duration=TRACE_SECONDS,
                            n_channels=min(30, len(raw.ch_names)), show=show, block=False,
-                           title=f"Case {self.window_.case.case_id}, run {self.run}")
+                           title=f"Case {self.window_.case.case_id}, run {self.run}",
+                           **trace_style())
+        _quiet_overview(browser)
         self._seed_vocabulary(browser)
         self.trace, self._trace_raw = browser, raw
         closed = getattr(browser, "gotClosed", None)

@@ -215,9 +215,10 @@ once. One consequence worth holding on to: a bipolar channel is a *pair*, so an
 event on `AR1-AR2` localises to somewhere around those two contacts, not to one
 of them.
 
-Marks are coloured by band — ripples blue, fast ripples red, interictal
-discharges grey — and the annotators' own marks, when you turn them on, are the
-same colours washed out.
+Marks are coloured by band — ripples indigo, fast ripples magenta,
+interictal discharges grey — on a signal drawn in one dark ink, so the marks
+are the only colour on the trace. The annotators' own marks, when you turn
+them on, have hues of their own: green for ripples, orange for fast ripples.
 
 **By default only the selected channel's marks are drawn.** A minute of this
 dataset holds around five hundred detections; drawing all of them turns the
@@ -631,7 +632,7 @@ recordings you can see exactly where the detector agrees with them and where it
 does not, on the minute in front of you.
 
 It opens as two bars per reviewed channel — grey for what the annotators
-marked, blue for what the detector marked, the darker blue for the events
+marked, the accent colour for what the detector marked, its darker shade for the events
 both marked — because that is the comparison, and a glance at twenty pairs
 of bars says it where eight columns take a minute. *Show the table* gives the
 counts, sensitivity and precision per channel.

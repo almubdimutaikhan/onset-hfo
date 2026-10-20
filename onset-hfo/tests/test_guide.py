@@ -22,6 +22,7 @@ widgets = pytest.importorskip("qtpy.QtWidgets", reason="the review extra is not 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qtpy.QtCore import Qt  # noqa: E402
+from qtpy.QtGui import QKeySequence  # noqa: E402
 
 from onset_review import guide  # noqa: E402
 
@@ -134,7 +135,10 @@ def test_f1_and_ctrl_k_are_bound_once(start):
     for entry in guide.commands(start):
         if entry["shortcut"]:
             bound[entry["shortcut"]] = bound.get(entry["shortcut"], 0) + 1
-    assert bound.get("F1") == 1 and bound.get("Ctrl+K") == 1
+    # The list shows each shortcut the platform's way: Ctrl+K reads as ⌘K on
+    # macOS, so compare with Qt's own rendering rather than a spelling.
+    command_k = QKeySequence("Ctrl+K").toString(QKeySequence.NativeText)
+    assert bound.get("F1") == 1 and bound.get(command_k) == 1
     duplicated = {key: n for key, n in bound.items() if n > 1}
     assert not duplicated, f"ambiguous shortcuts: {duplicated}"
 

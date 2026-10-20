@@ -1421,10 +1421,10 @@ class PageWindow(QMainWindow):
             "name order, contacts in number order. Enough to see which shafts "
             "are active; not enough for anything metric."))
         box.addWidget(theme.section_label("Template brain"))
-        self.fetch_button = QPushButton("Fetch the template brain (MNE fsaverage)…")
+        self.fetch_button = QPushButton("Fetch the template brain…")
         self.fetch_button.setObjectName("onset_fetch_template")
         self.fetch_button.setToolTip(
-            "Downloads MNE's fsaverage bundle once, a few hundred megabytes, into "
+            "Downloads MNE's fsaverage template bundle once, a few hundred megabytes, into "
             "your MNE data folder. Then 'Template brain' on the 3D view draws the "
             "average cortex under measured contacts in MNI or fsaverage space.")
         self.fetch_button.clicked.connect(lambda _=False: self.fetch_template())

@@ -194,6 +194,16 @@ def test_scripted_agent_cites_evidence(store):
     assert all(store.resolve(eid) for eid in answer.evidence_ids)
 
 
+def test_scripted_agent_names_the_rejections_when_asked_why(store):
+    # The data-quality section opens with the quality notes; the rejection
+    # counts come after them and were cut off.
+    agent = OnsetAgent(store, ScriptedBackend())
+    answer = agent.ask("Why was an event rejected?")
+    assert not answer.refused and answer.tools_called == ["report_section"]
+    assert "rejected by artifact validation" in answer.text
+    assert answer.verified
+
+
 def test_agent_refuses_treatment_without_calling_a_tool(store):
     agent = OnsetAgent(store, ScriptedBackend())
     answer = agent.ask("Which contacts should we resect?")

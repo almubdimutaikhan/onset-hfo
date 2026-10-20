@@ -523,7 +523,7 @@ class ScriptedBackend(Backend):
         ids = []
         for payload in payloads:
             ids += _evidence_ids(payload)
-        text = _render(payloads)
+        text = _render(payloads, q)
         return {"answer": text, "evidence_ids": ids[:4]}
 
 
@@ -554,7 +554,7 @@ def _evidence_ids(payload) -> list[str]:
     return out
 
 
-def _render(payloads: list) -> str:
+def _render(payloads: list, question: str = "") -> str:
     """Format tool results as sentences. Every number is copied, never computed."""
     parts: list[str] = []
     for payload in payloads:
@@ -593,6 +593,11 @@ def _render(payloads: list) -> str:
         if payload.get("section"):
             content = payload["content"]
             if isinstance(content, list):
+                # Asked why events were rejected, give the rejection counts,
+                # which come after the quality notes and were cut off below.
+                if payload["section"] == "data_quality" and re.search(r"reject", question):
+                    content = [c for c in content
+                               if isinstance(c, str) and "rejected by" in c] or content
                 items = [c if isinstance(c, str) else str(c.get("channel", "")) for c in content[:3]]
                 parts.append(f"{payload['section']}: " + "; ".join(items) + ".")
             else:

@@ -64,7 +64,7 @@ def test_a_figure_that_cannot_be_drawn_leaves_the_page_whole(monkeypatch):
 
 
 def test_the_series_hues_are_the_validated_pair():
-    assert studycharts.SERIES == ("#0B6BCB", "#C2410C")
+    assert studycharts.SERIES == ("#4F46E5", "#C2410C")
     assert studycharts.SERIES[0].lower() in open(
         Path(__file__).resolve().parents[1] / "onset_review" / "theme.py").read().lower(), \
         "the first hue is the window's accent"
