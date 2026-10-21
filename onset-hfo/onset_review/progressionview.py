@@ -3,7 +3,11 @@
 Draws what `onset_review.ictalprogression` computes -- the recruitment heatmap,
 the map at a moment, the order of change -- for one analysed seizure at a time.
 The slider moves the moment; Play steps it forward, one second of seizure per
-tenth of a second, so the channels can be watched lighting up in turn.
+tenth of a second, so the channels can be watched lighting up in turn. With
+nilearn installed and the contacts placed in MNI space, the map is the glass
+brain; drawing it takes about half a second, so Play then runs at a couple of
+frames a second, and *Glass brain* can be unticked for the faster view from
+above.
 """
 
 from __future__ import annotations
@@ -12,6 +16,7 @@ import numpy as np
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QHBoxLayout,
@@ -34,6 +39,9 @@ __all__ = ["ProgressionView"]
 #: the tick: one second of seizure every tenth of a second.
 PLAY_STEP = 4
 PLAY_MS = 100
+#: How long the slider must rest before the map is redrawn: a glass brain takes
+#: about half a second, too long to redraw at every step of a drag.
+SETTLE_MS = 60
 
 
 class ProgressionView(QWidget):
@@ -46,18 +54,31 @@ class ProgressionView(QWidget):
         self.prog = None
         self.positions = None
         self.zone: set = set()
+        self.kind = "template"
         self.seizure = QComboBox()
         self.seizure.setObjectName("onset_progression_seizure")
         self.seizure.currentIndexChanged.connect(lambda _i: self._load())
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setObjectName("onset_progression_slider")
-        self.slider.valueChanged.connect(lambda _v: self._draw())
+        self.settle = QTimer(self)
+        self.settle.setSingleShot(True)
+        self.settle.setInterval(SETTLE_MS)
+        self.settle.timeout.connect(self._draw)
+        self.slider.valueChanged.connect(self._moved)
         self.at = QLabel("")
         self.at.setObjectName("onset_progression_at")
         self.play = QPushButton("Play")
         self.play.setObjectName("onset_progression_play")
         self.play.setCheckable(True)
         self.play.toggled.connect(self._play)
+        self.glass = QCheckBox("Glass brain")
+        self.glass.setObjectName("onset_progression_glass")
+        self.glass.setToolTip("The placed contacts on nilearn's glass brain, seen from the "
+                              "left, from above and from the right. Untick for the faster "
+                              "view from above.")
+        self.glass.setChecked(True)
+        self.glass.setEnabled(False)
+        self.glass.toggled.connect(lambda _on: self._draw())
         self.save = QPushButton("Save as PNG…")
         self.save.clicked.connect(lambda _=False: self.save_png())
         self.timer = QTimer(self)
@@ -86,6 +107,7 @@ class ProgressionView(QWidget):
         controls.addWidget(self.play)
         controls.addWidget(self.slider, 1)
         controls.addWidget(self.at)
+        controls.addWidget(self.glass)
         controls.addWidget(self.save)
         split = QSplitter(Qt.Horizontal)
         split.addWidget(self.canvas)
@@ -97,12 +119,18 @@ class ProgressionView(QWidget):
         box.addWidget(self.note)
 
     # -- what to show ----------------------------------------------------------
-    def set_result(self, result, positions=None, zone=None) -> None:
+    def set_result(self, result, positions=None, zone=None, kind: str = "template") -> None:
         """A case's ictal result, the contacts' positions (`channel`, `x`, `y`,
-        `placed`) and the marked onset zone's channels."""
+        `z`, `placed`), the marked onset zone's channels, and where the
+        positions came from (`electrodes.positions_kind`)."""
+        from onset_review import templatebrain
+
         self.result = result
         self.positions = positions
         self.zone = set(zone or ())
+        self.kind = kind
+        self.glass.setEnabled(templatebrain.available() and positions is not None
+                              and "z" in positions and bool(positions["placed"].any()))
         self.seizure.blockSignals(True)
         self.seizure.clear()
         for seizure in (result.analysed_seizures() if result is not None else []):
@@ -157,8 +185,14 @@ class ProgressionView(QWidget):
 
         t = self.moment()
         self.at.setText(f"{t:+.1f} s")
-        self.last = draw(self.figure, self.prog, t, self.positions, self.zone)
+        self.last = draw(self.figure, self.prog, t, self.positions, self.zone,
+                         glass=self.glass.isEnabled() and self.glass.isChecked(),
+                         kind=self.kind)
         self.canvas.draw_idle()
+
+    def _moved(self, _value: int) -> None:
+        self.at.setText(f"{self.moment():+.1f} s")
+        self.settle.start()
 
     # -- play ------------------------------------------------------------------------
     def _play(self, on: bool) -> None:

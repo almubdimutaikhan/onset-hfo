@@ -13,7 +13,9 @@ things a reader looks at to see a seizure start and spread:
   change and from the marked onset;
 * **the map at a moment**: where the channels are, coloured by their ratio at
   that moment and ringed once they have changed, so a slider or "play" shows
-  the seizure spreading across the electrodes.
+  the seizure spreading across the electrodes. With nilearn installed and the
+  contacts placed in MNI space, the map is nilearn's glass brain (seen from the
+  left, from above and from the right); otherwise the contacts seen from above.
 
 What it shows is descriptive: when each channel's fast activity rose against
 its own baseline. It recommends nothing, and a channel that changed first is
@@ -25,7 +27,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-__all__ = ["order_table", "heatmap_rows", "state_at", "draw", "VMAX"]
+__all__ = ["order_table", "heatmap_rows", "state_at", "draw", "glass_caption", "VMAX"]
 
 #: The colour scale's top, in log10 of the ratio to baseline: 1.5 is about 30
 #: times the channel's usual fast-over-slow energy. 0 is "as usual".
@@ -78,13 +80,41 @@ def state_at(prog, t: float) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def glass_caption(kind: str = "template") -> str:
+    """What the glass brain shows, and where the positions came from
+    (`electrodes.positions_kind`)."""
+    from onset_hfo.case.electrodes import CAPTIONS
+
+    return (f"glass brain (MNI152, nilearn) · {CAPTIONS.get(kind, CAPTIONS['template'])}\n"
+            "shade: fast/slow ×baseline · cyan ring: changed · dashed: marked onset zone")
+
+
+def _placed(prog, positions) -> pd.DataFrame | None:
+    if positions is None or not len(positions) or "placed" not in positions:
+        return None
+    placed = positions[positions["placed"].astype(bool)]
+    return placed[placed["channel"].isin(prog.channels)]
+
+
+def _can_glass(placed) -> bool:
+    from onset_review import templatebrain
+
+    return (placed is not None and len(placed) > 0 and "z" in placed
+            and bool(np.isfinite(placed[["x", "y", "z"]].to_numpy(float)).all())
+            and templatebrain.available())
+
+
 def draw(figure, prog, t: float | None = None, positions: pd.DataFrame | None = None,
-         zone: set | frozenset = frozenset(), limit: int = 40) -> dict:
+         zone: set | frozenset = frozenset(), limit: int = 40, glass: bool = True,
+         kind: str = "template") -> dict:
     """The heatmap on the left and, on the right, the map at `t` when the
     channels have positions, else the order as a timeline.
 
-    `positions` has `channel`, `x`, `y` and `placed`; `zone` holds the
-    channels the clinician marked as the onset zone, ringed on the map.
+    `positions` has `channel`, `x`, `y` and `placed`, and `z` for the glass
+    brain, which is drawn when `glass`, nilearn is installed and every placed
+    channel has all three; `kind` says where the positions came from, for the
+    caption. `zone` holds the channels the clinician marked as the onset zone,
+    ringed on the map.
     """
     from onset_review.studycharts import CURSOR, MUTED, _quiet
 
@@ -92,9 +122,11 @@ def draw(figure, prog, t: float | None = None, positions: pd.DataFrame | None = 
     channels, rows = heatmap_rows(prog, limit)
     times = np.asarray(prog.times, dtype=float)
     t = float(times[0]) if t is None and len(times) else float(t or 0.0)
-    heat = figure.add_axes([0.1, 0.12, 0.5, 0.78])
-    side = figure.add_axes([0.66, 0.12, 0.32, 0.78])
-    out = {"channels": channels, "t": t}
+    placed = _placed(prog, positions)
+    use_glass = bool(glass and channels and _can_glass(placed))
+    heat = figure.add_axes([0.08, 0.14, 0.38, 0.76] if use_glass else [0.1, 0.12, 0.5, 0.78])
+    side = None if use_glass else figure.add_axes([0.66, 0.12, 0.32, 0.78])
+    out = {"channels": channels, "t": t, "glass": use_glass}
     if not channels:
         heat.text(0.5, 0.5, "No channel to draw", ha="center", va="center",
                   transform=heat.transAxes, color=MUTED)
@@ -113,17 +145,17 @@ def draw(figure, prog, t: float | None = None, positions: pd.DataFrame | None = 
             heat.plot([when], [y], marker="|", color="white", markersize=7, mew=1.6)
     heat.axvline(0.0, color="white", lw=0.8, ls="--", alpha=0.8)
     out["cursor"] = heat.axvline(t, color=CURSOR, lw=1.4)
-    heat.set_xlabel("seconds from the marked onset  ·  white tick: when the channel "
+    heat.set_xlabel("seconds from the marked onset\nwhite tick: when the channel "
                     "changed  ·  dashed: marked onset", fontsize=7, color=MUTED)
     heat.tick_params(labelsize=7)
     colour = figure.colorbar(mesh, ax=heat, fraction=0.03, pad=0.01)
     colour.set_label("fast/slow energy, ×baseline (log10)", fontsize=7)
     colour.ax.tick_params(labelsize=6)
 
-    placed = None
-    if positions is not None and len(positions) and "placed" in positions:
-        placed = positions[positions["placed"].astype(bool)]
-        placed = placed[placed["channel"].isin(prog.channels)]
+    if use_glass:
+        _draw_glass(figure, prog, t, placed, zone, kind)
+        out["map"] = True
+        return out
     _quiet(side)
     if placed is not None and len(placed):
         state = state_at(prog, t).set_index("channel")
@@ -160,3 +192,35 @@ def draw(figure, prog, t: float | None = None, positions: pd.DataFrame | None = 
         side.set_title("Order of change (no positions placed)", fontsize=8)
         out["map"] = False
     return out
+
+
+def _draw_glass(figure, prog, t: float, placed: pd.DataFrame, zone, kind: str) -> None:
+    """The placed channels at `t` on nilearn's glass brain, right of the heatmap."""
+    from nilearn import plotting
+
+    from onset_review.studycharts import CURSOR, MUTED
+
+    state = state_at(prog, t).set_index("channel")
+    coords = placed[["x", "y", "z"]].to_numpy(float)
+    values = np.array([state.loc[c, "log_ratio"] for c in placed["channel"]], dtype=float)
+    changed = np.array([bool(state.loc[c, "changed"]) for c in placed["channel"]])
+    sizes = np.where(changed, 40.0, 16.0)
+    display = plotting.plot_markers(
+        np.nan_to_num(values, nan=0.0), coords, node_size=sizes, node_cmap="magma",
+        node_vmin=0.0, node_vmax=VMAX, display_mode="lzr", figure=figure,
+        axes=[0.535, 0.16, 0.46, 0.68], colorbar=False, alpha=0.9)
+    # Rings, not dots: nilearn hands `marker_color` to matplotlib as `c`, so
+    # the face is made transparent there, one colour per marker.
+    if changed.any():
+        display.add_markers(coords[changed], marker_color=[(0.0, 0.0, 0.0, 0.0)]
+                            * int(changed.sum()), marker_size=sizes[changed] + 22,
+                            edgecolors=CURSOR, linewidths=1.2)
+    ringed = placed["channel"].isin(zone).to_numpy()
+    if ringed.any():
+        display.add_markers(coords[ringed], marker_color=[(0.0, 0.0, 0.0, 0.0)]
+                            * int(ringed.sum()), marker_size=sizes[ringed] + 60,
+                            edgecolors=MUTED, linewidths=0.8, linestyle="--")
+    figure.text(0.765, 0.80, f"at {t:+.1f} s: {int(changed.sum())} of {len(placed)} "
+                "placed channels changed", ha="center", va="top", fontsize=8)
+    figure.text(0.765, 0.27, glass_caption(kind), ha="center", va="top", fontsize=6.5,
+                color=MUTED)

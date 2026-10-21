@@ -1387,21 +1387,30 @@ class IctalPage(QWidget):
 
 
     def _places(self, result):
-        """The analysed channels' template positions and the marked onset
-        zone's channels, for the progression map; (None, set()) without."""
-        from onset_hfo.case.electrodes import channel_positions, contacts_of, load_electrodes
+        """The analysed channels' positions, the marked onset zone's channels
+        and where the positions came from, for the progression map;
+        (None, set(), "template") without."""
+        from onset_hfo.case.electrodes import (
+            channel_positions,
+            contacts_of,
+            load_electrodes,
+            positions_kind,
+        )
 
         if result is None or not len(result.combined):
-            return None, set()
+            return None, set(), "template"
         case = self.window_.case
         channels = list(result.combined["channel"].astype(str))
+        kind = "template"
         try:
-            where = channel_positions(load_electrodes(case), channels)
-            positions = where.assign(channel=channels)[["channel", "x", "y", "placed"]]
+            electrodes = load_electrodes(case)
+            where = channel_positions(electrodes, channels)
+            positions = where.assign(channel=channels)[["channel", "x", "y", "z", "placed"]]
+            kind = positions_kind(electrodes)
         except (OSError, ValueError, KeyError):
             positions = None
         zone = set(case.zone("soz"))
-        return positions, {c for c in channels if any(p in zone for p in contacts_of(c))}
+        return positions, {c for c in channels if any(p in zone for p in contacts_of(c))}, kind
 
 
 class ReviewPage(QWidget):
