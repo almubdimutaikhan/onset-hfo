@@ -19,20 +19,22 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Qt, QTimer, Signal
 from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QSizePolicy,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
 
-from onset_review import contactmap, theme
+from onset_review import contactmap, stretchmap, theme
 from onset_review.anatomy import ARCHIVE_ORIGIN, layout_caption
 from onset_review.brainview import ZONE_EDGES
 from onset_review.theme import card, pt
@@ -42,6 +44,11 @@ __all__ = ["ContactMapPanel", "WHERE_QUESTION"]
 #: What the "Ask where" button asks the assistant. One question, fixed, so
 #: that the map and the model are talking about the same thing.
 WHERE_QUESTION = "Where on the head is the activity, and on how many electrodes?"
+
+#: The stretch slider's step, and how far Play moves it per tick.
+STRETCH_STEP_S = 0.25
+PLAY_STEP_S = 1.0
+PLAY_MS = 400
 
 
 class ContactMapPanel(QWidget):
@@ -73,6 +80,10 @@ class ContactMapPanel(QWidget):
             if key == "expert" and not list(getattr(session, "expert", []) or []):
                 continue
             self.measure.addItem(label, key)
+        # Measured from the signal over a stretch the reader picks, below.
+        self.measure.insertSeparator(self.measure.count())
+        for key, label in stretchmap.available(float(session.raw.info["sfreq"])):
+            self.measure.addItem(label, key)
         self.view = QComboBox()
         self.view.setObjectName("onset_map_view")
         for name in contactmap.VIEWS:
@@ -93,6 +104,46 @@ class ContactMapPanel(QWidget):
         self.ask.setObjectName("onset_map_ask")
         self.ask.setToolTip(WHERE_QUESTION)
         self.ask.clicked.connect(lambda _=False: self.askRequested.emit(WHERE_QUESTION))
+
+        # The stretch a signal measure is taken over: a length, a start that a
+        # slider moves along the window, Play, and the trace on screen.
+        self.trace_span = None      #: set by the page: () -> (t0, t1) on screen
+        self._duration = float(session.raw.n_times) / float(session.raw.info["sfreq"])
+        self.length = QDoubleSpinBox()
+        self.length.setObjectName("onset_map_length")
+        self.length.setRange(0.5, max(0.5, self._duration))
+        self.length.setSingleStep(0.5)
+        self.length.setDecimals(2)
+        self.length.setSuffix(" s")
+        self.length.setValue(min(2.0, self._duration))
+        self.start = QSlider(Qt.Horizontal)
+        self.start.setObjectName("onset_map_start")
+        self.start.setRange(0, max(0, int(self._duration / STRETCH_STEP_S)))
+        self.play = QPushButton("Play")
+        self.play.setObjectName("onset_map_play")
+        self.play.setCheckable(True)
+        self.play.toggled.connect(self._play)
+        self.timer = QTimer(self)
+        self.timer.setInterval(PLAY_MS)
+        self.timer.timeout.connect(self._tick)
+        self.on_screen = QPushButton("Trace on screen")
+        self.on_screen.setObjectName("onset_map_on_screen")
+        self.on_screen.setToolTip("Map the stretch the trace is showing")
+        self.on_screen.clicked.connect(lambda _=False: self.use_trace_span())
+        self.span_label = QLabel("")
+        self.span_label.setObjectName("onset_map_span")
+        self.stretch_row = QWidget()
+        row = QHBoxLayout(self.stretch_row)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(QLabel("Stretch"))
+        row.addWidget(self.length)
+        row.addWidget(self.play)
+        row.addWidget(self.start, 1)
+        row.addWidget(self.span_label)
+        row.addWidget(self.on_screen)
+        self.stretch_row.setVisible(False)
+        for widget in (self.length, self.start):
+            widget.valueChanged.connect(lambda _v: self.redraw())
 
         bar = QHBoxLayout()
         bar.setSpacing(6)
@@ -134,6 +185,7 @@ class ContactMapPanel(QWidget):
         box.setContentsMargins(4, 4, 4, 4)
         box.setSpacing(4)
         box.addLayout(bar)
+        box.addWidget(self.stretch_row)
         box.addWidget(self.canvas, 1)
         box.addWidget(self.headline)
         box.addWidget(self.caption)
@@ -160,12 +212,63 @@ class ContactMapPanel(QWidget):
     def measure_key(self) -> str:
         return str(self.measure.currentData() or "primary")
 
+    def signal_measure(self) -> bool:
+        return stretchmap.is_signal_measure(self.measure_key())
+
+    # -- the stretch ------------------------------------------------------------
+    def span(self) -> tuple[float, float]:
+        """The stretch a signal measure is taken over, in seconds of the window."""
+        start = self.start.value() * STRETCH_STEP_S
+        start = min(start, max(0.0, self._duration - self.length.value()))
+        return start, min(self._duration, start + self.length.value())
+
+    def set_span(self, t0: float, t1: float) -> None:
+        """Map [t0, t1) seconds of the window."""
+        t0 = max(0.0, float(t0))
+        t1 = min(self._duration, max(float(t1), t0 + 0.5))
+        for widget in (self.length, self.start):
+            widget.blockSignals(True)
+        self.length.setValue(t1 - t0)
+        self.start.setValue(int(round(t0 / STRETCH_STEP_S)))
+        for widget in (self.length, self.start):
+            widget.blockSignals(False)
+        self.redraw()
+
+    def use_trace_span(self) -> bool:
+        span = self.trace_span() if callable(self.trace_span) else None
+        if not span:
+            self.span_label.setText("no trace on screen")
+            return False
+        self.set_span(*span)
+        return True
+
+    def _play(self, on: bool) -> None:
+        self.play.setText("Pause" if on else "Play")
+        if on and self.start.value() >= self.start.maximum():
+            self.start.setValue(0)
+        (self.timer.start if on else self.timer.stop)()
+
+    def _tick(self) -> None:
+        end = self.span()[1]
+        if end >= self._duration - 1e-9:
+            self.play.setChecked(False)
+            return
+        self.start.setValue(self.start.value() + int(round(PLAY_STEP_S / STRETCH_STEP_S)))
+
     # -- drawing --------------------------------------------------------------
     def redraw(self) -> None:
         tokens = theme.current()
+        signal = self.signal_measure()
+        self.stretch_row.setVisible(signal)
+        self.labels.setEnabled(not signal)
+        if not signal and self.play.isChecked():
+            self.play.setChecked(False)
+        span = self.span() if signal else None
+        if span is not None:
+            self.span_label.setText(f"{span[0]:.2f}–{span[1]:.2f} s")
         self.frame = contactmap.map_frame(self._session, resection=self._resection,
                                           electrodes=self._electrodes,
-                                          measure=self.measure_key())
+                                          measure=self.measure_key(), span=span)
         frame = self.frame
         self.axes.clear()
         self.axes.set_facecolor(tokens.surface)
@@ -189,9 +292,18 @@ class ContactMapPanel(QWidget):
             self.canvas.draw_idle()
             return
 
+        key = self.measure_key()
+        if getattr(self._session, "modality", "ieeg") == "eeg" and self._topomap(frame, key):
+            self.canvas.draw_idle()
+            return
         h, v = contactmap.project(frame, view)
         values = frame["value"].to_numpy(dtype=float)
-        key = self.measure_key()
+        if signal:
+            # A channel the measure could not be computed on is drawn at the
+            # bottom of the scale rather than dropped from the map.
+            finite = values[np.isfinite(values)]
+            values = np.where(np.isfinite(values), values,
+                              float(finite.min()) if finite.size else 0.0)
         if key == "rank":
             values = float(values.max()) + 1.0 - values
         sizes = 40.0 + 300.0 * _unit(values)
@@ -209,10 +321,13 @@ class ContactMapPanel(QWidget):
                                textcoords="offset points", fontsize=9, fontweight="bold",
                                color=tokens.accent, zorder=7)
 
-        if self.labels.isChecked():
+        if self.labels.isChecked() and not signal:
+            # Rank numbers are the detectors' ranking; on a signal measure
+            # they would label something the colours do not show.
             self._draw_ranks(frame, h, v)
 
-        unit = next(u for k, _l, u in contactmap.MEASURES if k == key)
+        unit = (stretchmap.measure_unit(key, getattr(self._session, "unit", "µV")) if signal
+                else next(u for k, _l, u in contactmap.MEASURES if k == key))
         cax = self.figure.add_axes((0.87, 0.15, 0.025, 0.6))
         bar = self.figure.colorbar(self._points, cax=cax)
         bar.ax.yaxis.set_tick_params(color=tokens.text_muted, labelcolor=tokens.text_muted)
@@ -229,8 +344,72 @@ class ContactMapPanel(QWidget):
         self.caption.setText(layout_caption(frame, self._origin))
         self.caption.setStyleSheet(card("warn" if "SCHEMATIC" in self.caption.text()
                                         or "DIAGRAM" in self.caption.text() else "info"))
-        self._say_headline(frame)
+        if signal:
+            self._say_stretch(frame, key, span)
+        else:
+            self._say_headline(frame)
         self.canvas.draw_idle()
+
+    def _say_stretch(self, frame, key: str, span) -> None:
+        """The highest channels on a signal measure, over the stretch."""
+        label = self.measure.currentText()
+        unit = stretchmap.measure_unit(key, getattr(self._session, "unit", "µV"))
+        ranked = frame.assign(value=frame["value"].astype(float)).dropna(subset=["value"])
+        ranked = ranked.sort_values("value", ascending=False).head(3)
+        named = ", ".join(f"{r.channel} ({r.value:.3g})" for r in ranked.itertuples())
+        self.headline.setText(
+            f"<b>{label}</b>, {span[0]:.2f}–{span[1]:.2f} s: highest on {named} "
+            f"({unit}). A measurement of this stretch, not a finding.")
+
+    def _topomap(self, frame, key: str) -> bool:
+        """A scalp EEG window drawn as a head topomap, the electrodes placed by
+        their 10-05 names. False when too few can be placed (the diagram is
+        drawn instead)."""
+        import mne
+
+        if not hasattr(self, "_scalp"):
+            self._scalp = stretchmap.scalp_info(self._session)
+        info, missing = self._scalp
+        if info is None:
+            return False
+        values = dict(zip(frame["channel"].astype(str), frame["value"].astype(float),
+                          strict=True))
+        names = [n for n in info.ch_names if np.isfinite(values.get(n, np.nan))]
+        if len(names) < 4:
+            return False
+        # MNE draws its own head; the contact map's outline would sit under it.
+        self.axes.clear()
+        picked = mne.pick_info(info, [info.ch_names.index(n) for n in names])
+        data = np.array([values[n] for n in names])
+        low, high = float(np.min(data)), float(np.max(data))
+        image, _ = mne.viz.plot_topomap(data, picked, axes=self.axes, show=False,
+                                        cmap="inferno", contours=0, names=None,
+                                        sensors=True,
+                                        vlim=(low, high if high > low else low + 1e-9))
+        tokens = theme.current()
+        signal = self.signal_measure()
+        unit = (stretchmap.measure_unit(key, getattr(self._session, "unit", "µV")) if signal
+                else next(u for k, _l, u in contactmap.MEASURES if k == key))
+        cax = self.figure.add_axes((0.87, 0.15, 0.025, 0.6))
+        bar = self.figure.colorbar(image, cax=cax)
+        bar.set_label(unit, fontsize=8, color=tokens.text_muted)
+        bar.ax.tick_params(labelsize=7)
+        self._colorbar = bar
+        self._points = None
+        self.axes.set_title("Head, seen from above", fontsize=9, color=tokens.text_muted,
+                            loc="left")
+        note = ("Scalp electrodes placed by their 10–05 names on MNE's standard head, "
+                "not measured on this patient.")
+        if missing:
+            note += (f" Not placed ({len(missing)}): " + ", ".join(missing[:10])
+                     + ("…" if len(missing) > 10 else "") + ".")
+        self.caption.setText(note)
+        self.caption.setStyleSheet(card("info"))
+        if signal:
+            self._say_stretch(frame, key, self.span())
+        else:
+            self._say_headline(frame)
+        return True
 
     def _draw_ranks(self, frame, h, v) -> None:
         from matplotlib import patheffects

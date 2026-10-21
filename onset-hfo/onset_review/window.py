@@ -497,6 +497,16 @@ def _colour_annotations(figure) -> None:
             pass
 
 
+def trace_view(figure) -> tuple[float, float] | None:
+    """The seconds of the window the trace is showing, or None when it
+    cannot be read (no browser, or one that has not drawn yet)."""
+    try:
+        low, high = figure.mne.plt.getViewBox().viewRange()[0]
+    except Exception:       # noqa: BLE001 - a map without a span still draws
+        return None
+    return float(low), float(high)
+
+
 def goto(figure, t: float, channel: str | None = None,
          session: ReviewSession | None = None) -> None:
     """Scroll the trace so `t` is on screen, and `channel` with it.
@@ -1097,6 +1107,8 @@ def _wire(figure, host, panels: dict, session: ReviewSession,
     panels["agreement"].channelPicked.connect(lambda channel: select(channel))
     panels["brain"].channelPicked.connect(lambda channel: select(channel))
     panels["map"].channelPicked.connect(lambda channel: select(channel))
+    # "Trace on screen" on the map: the stretch the browser is showing.
+    panels["map"].trace_span = lambda: trace_view(figure)
     # The map haloes whatever is chosen anywhere, so an event under judgement
     # can be found on the head without leaving the page it is judged on.
     panels["findings"].channelPicked.connect(panels["map"].highlight)

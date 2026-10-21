@@ -693,6 +693,26 @@ shafts are active and their order along the shaft; it is not anatomy, and
 no rendered cortex is drawn under it, because these archives ship no MRI and
 a surface nobody measured would be a picture of nothing.
 
+**Map a stretch of the signal.** Below the detectors' measures, *Colour by*
+offers measures taken straight from the signal over a stretch you choose:
+band power in dB (delta, theta, alpha, beta, gamma, and the ripple and fast
+ripple bands where the sampling rate allows), line length, the fast/slow
+energy ratio the Epileptogenicity Index is built from, and the HFO rate in
+the stretch. Choosing one shows a *Stretch* row: its length, a slider that
+moves it along the window, **Play** to step it forward a second at a time
+and watch the map change, and **Trace on screen** to map exactly what the
+trace is showing. The headline names the highest channels over the stretch.
+These are measurements of that stretch, computed from the signal as the
+detectors saw it (filtered and re-referenced); none is a finding by itself,
+and the rank numbers are hidden on them because the ranking is the
+detectors'.
+
+**Scalp EEG is drawn as a head.** On a scalp EEG window the map is a head
+topomap seen from above, the electrodes placed by their 10–05 names on MNE's
+standard head (a bipolar pair midway between its two electrodes), and the
+caption says these positions are standard, not measured on the patient, and
+lists any channel it could not place. MEG keeps the diagram of channel names.
+
 **Ask the assistant where** sends the assistant the counts behind the map:
 how the leading channels distribute over shafts and sides, and whether the
 positions are measured. It answers in those counts (*3 of the top 5 channels

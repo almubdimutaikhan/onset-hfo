@@ -579,7 +579,7 @@ the notebooks in `notebooks/`.
 | **Review › Recording** | the answer and its channels, the trend (folded), the trace, the ranking, the events, one event, spectrum, average event, threshold; *Review events* opens review mode |
 | **Review › Signal** | the HFO band, preprocessing, data quality, ICA components |
 | **Review › Contacts** | the patient record, and the contacts in 3D, measured or schematic |
-| **Review › Map** | the contacts flat, coloured by rate |
+| **Review › Map** | the contacts flat, coloured by rate, or by band power, line length or energy ratio over a stretch you choose (with Play); a head topomap for scalp EEG |
 | **Assistant › This recording** | questions about this window, answered from its analysis |
 | **Assistant › Chat** | the local model on its own |
 | **Report** | the findings paragraph and the export |
