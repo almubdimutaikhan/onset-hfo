@@ -90,7 +90,7 @@ For the research framing rather than the code, read
 | `artifacts/` | **gitignored** — where runs actually write, and the dataset cache |
 | `notebooks/` | eight notebooks, each with a Colab badge; 06 and 08 need a GPU runtime |
 | `scripts/` | studies too long for a test: the model ladder, the sub-population screen, the multiplier ablation |
-| `tests/` | about seventy files, 1,709 tests, all offline |
+| `tests/` | about seventy files, 1,737 tests, all offline |
 | `paper/` | **the preprint — untracked on purpose. Never commit it.** |
 
 ### `onset_hfo/` — the modules worth knowing first
