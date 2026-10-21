@@ -86,7 +86,7 @@ def draw(figure, prog, t: float | None = None, positions: pd.DataFrame | None = 
     `positions` has `channel`, `x`, `y` and `placed`; `zone` holds the
     channels the clinician marked as the onset zone, ringed on the map.
     """
-    from onset_review.studycharts import MUTED, _quiet
+    from onset_review.studycharts import CURSOR, MUTED, _quiet
 
     figure.clear()
     channels, rows = heatmap_rows(prog, limit)
@@ -112,7 +112,7 @@ def draw(figure, prog, t: float | None = None, positions: pd.DataFrame | None = 
         if np.isfinite(when):
             heat.plot([when], [y], marker="|", color="white", markersize=7, mew=1.6)
     heat.axvline(0.0, color="white", lw=0.8, ls="--", alpha=0.8)
-    out["cursor"] = heat.axvline(t, color="#22D3EE", lw=1.4)
+    out["cursor"] = heat.axvline(t, color=CURSOR, lw=1.4)
     heat.set_xlabel("seconds from the marked onset  ·  white tick: when the channel "
                     "changed  ·  dashed: marked onset", fontsize=7, color=MUTED)
     heat.tick_params(labelsize=7)
@@ -131,7 +131,7 @@ def draw(figure, prog, t: float | None = None, positions: pd.DataFrame | None = 
         changed = [bool(state.loc[c, "changed"]) for c in placed["channel"]]
         side.scatter(placed["x"], placed["y"], c=values, cmap="magma", vmin=0.0,
                      vmax=VMAX, s=[60 if c else 26 for c in changed],
-                     edgecolors=["#22D3EE" if c else "none" for c in changed],
+                     edgecolors=[CURSOR if c else "none" for c in changed],
                      linewidths=1.4)
         ringed = placed[placed["channel"].isin(zone)]
         if len(ringed):
@@ -150,7 +150,7 @@ def draw(figure, prog, t: float | None = None, positions: pd.DataFrame | None = 
         order = order_table(prog)
         order = order[order["detected"].astype(bool)].head(15)
         y = np.arange(len(order))
-        side.barh(y, order["change_s"], color=["#22D3EE" if v <= t else MUTED
+        side.barh(y, order["change_s"], color=[CURSOR if v <= t else MUTED
                                                 for v in order["change_s"]])
         side.set_yticks(y)
         side.set_yticklabels(list(order["channel"]), fontsize=7)

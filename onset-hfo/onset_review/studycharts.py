@@ -31,6 +31,9 @@ MARK = "#1D1D1F"
 YOURS = "#6E6E73"
 TEXT = "#1D1D1F"
 MUTED = "#6E6E73"
+#: The moment and the "has changed" mark on a magma heatmap or map (the ictal
+#: progression): a cyan that stands out on magma's black and on its yellow.
+CURSOR = "#22D3EE"
 GRID = "#E5E5EA"
 
 DETECTOR_LABELS = {"rms": "RMS energy", "line_length": "Line length",
