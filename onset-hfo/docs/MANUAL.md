@@ -186,16 +186,21 @@ onset-hfo fetch --subject sub-01 --t-start 0 --t-stop 60
 7. **Say who you are**, once, when asked, or start with
    `onset-review --reader "Dr Smith"`. Verdicts are never anonymous.
 8. **Judge events, one at a time.** Press **Review events** in the toolbar,
-   or **Space** on the trace or the side column. One event fills the screen,
-   raw, band-passed and time-frequency on one time axis. **A** (real), **D**
+   or **Space** on the trace or the side column. One event fills a window of
+   its own (**F11** for full screen), signal, band-passed and time-frequency
+   on one time axis. **A** (real), **D**
    (not real) or **U** (cannot tell) records your verdict and the next event
    follows; **←** and **→** step, **J** jumps to the next unjudged one, **N**
    adds a sentence, **Backspace** takes a verdict back, **Esc** leaves. The
    bar at the top counts what you have judged. The events come from the
    Events list as you have filtered it, so filter it to the busiest channel
-   first to read that channel's events.
+   first to read that channel's events. Unsure? **C** shows the
+   neighbouring contacts and the seconds around the event, with every
+   detection boxed and a count of channels that had one at the same moment;
+   **K** shows the two contacts of a bipolar channel; **T** takes the full
+   trace to the event; **+**, **−**, **↑**, **↓** zoom time and gain.
 
-   ![Review mode: one event, full screen](images/onset-review-review-mode.png)
+   ![Review mode with the context view](images/onset-review-review-mode.png)
 
    The same keys work in the Events list itself, with it focused, and
    **Ctrl+J** jumps to the next unjudged event there.
@@ -447,7 +452,7 @@ BIDS-iEEG, the open standard, with every change kept in an audit log.
 | **Segments** | choose stretches by rule: sleep stage, away from seizures and artefacts |
 | **Preprocess** | one set of signal settings for every segment |
 | **Interictal** | analyse every segment alike and pool them into one ranking with intervals |
-| **Ictal onset** | where each marked seizure starts (the Epileptogenicity Index), and how consistent that is across seizures |
+| **Ictal onset** | where each marked seizure starts (the Epileptogenicity Index), how consistent that is across seizures, and (Progression) how each seizure spread: a heatmap, the order of change and a map you can play |
 | **Review** | open any segment in the review window of Tutorial 1 |
 | **Map** | place the contacts on a template brain (imported, or planned on the template), or from the patient's own CT and MRI, with atlas labels |
 | **Report** | check the case for anything identifying, take reviewers' sign-offs, produce numbered PDF reports |
@@ -574,7 +579,7 @@ the notebooks in `notebooks/`.
 | **Review › Recording** | the answer and its channels, the trend (folded), the trace, the ranking, the events, one event, spectrum, average event, threshold; *Review events* opens review mode |
 | **Review › Signal** | the HFO band, preprocessing, data quality, ICA components |
 | **Review › Contacts** | the patient record, and the contacts in 3D, measured or schematic |
-| **Review › Map** | the contacts flat, coloured by rate |
+| **Review › Map** | the contacts flat, coloured by rate, or by band power, line length or energy ratio over a stretch you choose (with Play); a head topomap for scalp EEG |
 | **Assistant › This recording** | questions about this window, answered from its analysis |
 | **Assistant › Chat** | the local model on its own |
 | **Report** | the findings paragraph and the export |
@@ -593,6 +598,8 @@ the notebooks in `notebooks/`.
 | **Space** | review mode, from the trace or the side column |
 | **A**, **D**, **U** | judge the selected event: real, not real, cannot tell |
 | **←**, **→**, **J**, **Esc** | in review mode: previous, next, next unjudged, leave |
+| **Home**, **End**, **+**, **−**, **↑**, **↓**, **R** | in review mode: first, last, time, gain, reset |
+| **C**, **K**, **T**, **F11** | in review mode: context, two contacts, show in trace, full screen |
 | **N** | a note on the event |
 | **Backspace** | take a verdict back |
 | **Ctrl+1**, **Ctrl+2**, **Ctrl+3** | the same verdicts from anywhere |

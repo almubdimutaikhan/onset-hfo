@@ -46,6 +46,12 @@ class EventDetailPanel(QWidget):
         super().__init__(parent)
         self._session = session
         self._snapshot = None
+        self._key = ""
+        #: Seconds of signal either side of the event, and the vertical gain
+        #: of the two traces. Review mode changes both; the side column keeps
+        #: the defaults.
+        self.pad_s = detail.PAD_S
+        self.gain = 1.0
 
         tokens = theme.current()
         # Short by default for the same reason the 3D view is: `figsize` sets
@@ -107,8 +113,14 @@ class EventDetailPanel(QWidget):
         if event is None:
             self.clear("That event is not in this analysis.")
             return False
-        self.show_snapshot(detail.snapshot(self._session, event))
+        self._key = str(key)
+        self.show_snapshot(detail.snapshot(self._session, event, pad_s=self.pad_s))
         return True
+
+    def redraw(self) -> None:
+        """Draw the event shown again, after `pad_s` or `gain` changed."""
+        if self._key:
+            self.show_key(self._key)
 
     def show_snapshot(self, snap) -> None:
         self._snapshot = snap
@@ -165,6 +177,12 @@ class EventDetailPanel(QWidget):
             # The event's own span, on both traces. Shaded rather than drawn
             # as two lines, because what is being judged is an interval.
             axis.axvspan(on, off, color=tokens.accent, alpha=0.13, lw=0)
+            if self.gain != 1.0:
+                # Gain about the middle of the trace, as an EEG reader's
+                # sensitivity control: the trace grows, the axis does not move.
+                low, high = axis.get_ylim()
+                middle, half = (low + high) / 2.0, (high - low) / 2.0 / self.gain
+                axis.set_ylim(middle - half, middle + half)
 
         if snap.power_db.size:
             self._mesh = spectrum.pcolormesh(
@@ -216,8 +234,9 @@ class EventDetailPanel(QWidget):
         text = (
             "Top: the signal as the detector saw it — high-passed, notched and "
             "re-referenced, not unprocessed. Middle: the same signal through "
-            "the detector's band. Bottom: energy against the 0.4 s either side "
-            "of the event, white lines at the band edges.<br>"
+            "the detector's band. Bottom: energy against the signal around the "
+            f"event ({self.pad_s:g} s either side), white lines at the band "
+            "edges.<br>"
             "<b>A real oscillation is an island</b> — energy confined in "
             "frequency and lasting several cycles. <b>Filter ringing is a "
             "column</b>: a sharp transient is broadband, so its energy runs "

@@ -40,6 +40,13 @@ notebook = ["jupyter>=1.0", "ipywidgets>=8.1"]
 # Everything else in the package runs without these.
 ml = ["scikit-learn>=1.3"]
 
+# The no-install demo (app/), a Streamlit site that reads the committed
+# results. Kept out of the core install because the pipeline, the agent, the
+# desktop application and every study run without it. 1.64 is what the root
+# requirements.txt installs on Streamlit Cloud; CI installs it to open every
+# page headless (tests/test_streamlit_app.py).
+app = ["streamlit>=1.64"]
+
 # Learned HFO detection for researchers: braindecode networks over candidate
 # windows (onset_hfo.eventnet and the Analysis page's "Learned detection"
 # templates). Nothing a clinician's pages show uses it, and the release

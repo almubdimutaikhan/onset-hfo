@@ -174,11 +174,11 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/*.ipynb
 
 There are two repositories under one project name: this one, and the
 [teaching prototype](https://github.com/berdakh/onset) on a synthetic cohort.
-[`DUPLICATION.md`](DUPLICATION.md) records what was shared while both had a
-Streamlit site. This repository retired its Streamlit site in October 2026, so
-the page names, the sidebar link row and the shared theme file no longer apply
-here. One thing still must match: the **standing disclaimer**'s structure and
-its no-recommendation sentence. The canonical copy is
+[`DUPLICATION.md`](DUPLICATION.md) records what the two share. Both have a
+Streamlit site again (this one's is the no-install demo in `app/`), so the page
+names, the sidebar link row and the shared theme file (`.streamlit/config.toml`,
+whose header says so) are kept in step as before. Above all, the **standing
+disclaimer**'s structure and its no-recommendation sentence must match. The canonical copy is
 `onset_review/studytables.py`'s `DISCLAIMER_LEAD` / `DATA_SENTENCE` /
 `DISCLAIMER_TAIL` (the desktop banner is assembled from them); only
 `DATA_SENTENCE` differs in the prototype, because only this project runs on

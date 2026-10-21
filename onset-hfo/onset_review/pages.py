@@ -1090,8 +1090,10 @@ class PageWindow(QMainWindow):
         return page
 
     # -- review mode ----------------------------------------------------------
-    def open_review_mode(self, full_screen: bool = True):
-        """One event at a time, full screen (`onset_review.reviewmode`)."""
+    def open_review_mode(self, full_screen: bool = False):
+        """One event at a time, in a window of its own: maximised the first
+        time, where it was left after that, full screen on F11
+        (`onset_review.reviewmode`)."""
         if not self.loaded or self.panels.get("events") is None:
             return None
         from onset_review.reviewmode import open_review

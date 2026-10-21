@@ -63,7 +63,7 @@ VIEWS = {
 
 
 def map_frame(session, resection=None, electrodes=None,
-              measure: str = "primary") -> pd.DataFrame:
+              measure: str = "primary", span: tuple | None = None) -> pd.DataFrame:
     """The layout frame with a ``value`` column for the chosen measure.
 
     Rates other than the ranking detector's are counted from the window's
@@ -75,7 +75,16 @@ def map_frame(session, resection=None, electrodes=None,
     if frame.empty:
         frame["value"] = pd.Series(dtype=float)
         return frame
-    if measure in ("primary", "rate_per_min"):
+    from onset_review import stretchmap
+
+    if stretchmap.is_signal_measure(measure):
+        # Measured from the signal over `span` (seconds of the loaded window),
+        # the whole window when none is given (`onset_review.stretchmap`).
+        if span is None:
+            span = (0.0, float(session.raw.n_times) / float(session.raw.info["sfreq"]))
+        values = stretchmap.stretch_values(session, measure, *span)
+        frame["value"] = [values.get(str(c), np.nan) for c in frame["channel"]]
+    elif measure in ("primary", "rate_per_min"):
         frame["value"] = frame["rate_per_min"].astype(float)
     elif measure == "rank":
         frame["value"] = frame["rank"].astype(float)

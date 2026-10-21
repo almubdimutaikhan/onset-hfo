@@ -33,7 +33,9 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          # app: the no-install demo, so tests/test_streamlit_app.py opens
+          # every page instead of skipping.
+          pip install -e ".[dev,app]"
       - name: Lint
         run: ruff check .
       - name: Test

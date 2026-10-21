@@ -37,6 +37,11 @@ application a rate leads to the events behind it and an event leads to the
 signal it was measured on; the Library pages report the cohort studies from
 the committed tables.
 
+To look without installing anything, open the demo at
+[onsetnu.streamlit.app](https://onsetnu.streamlit.app/): the same results and
+study pages in a browser, with the assistant on its scripted backend. Locally:
+`pip install -e ".[app]"`, then `streamlit run app/Home.py`.
+
 ## "I just want to see it work"
 
 Open [`notebooks/01_hfo_detection_quickstart.ipynb`](../notebooks/01_hfo_detection_quickstart.ipynb)

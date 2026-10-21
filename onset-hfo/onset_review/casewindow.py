@@ -67,6 +67,7 @@ from qtpy.QtWidgets import (
     QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -1268,12 +1269,21 @@ class IctalPage(QWidget):
         split.addWidget(self.canvas)
         split.addWidget(self.table)
         split.setSizes([480, 620])
+        from onset_review.progressionview import ProgressionView
+
+        # The index per channel, and how each seizure spread to get there.
+        self.progression = ProgressionView()
+        self.progression.setObjectName("onset_case_progression")
+        self.views = QTabWidget()
+        self.views.setObjectName("onset_case_ictal_views")
+        self.views.addTab(split, "Index")
+        self.views.addTab(self.progression, "Progression")
         box = QVBoxLayout(self)
         box.addLayout(top)
         box.addWidget(self.what)
         box.addWidget(self.seizures)
         box.addWidget(self.statement)
-        box.addWidget(split, 1)
+        box.addWidget(self.views, 1)
 
     def refresh(self) -> None:
         from onset_hfo.ictal import IctalSettings
@@ -1356,6 +1366,7 @@ class IctalPage(QWidget):
 
         result = self.result
         self.figure.clear()
+        self.progression.set_result(result, *self._places(result))
         if result is None:
             self.statement.setText("")
             self.table.setRowCount(0)
@@ -1373,6 +1384,24 @@ class IctalPage(QWidget):
                       f"{int(row['seizures_high'])} of {int(row['seizures'])}", change)
             for c, value in enumerate(values):
                 self.table.setItem(r, c, QTableWidgetItem(value))
+
+
+    def _places(self, result):
+        """The analysed channels' template positions and the marked onset
+        zone's channels, for the progression map; (None, set()) without."""
+        from onset_hfo.case.electrodes import channel_positions, contacts_of, load_electrodes
+
+        if result is None or not len(result.combined):
+            return None, set()
+        case = self.window_.case
+        channels = list(result.combined["channel"].astype(str))
+        try:
+            where = channel_positions(load_electrodes(case), channels)
+            positions = where.assign(channel=channels)[["channel", "x", "y", "placed"]]
+        except (OSError, ValueError, KeyError):
+            positions = None
+        zone = set(case.zone("soz"))
+        return positions, {c for c in channels if any(p in zone for p in contacts_of(c))}
 
 
 class ReviewPage(QWidget):

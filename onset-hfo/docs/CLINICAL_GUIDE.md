@@ -414,8 +414,9 @@ unjudged event** (`Ctrl+J`) skips what you have already done.
 
 **Review mode, one event at a time.** *Review events* in the toolbar, **Space**
 on the trace or the side column, or **Navigate → Review events one at a time…**
-gives one event the whole screen: the wideband, band-passed and time-frequency
-pictures on one time axis, the event's numbers under them, and what you have
+opens one event in a window of its own, maximised (move, resize or minimise it
+like any window; `F11` makes it full screen): the wideband, band-passed and
+time-frequency pictures on one time axis, the event's numbers under them, and what you have
 said about it in the corner. The same keys record your verdict and the next
 event follows; `←` and `→` step, `J` jumps to the next unjudged one, `Esc`
 leaves. The events are the Events list's, in its order and with its filters,
@@ -424,7 +425,28 @@ the bar at the top counts what you have judged of them. Nothing is kept twice:
 the verdicts go through the list and are saved as they are given, and leaving
 review mode leaves the list, the trace and the event view where you stopped.
 
-![Review mode: one event, full screen, with the reader's three keys](images/onset-review-review-mode.png)
+**When one event is not enough to judge.** Look around it rather than closer:
+
+- `+` and `−` show more or less signal either side of the event (0.1 s to
+  5 s); `↑` and `↓` set the gain; the toolbar zooms a box or pans, and `R`
+  resets. `Home` and `End` go to the first and last event.
+- `C` opens the **context view** under the event: its electrode two contacts
+  either side, one second or more either side, the signal as analysed beside
+  the same signal high-passed at the band's lower edge, all channels at one
+  gain per column, and every detection boxed (dashed: rejected). It says how
+  many *other* channels had a detection at the same moment. A real HFO is
+  usually on one or two neighbouring contacts; many channels at once suggests
+  an artefact. The view stays open from event to event until you close it.
+- `K` shows the bipolar channel's **two contacts and their difference**
+  instead, high-passed and notched as the analysis was: an oscillation in one
+  contact, or something in both that the difference cancels.
+- `T` takes the window's **full trace** to this event and its channel, with
+  review mode left open, for every channel and the seconds around.
+
+Review mode remembers its size, place, time window and whether the context
+view was open.
+
+![Review mode with the context view: the event, its neighbours on the same electrode, and a detection on another channel at the same moment](images/onset-review-review-mode.png)
 
 **Judging a contact.** In **Findings**, *Count it*, *Ignore it* or *Cannot
 tell*: one segmented control, the verdict already given shown filled, and
@@ -670,6 +692,26 @@ would be — and the title and the caption say so. It is enough to see which
 shafts are active and their order along the shaft; it is not anatomy, and
 no rendered cortex is drawn under it, because these archives ship no MRI and
 a surface nobody measured would be a picture of nothing.
+
+**Map a stretch of the signal.** Below the detectors' measures, *Colour by*
+offers measures taken straight from the signal over a stretch you choose:
+band power in dB (delta, theta, alpha, beta, gamma, and the ripple and fast
+ripple bands where the sampling rate allows), line length, the fast/slow
+energy ratio the Epileptogenicity Index is built from, and the HFO rate in
+the stretch. Choosing one shows a *Stretch* row: its length, a slider that
+moves it along the window, **Play** to step it forward a second at a time
+and watch the map change, and **Trace on screen** to map exactly what the
+trace is showing. The headline names the highest channels over the stretch.
+These are measurements of that stretch, computed from the signal as the
+detectors saw it (filtered and re-referenced); none is a finding by itself,
+and the rank numbers are hidden on them because the ranking is the
+detectors'.
+
+**Scalp EEG is drawn as a head.** On a scalp EEG window the map is a head
+topomap seen from above, the electrodes placed by their 10–05 names on MNE's
+standard head (a bipolar pair midway between its two electrodes), and the
+caption says these positions are standard, not measured on the patient, and
+lists any channel it could not place. MEG keeps the diagram of channel names.
 
 **Ask the assistant where** sends the assistant the counts behind the map:
 how the leading channels distribute over shafts and sides, and whether the
@@ -1814,6 +1856,24 @@ for those channels, each seizure's index as a dot, and the cutoff as a line.
 Each run writes a dated folder under `derivatives/onset/ictal/`: the
 combined table, every seizure's table, which seizures were analysed and why
 not, the settings and a summary.
+
+The **Progression** tab shows how each seizure spread, one seizure at a time:
+
+- a **heatmap** of every channel's fast-over-slow energy against its own
+  baseline, from before the marked onset to after it, the channels in the
+  order they changed and each change marked;
+- the **order of change**, each channel with its time from the marked onset
+  and from the first channel to change;
+- the **map at a moment**: the placed contacts seen from above, coloured by
+  their energy ratio and ringed once they have changed, with the marked onset
+  zone dashed. Without placed contacts, the order is drawn as a timeline.
+
+Drag the slider to a moment, or press **Play** to watch the channels change
+one after another; **Save as PNG** keeps the picture. It shows when each
+channel's activity changed, not where the seizure starts: a channel that
+changes first is not thereby the onset zone, which is the clinician's to mark.
+Runs made before this tab existed kept no curves; run the analysis again to
+see them.
 
 This is a research measure, and it needs a person to mark the electrographic
 onset. How well it finds the clinicians' onset zone on 28 patients of the

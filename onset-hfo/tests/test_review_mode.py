@@ -237,3 +237,133 @@ def test_review_mode_is_reached_by_space_the_toolbar_and_the_menu(qapp, opened):
     _settle(qapp)
     assert pages.review_mode.isVisible()
     pages.review_mode.close()
+
+
+# -- when one event is not enough ------------------------------------------------------------
+def _mode(qapp, opened):
+    pages = opened.parts.pages
+    pages.show_page("recording")
+    mode = pages.open_review_mode()
+    _settle(qapp)
+    return pages, mode
+
+
+def test_review_mode_opens_as_a_window_that_can_be_moved_and_goes_full_screen_on_f11(
+        qapp, opened):
+    _pages, mode = _mode(qapp, opened)
+    try:
+        assert not mode.isFullScreen(), "an ordinary window: moved, resized, minimised"
+        mode.toggle_full_screen()
+        _settle(qapp, 3)
+        assert mode.isFullScreen()
+        mode.toggle_full_screen()
+        _settle(qapp, 3)
+        assert not mode.isFullScreen()
+        keys = {s.key().toString() for s in mode.shortcuts}
+        assert {"F11", "Home", "End", "+", "-", "Up", "Down", "R", "C", "K", "T"} <= keys
+    finally:
+        mode.close()
+
+
+def test_plus_and_minus_change_the_seconds_shown_and_the_arrows_the_gain(qapp, opened):
+    from onset_review.reviewmode import PADS
+
+    _pages, mode = _mode(qapp, opened)
+    try:
+        start = mode.detail.pad_s
+        before = mode.detail._snapshot.times
+        wider = mode.widen(+1)
+        assert wider > start
+        after = mode.detail._snapshot.times
+        # Wider on the right at least; on the left the recording may begin first.
+        assert after[-1] - after[0] > before[-1] - before[0]
+        assert after[-1] >= before[-1] + (wider - start) - 0.01
+        assert mode.widen(-10) == PADS[0]
+        assert mode.widen(+10) == PADS[-1]
+        flat = mode.detail.axes[0].get_ylim()
+        mode.set_gain(4.0)
+        tall = mode.detail.axes[0].get_ylim()
+        assert (tall[1] - tall[0]) == pytest.approx((flat[1] - flat[0]) / 4.0, rel=0.05)
+        assert "gain ×4" in mode.zoom.text()
+        mode.reset_zoom()
+        assert mode.detail.gain == 1.0 and mode.detail.pad_s == PADS[2]
+        assert f"{PADS[2]:g} s either side" in mode.detail.caption.text()
+    finally:
+        mode.close()
+
+
+def test_home_and_end_go_to_the_first_and_last_event(qapp, opened):
+    _pages, mode = _mode(qapp, opened)
+    try:
+        mode.step(-10**9)
+        assert mode.position()[0] == 1
+        mode.step(+10**9)
+        at, total = mode.position()
+        assert at == total
+    finally:
+        mode.close()
+
+
+def test_the_context_view_shows_the_neighbours_and_stays_open_from_event_to_event(
+        qapp, opened):
+    from onset_review import eventcontext
+
+    _pages, mode = _mode(qapp, opened)
+    try:
+        assert mode.context.isHidden()
+        assert mode.toggle_context()
+        _settle(qapp, 3)
+        event = mode._event()
+        shown = mode.context.shown
+        assert shown.channels == eventcontext.neighbours(
+            opened.parts.session.raw.ch_names, event.channel, 2)
+        assert event.channel in mode.context.title.text()
+        assert "same moment" in mode.context.note.text()
+        mode.step(+1)
+        _settle(qapp, 3)
+        assert mode.context.isVisible()
+        assert mode.context.shown.event_channel == mode._event().channel
+        mode.context.contacts.setChecked(True)
+        _settle(qapp, 3)
+        first, second = mode._event().channel.split("-")
+        assert mode.context.shown.channels[:2] == [first, second]
+    finally:
+        mode.close()
+
+
+def test_t_takes_the_full_trace_to_the_event_with_review_mode_left_open(qapp, opened,
+                                                                        monkeypatch):
+    from onset_review import window
+
+    pages, mode = _mode(qapp, opened)
+    calls = []
+    monkeypatch.setattr(window, "goto", lambda figure, t, channel=None, session=None:
+                        calls.append((figure, t, channel)))
+    try:
+        event = mode._event()
+        assert mode.show_in_trace()
+        figure, t, channel = calls[-1]
+        assert figure is pages.figure and channel == event.channel
+        assert t == pytest.approx(event.start - opened.parts.session.t_offset)
+        assert mode.isVisible()
+    finally:
+        mode.close()
+
+
+def test_review_mode_remembers_its_zoom_and_context_view(qapp, opened):
+    from onset_review import reviewmode
+
+    _pages, mode = _mode(qapp, opened)
+    mode.widen(+1)
+    mode.toggle_context()
+    pad = mode.detail.pad_s
+    mode.close()
+    _settle(qapp, 3)
+    prefs = reviewmode.load_prefs()
+    assert prefs["pad_s"] == pad and prefs["context"] is True and prefs["geometry"]
+    _pages, again = _mode(qapp, opened)
+    try:
+        assert again.detail.pad_s == pad
+        assert again.context.isVisible()
+    finally:
+        again.close()
