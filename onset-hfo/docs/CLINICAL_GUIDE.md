@@ -16,15 +16,16 @@ Thirty minutes of reading. The last section is the one that matters.
 
 You don't need to know the menus to start.
 
-![The Quick start page: the program laid out as the jobs people come with, every step a link](images/onset-review-quickstart.png)
+![The Quick start guide: the program laid out as the jobs people come with, every step a link](images/onset-review-quickstart.png)
 
 - **The sidebar is four places**: **Patient**, **Review**, **Assistant** and
-  **Report**, with the **Library** at its foot. The pages inside a place are
+  **Report**, with **Validation** at its foot. The pages inside a place are
   the row of buttons above the page: *Overview · Case* under Patient,
-  *Recording · Signal · Contacts · Map* under Review, *This recording · Chat*
-  under Assistant, and the guide and the study's pages under Library.
-- **Quick start** (*Library*, *Help → Quick start guide*, or **F1**) lays the
-  program out as the jobs people come with:
+  *Recording · Signal · Contacts · Map* under Review, and *This recording ·
+  Chat* under Assistant.
+- **Quick start guide** (*Help → Quick start guide*, or **F1**, or the link
+  on Patient › Overview) opens in its own window and lays the program out as
+  the jobs people come with:
   - look at a recording;
   - work up a patient, step by step;
   - read the evidence behind the numbers;
@@ -49,8 +50,9 @@ You don't need to know the menus to start.
   overrides it.
 - **Contrast.** Text and muted text meet WCAG AA contrast (4.5:1) on every
   background in both themes, and a test keeps it so.
-- **Keyboard.** **Alt+1** … **Alt+5** go to the places; **Ctrl+Page Down**
-  and **Ctrl+Page Up** move between the pages inside one.
+- **Keyboard.** **Alt+1** … **Alt+5** go to the places (**Alt+6** is
+  Analysis, in Analysis mode); **Ctrl+Page Down** and **Ctrl+Page Up** move
+  between the pages inside one.
 - **By code instead of pages.** Turn on **View → Analysis mode**
   (**Ctrl+Shift+E**). On the **Analysis** page it adds, the editor's
   **Templates** menu (or *Browse all templates…*, with a description and a
@@ -119,8 +121,8 @@ dataset — what the original annotators marked on the same minute.
 There are eleven panels and the window does not show them all at once, because
 a screen with eleven docked panels on it is one you have to tidy before you can
 use it. By default they are arranged as **pages**, one showing at a time,
-behind a sidebar of four places (Patient, Review, Assistant, Report) and the
-Library of the study's read-only pages, `Alt+1` to `Alt+5` to switch. The
+behind a sidebar of four places (Patient, Review, Assistant, Report) and
+Validation at its foot, `Alt+1` to `Alt+5` to switch. The
 trace is on Review › Recording, with the ranking, the events and the selected
 event in a column beside it. The diagram above and the rest of this
 section describe the **docked** arrangement, which **View → Everything at once
@@ -995,55 +997,41 @@ or a place where a console result changes the panels. A rate computed here is
 not on the Ranking or the Map. The report lists what was run; the panels show
 what the pipeline computed.
 
-### The study pages, against this recording
+### Validation: what each number was measured against
 
-![The Detectors page with this recording set against the study](images/onset-review-study-this.png)
+![The Validation page](images/onset-review-validation.png)
 
-The six study pages are the project's published record and say the same
-thing whatever is open. With a recording open, each gains a section headed
-**This recording**, always caveated as one window of one patient:
+**Validation**, at the foot of the sidebar (`Alt+5`), is one page. For each
+kind of number the program shows it says what that number was measured
+against on public data, how well it agreed, and where it fails:
 
-- **Detectors** scores this window against its expert markings exactly as the
-  study scored each patient — same functions, reviewed channels only — and
-  marks it as a star on the sweep. A recording without markings has nothing to
-  score against; the page says so and shows how far the detectors that ran
-  agree with each other instead.
-- **Outcome** rings a study patient's dot. For anyone else it says the plain
-  thing: the result describes 20 patients and cannot be applied to one, and
-  nothing in this software predicts an outcome.
-- **Patients** opens on the open subject; **Data** lists the open file's facts
-  beside the two archives; **Architecture** lists the steps this analysis
-  actually ran, with its settings.
+- **Finding HFOs** — the detectors against the expert markings of ds003498:
+  best channel-rank ρ 0.66 for ripples and 0.61 for fast ripples, precision
+  0.51 and 0.54, read as agreement rather than accuracy.
+- **Interictal HFOs and surgical outcome** — ds003498, 13 seizure-free
+  against 7 with recurrence: AUC 0.71, p = 0.12, not significant; 0.67 with
+  the RMS detector; and the replication on HUP.
+- **Ictal onset: the Epileptogenicity Index** — ds003029, 28 patients:
+  median AUC 0.80 (0.70–0.87), falling to 0.52 with the onset put 40 s
+  before the seizure; on HUP, 54 patients, 0.79.
+- **Contacts placed on the template** — ds004100, 38 patients: a median
+  2.5 mm off with the shaft's own spacing, 10.1 mm at a 3.5 mm pitch, and
+  the atlas names a structure for only 51% of contacts.
 
-![The sweep, live: drag the threshold, hover a point](images/onset-review-chart.png)
+Each section names its full study: `docs/EVALUATION.md`, `docs/OUTCOME.md`,
+`docs/ICTAL.md` and `docs/TEMPLATE_MAP.md`. The figures are written into the
+program and a test holds them to the committed tables, so the page reads the
+same on an install without the tables. It needs no recording.
 
-**Explore the chart** opens the page's figure live: hover a point or a dot for
-its value or its patient, click a patient's dot to open their window, and on
-the sweep drag the threshold — the readout gives every detector's measured
-numbers at it, from the committed table, never between the measured points.
+When the open window carries expert markings (the ds003498 patients' windows
+do), a section headed **This recording** at the top scores that window the
+way the detector study scored each patient — same functions, reviewed
+channels only — caveated as one window of one patient. A glossary term on the
+page shows its definition when you hover over it.
 
-**Re-run with your settings** runs the Detectors or the Outcome study again
-with your band, detectors, thresholds and window, through the study's own
-functions, in the background, one patient at a time (Stop ends it between
-patients). By default only recordings already on this machine are used. The
-result appears under *Your re-run — not the published study* and dashed on
-the chart; every skipped patient is named with the reason. The committed
-tables are never touched.
-
-**Your cohort.** On the Outcome page, *Add this recording to your cohort*
-measures the open window the way the study measures a patient — the channels
-tied with the busiest, and the share of them inside the contacts you tick as
-resected — with the outcome you enter. With two or more patients in each
-group the page gives the study's own comparison (AUC with its interval and a
-permutation p) and the smallest effect groups that size could detect; with
-fewer, it says a comparison is not possible. It is yours, kept on this
-machine, unvalidated, and labelled so everywhere it shows.
-
-**Open as notebook** writes the page as a notebook that rebuilds it from the
-same tables with the same functions — its recomputed AUC is the page's — and
-opens it on the Analysis page, the starting point for a question of your own.
-The study's pages are the **Library**, one place at the foot of the sidebar
-(`Alt+5`), each a button above the page.
+The full study pages, with every threshold, patient and chart, are on the
+no-install demo, [onsetnu.streamlit.app](https://onsetnu.streamlit.app/), and
+in `docs/`.
 
 ### Two analyses side by side
 
@@ -1087,10 +1075,7 @@ EOG* — because a batch cannot stop to ask about each file; check one file
 alone with *File → Open a file* first. A recording that fails is a row with
 the reason, and the batch goes on; Stop ends it between recordings. The
 table, each recording's ranking and the settings are written to a folder
-beside your current one. Double-click a row to open it in the window;
-*Add to your cohort…* measures it the way the Outcome study measures a
-patient, from the ranking the batch kept — the same numbers as adding it
-from the open window.
+beside your current one. Double-click a row to open it in the window.
 
 ![The batch read across its recordings](images/onset-review-batch-across.png)
 
@@ -1116,23 +1101,24 @@ read from the batch's `summary.csv` and `scores.csv`.
 **Open a batch…** in the same window brings back a batch run before — the
 recent ones are listed, or choose its folder — with its table, its charts and
 its settings. A batch keeps how each recording was asked for, so its rows
-open in the window and join your cohort as they did on the day it ran. (A
+open in the window as they did on the day it ran. (A
 batch written by 0.3.8 or earlier shows its table and charts, but its rows
 cannot be opened: run it again.)
 
 **File → Save project…** (`Ctrl+Shift+S`) keeps the recording and everything
 done with it in one `.onsetproj` file: the request with its preprocessing,
 your verdicts and findings paragraph, the editor's scripts, the console's
-variables and command history, your cohort and re-runs, and the page you were
-on. A file of your own can go inside it (asked when you save); otherwise the
-project keeps its location and a checksum, asks for it when it is not there,
-and says so if the file found is not the same one. **File → Open project…**,
-a double-click in the Files pane or `onset-review study.onsetproj` puts it all
-back and analyses the recording again from its request — so a project
-reopened is the same analysis, not a copy of its numbers. Your verdicts and
-cohort on this machine are kept beside the project's, never overwritten
-unseen. The console history comes back as a script in the editor, not as
-commands run.
+variables and command history, and the page you were on. A file of your own
+can go inside it (asked when you save); otherwise the project keeps its
+location and a checksum, asks for it when it is not there, and says so if the
+file found is not the same one. **File → Open project…**, a double-click in
+the Files pane or `onset-review study.onsetproj` puts it all back and analyses
+the recording again from its request — so a project reopened is the same
+analysis, not a copy of its numbers. Your verdicts on this machine are kept
+beside the project's, never overwritten unseen. The console history comes
+back as a script in the editor, not as commands run. A project saved by
+0.3.22 or earlier still opens; the `study/` folder it may carry is left
+unread.
 
 ### When something goes wrong
 

@@ -19,10 +19,12 @@ ones to [`data/outcome/`](../data/outcome), so every number here can be
 checked from a fresh clone with no download.
 
 **To read this study one patient at a time**, rather than as the group tables
-below, open **Library › Patients** in the desktop application: same
-study, one row per person, with the caveats that apply to each of them —
-resection coverage, tie-set size, and whether their answer held across the
-minutes of a run and across nights.
+below, open the **Patients** page of the no-install demo
+([onsetnu.streamlit.app](https://onsetnu.streamlit.app/)): same study, one row
+per person, with the caveats that apply to each of them — resection coverage,
+tie-set size, and whether their answer held across the minutes of a run and
+across nights. The desktop application's **Validation** page gives the study's
+result and where it fails, in summary.
 
 ---
 

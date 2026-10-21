@@ -92,7 +92,7 @@ For the research framing rather than the code, read
 | `notebooks/` | eight notebooks, each with a Colab badge; 06 and 08 need a GPU runtime |
 | `scripts/` | studies too long for a test: the model ladder, the sub-population screen, the multiplier ablation |
 | `app/` | the no-install demo: a Streamlit site over the committed results (`app/README.md`) |
-| `tests/` | about seventy files, 1,778 tests, all offline |
+| `tests/` | about seventy files, 1,710 tests, all offline |
 | `paper/` | **the preprint — untracked on purpose. Never commit it.** |
 
 ### `onset_hfo/` — the modules worth knowing first
@@ -188,10 +188,13 @@ All of these are load-bearing and none is obvious from reading the code.
    weighted score and it truncates to `int` and returns something meaningless
    that still looks like an answer. This is why §6c reports
    `candidates_resected` for one arm only.
-4. **The study pages' logic must not import Qt.** CI's main job installs only
-   `.[dev]`, which has no Qt. Everything the study pages decide lives in
-   `onset_review/studytables.py` and `onset_review/studies.py`, which import no
-   interface toolkit; a test enforces this for the loaders.
+4. **The Validation page's logic must not import Qt.** CI's main job installs
+   only `.[dev]`, which has no Qt. The page's text and figures live in
+   `onset_review/validation.py`, and the score of the open window in
+   `onset_review/thisrecording.py`, which import no interface toolkit; only
+   `onset_review/readingview.py`, which renders it, needs Qt. The demo's
+   loaders, `onset_review/studytables.py`, import no toolkit either; a test
+   enforces this for them.
 5. **`ONSET_HFO_OFFLINE=1` plus explicit `--subjects` runs most studies with no
    network at all**, because only the subject *listing* touches the archive.
    Two roadmap items sat marked "blocked on network" for weeks because nobody

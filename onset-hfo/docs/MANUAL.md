@@ -100,32 +100,34 @@ Start it from the applications menu, or type `onset-review`. It opens on
 
 ![Onset Review on Patient › Overview](images/onset-review-home.png)
 
-- **The sidebar** holds four places, with the Library at its foot:
+- **The sidebar** holds four places, with Validation at its foot:
   - **Patient**: the recordings on this machine and the ways to open one, and
     a patient's case;
   - **Review**: the open recording, its signal and its contacts;
   - **Assistant**: the local model;
   - **Report**;
-  - **Library**: the quick start guide and the study behind every number.
+  - **Validation**: what each kind of number was measured against, how well
+    it agreed, and where it fails.
 - **The pages inside a place** are the row of buttons above the page:
   *Overview · Case* under Patient, *Recording · Signal · Contacts · Map* under
   Review. This manual names a page by its place: **Review › Signal**.
 - **Before anything is open**, every page can still be visited. A page that
   needs a recording says what it shows and offers ways to open one.
-- **Quick start** (*Library*, **F1**, or *Help → Quick start guide*) lays the
-  program out as the jobs people come with. Every step on it is a link that
-  does the step.
+- **Quick start guide** (**F1**, *Help → Quick start guide*, or the link on
+  Patient › Overview) opens in its own window and lays the program out as the
+  jobs people come with. Every step on it is a link that does the step.
 - **Find a command** (**Ctrl+K**) searches every menu entry and page by any
   word and runs the one you pick.
-- **Alt+1 … Alt+5** go to the places, and **Ctrl+Page Down** and
-  **Ctrl+Page Up** to the next and previous page inside one.
+- **Alt+1 … Alt+5** go to the places (**Alt+6** to Analysis, in Analysis
+  mode), and **Ctrl+Page Down** and **Ctrl+Page Up** to the next and previous
+  page inside one.
 - **View → Analysis mode** adds Python on the recording: the Analysis place,
   and the Workspace and Files beside the pages
   ([Tutorial 9](#tutorial-9-your-own-analysis-in-python)). It is off until you
   turn it on.
 - **View → Interface size** enlarges text, icons and spacing together.
 
-![The Quick start page](images/onset-review-quickstart.png)
+![The Quick start guide](images/onset-review-quickstart.png)
 
 Everything shown in the window is local. The window starts offline; it
 reaches the internet only when you ask for something there, such as a
@@ -473,8 +475,7 @@ your work.
 
 - **Batch.** **File → Analyse many recordings…** queues recordings, runs them
   all with the same settings, and shows one table with the busiest channel of
-  each, the spread between detectors and any outlier. *Add to your cohort*
-  makes the batch a cohort for the study pages.
+  each, the spread between detectors and any outlier.
 
   ![A batch](images/onset-review-batch.png)
 
@@ -583,16 +584,17 @@ the notebooks in `notebooks/`.
 | **Assistant › This recording** | questions about this window, answered from its analysis |
 | **Assistant › Chat** | the local model on its own |
 | **Report** | the findings paragraph and the export |
-| **Library** | the quick start guide, and the published results (Detectors, Outcome, Patients, Ictal onset, Template map, Data, Architecture, Research) with this recording beside them |
+| **Validation** | what each kind of number was measured against on public data, how well it agreed and where it fails; with a recording that carries expert markings, that window scored too |
 | **Analysis** | in Analysis mode only: editor, console and workspace on the open recording; templates |
 
 ## Keyboard
 
 | keys | what they do |
 |---|---|
-| **F1** | Quick start |
+| **F1** | the Quick start guide |
 | **Ctrl+K** | find a command |
-| **Alt+1 … Alt+5** | Patient, Review, Assistant, Report, Library |
+| **Alt+1 … Alt+5** | Patient, Review, Assistant, Report, Validation |
+| **Alt+6** | Analysis, in Analysis mode |
 | **Ctrl+Page Down**, **Ctrl+Page Up** | the next and previous page inside a place |
 | **Ctrl+Shift+E** | Analysis mode on or off |
 | **Space** | review mode, from the trace or the side column |

@@ -171,7 +171,7 @@ is not a conservative analysis, it is a meaningless one.
 ### The window: four places in a sidebar
 
 The sidebar holds four places, **Patient**, **Review**, **Assistant** and
-**Report**, with the **Library** at its foot; hover one for what it is for.
+**Report**, with **Validation** at its foot; hover one for what it is for.
 The pages inside a place are a row of buttons above the page (*Recording ·
 Signal · Contacts · Map* under Review), and the same disclaimer is on every
 page: one line, the whole of it a click on *Read more* away. Above the page a
@@ -190,9 +190,11 @@ cards.
 | **Assistant › This recording** | the assistant, one card per exchange with a chip saying what the answer is (Checked, From the documents, Not checked, Refused) and the trace folded under it; a *Stop* button for a model taking too long, *New conversation*, the tick that lets it run the pipeline's analyses, and the box that gets a local Qwen onto this machine. A refusal says what the model wrote and which check it failed |
 | **Assistant › Chat** | the same local model on its own, not connected to the recording and checked by nothing, with a line at the top that says so. There before a recording is opened |
 
-`Alt+1` to `Alt+5` switch places, so do the entries at the top of **View**;
-`Ctrl+Page Down` and `Ctrl+Page Up` move between the pages inside one. The
-**Library** holds the quick start guide and the study's pages, described below.
+`Alt+1` to `Alt+5` switch places (`Alt+6` is Analysis, in Analysis mode), so
+do the entries at the top of **View**; `Ctrl+Page Down` and `Ctrl+Page Up`
+move between the pages inside one. **Validation** says what each kind of
+number was measured against, described below; the quick start guide opens in
+its own window (**F1**).
 The map has its own page beside Contacts (*Review › Map*), and the report is
 the **Report** place.
 Every boundary between regions — the sidebar and the page, the trend strip
@@ -268,10 +270,9 @@ double-click.
 **Many recordings, and projects.** *File → Analyse many recordings…*
 (`Ctrl+Shift+A`) analyses a list of cached windows and files of your own one
 after another, alike, into one table with a row each — files typed by one
-rule you state, failures kept as rows with their reason — and any row can join
-*Your cohort*. *File → Save project…* (`Ctrl+Shift+S`) keeps a recording and
-everything done with it — settings, verdicts, scripts, console variables,
-cohort — in one `.onsetproj` file that *File → Open project…* (or
+rule you state, failures kept as rows with their reason. *File → Save
+project…* (`Ctrl+Shift+S`) keeps a recording and everything done with it —
+settings, verdicts, scripts, console variables — in one `.onsetproj` file that *File → Open project…* (or
 `onset-review study.onsetproj`) reopens here or on another machine, analysing
 the recording again from its request. The batch window's **Across the batch**
 tab draws each recording's busiest channel with its interval on one chart,
@@ -306,44 +307,24 @@ bar says so.
 
 ![The Recording page with every pane closed and the sidebar hidden, on a 1366 × 768 screen](images/onset-review-page-only.png)
 
-The **Library** holds the quick start guide and the **study pages** of the results site —
-Detectors, Outcome, Patients, Data, Architecture, Research — built in the
-window from the same committed tables the site reads (`data/`), through the
-site's own loaders. They need no recording, so they are open before anything is
-loaded. Each opens with **What this page shows**: two or three plain sentences
-and up to four numbers, computed from the same tables as the page, for someone
-who reads nothing else on it. Detectors draws the threshold sweep as one line
-per detector with the chosen operating point marked, and Outcome draws every
-patient as a dot by outcome, both from the tables beside them. The text sits
-in a reading column; tables longer than ten rows are folded until *Show every
-table* is ticked; a glossary term on the page carries its definition as a
-tooltip. Under the text, **Ask about
-this page** puts a question to the local model with that page as its only
-material — every number in the answer must be on the page or the answer is
-marked refused — and answers from the page itself when no model is loaded.
-Its box takes more than one line (**Enter** asks, **Shift+Enter** starts a
-new line), and the grip under it drags it taller.
-Band, metric and patient are combo boxes above the text, and the
-Patients page can open a patient's cached window on the Recording page, which
-is the one link the site cannot make.
+**Validation** is one page. For each kind of number the window shows — the
+detected HFOs, the busiest channel against surgical outcome, the Epileptogenicity
+Index, contacts placed on the template — it says what that number was
+measured against on public data, how well it agreed, and where it fails, and
+names the full study in `docs/`. The figures are written into the program and
+a test holds them to the committed tables in `data/`, so the page reads the
+same on an install without the tables. It needs no recording, so it is open
+before anything is loaded. When the open window carries expert markings (the
+ds003498 patients' windows do), a section headed **This recording** at the
+top scores that window the way the detector study scored each patient,
+caveated as one window of one patient. The text sits in a reading column, and
+a glossary term on the page carries its definition as a tooltip.
 
-![A study page](images/onset-review-study.png)
+![The Validation page](images/onset-review-validation.png)
 
-With a recording open, each study page also carries a section headed **This
-recording**: the open window scored against its expert markings the way the
-study scored each patient, marked on the sweep (or the detectors' agreement
-where there are no markings); a study patient ringed on the outcome chart.
-**Explore the chart** opens the figure live — hover, click a patient to open
-them, drag the threshold. **Re-run with your settings** runs the Detectors or
-Outcome study again with your choices, in the background, and shows it dashed
-beside the published lines, labelled yours. **Add this recording to your
-cohort** measures your own patients the same way. **Open as notebook** opens the
-page as a notebook that rebuilds it. None of it changes a published number.
-
-They read the checkout, or the release
-bundle's `site/` folder, which `install.sh` copies next to the environment; on
-an install with neither the pages say so and point at the
-[results site](https://berdakh.github.io/onset-hfo/).
+The full study pages, with every threshold, patient and chart, are on the
+no-install demo, [onsetnu.streamlit.app](https://onsetnu.streamlit.app/), and
+in `docs/`.
 
 ![The window as it opens](images/onset-review-home.png)
 
@@ -424,8 +405,7 @@ refusal before the model is even called.
 
 Every release on <https://github.com/berdakh/onset-hfo/releases> carries
 `onset-hfo-<version>-linux.tar.gz`. It holds the wheel, this installer as
-`install.sh`, the menu entry and icon, these docs, and the `site/` folder the
-study pages read. No git, no checkout:
+`install.sh`, the menu entry and icon, and these docs. No git, no checkout:
 
 ```bash
 tar xzf onset-hfo-<version>-linux.tar.gz
@@ -514,8 +494,8 @@ screen** (`F11`) are there whatever your window manager does with title bars,
 and **View → Restore the default layout** undoes the dragging. On every page,
 with Analysis mode on or off, the window can be made as small as about
 1050 × 630 px. Below the size a page wants, its rows of buttons wrap, the
-Recording page's tabs scroll and the top of a Library page scrolls, rather than
-the window growing past the screen. A test keeps it within 1100 × 720 px.
+Recording page's tabs scroll, rather than the window growing past the
+screen. A test keeps it within 1100 × 720 px.
 
 **It opens but there is no trace** — check the window actually loaded:
 `onset-review --list` should show the window you picked. If the recording is

@@ -43,11 +43,15 @@ If they only take one sentence away, this is it:
 ## The five-minute demo
 
 Run it in the desktop application, installed from the latest release with
-`./install.sh --with-sample`. Rehearse this exact path; it needs no network
-and no data of theirs. The page names below map to the application as
-**Recording** → Review › Recording, **Report** → Report, **Assistant** →
-Assistant, and the cohort pages (**Detectors**, **Outcome**, **Patients**) →
-Library.
+`./install.sh --with-sample`. Rehearse this exact path; the application
+needs no network and no data of theirs. The page names below map to the
+application as **Recording** → Review › Recording, **Report** → Report and
+**Assistant** → Assistant. The cohort pages (**Detectors**, **Outcome**,
+**Patients**) are no longer in the application: they are on the no-install
+demo at [onsetnu.streamlit.app](https://onsetnu.streamlit.app/), which needs
+the network, so open it in a browser tab before the doors open. Offline, the
+application's **Validation** page gives each study's result and where it
+fails, on one page.
 
 ### 1 · Recording — "where does a number come from?" *(90 s)*
 
@@ -227,8 +231,8 @@ anyone claiming otherwise.
   ranking, report, outcome, all of it reads committed data. The page says why
   the figure is missing rather than breaking. Say "that panel fetches the
   original recording live; the measurements are all here."
-- **Have the Outcome page open in a second tab** at the *window* section. It
-  is the conversation you want.
+- **Have the demo's Outcome page open in a second tab** at the *window*
+  section. It is the conversation you want.
 - **A laptop beats a phone.** Three-panel figures and the ranking table need
   the width.
 - **Printed handout:** `site/handout.html`, also linked from the results site

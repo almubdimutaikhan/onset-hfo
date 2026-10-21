@@ -518,8 +518,8 @@ citations. A medical question that reaches that point is refused: nothing
 here can vouch for it. The scope refusals (treatment, diagnosis, another
 patient) run before any of this, as before.
 
-The installer copies `docs/` beside the study pages' `site/`, so an
-installed copy has the documents; a checkout reads its own.
+The installer copies `docs/` next to the environment, so an installed copy
+has the documents; a checkout reads its own.
 
 ## Trying it with a real model
 

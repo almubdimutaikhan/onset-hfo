@@ -34,8 +34,8 @@ Install the desktop application from the
 (`./install.sh --with-sample`, then `onset-review`), or run the notebooks in
 Colab with no install — the badge at the top of each notebook opens it. In the
 application a rate leads to the events behind it and an event leads to the
-signal it was measured on; the Library pages report the cohort studies from
-the committed tables.
+signal it was measured on; its Validation page says what each kind of number
+was measured against on public data, and where it fails.
 
 To look without installing anything, open the demo at
 [onsetnu.streamlit.app](https://onsetnu.streamlit.app/): the same results and
@@ -138,7 +138,8 @@ Read in this order:
 | What does the report contain? | [`onset_hfo/report.py`](../onset_hfo/report.py) |
 | Which contacts were resected, and how is that mapped to channels? | [`onset_hfo/clinical.py`](../onset_hfo/clinical.py) |
 | How is the outcome study computed, and what are its statistics? | [`onset_hfo/outcome.py`](../onset_hfo/outcome.py) |
-| What does the interface decide, and what does it only display? | [`onset_review/studytables.py`](../onset_review/studytables.py) |
+| What does the interface decide, and what does it only display? | [`onset_review/studytables.py`](../onset_review/studytables.py) (the demo's pages) |
+| What was each method measured to do, as the window's Validation page says? | [`onset_review/validation.py`](../onset_review/validation.py) |
 | What does the desktop window show, and where does each number come from? | [`onset_review/session.py`](../onset_review/session.py) and [`onset_review/trends.py`](../onset_review/trends.py) |
 | How is a span longer than memory analysed, and what does chunking cost? | [`onset_hfo/longrun.py`](../onset_hfo/longrun.py) and [`onset_hfo/streaming.py`](../onset_hfo/streaming.py) |
 | How are real electrode coordinates taken in, and what is checked about them? | [`onset_review/coordinates.py`](../onset_review/coordinates.py) |
