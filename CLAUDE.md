@@ -14,3 +14,12 @@ Only what the code does not show. For the project itself read `onset-hfo/README.
 - Never commit `paper/`, PDFs, recordings or `artifacts/`.
 - Work in the worktree you are given. Never push, open a PR or switch branches yourself.
 - Briefs and return records for multi-agent work are in `.claude/handoff/`; agent specs are in `.claude/agents/`.
+
+## How to orchestrate
+The main session is the manager. The agents report to it and none spawns another.
+- A small change in one layer skips the architect: give a developer a short brief (goal, files, acceptance commands).
+- A cross-layer change, or anything touching a contract, starts with `architect` writing `.claude/handoff/<slug>-brief.md`. Ask the user before changing a contract.
+- One worktree and one branch per task, from the current base. Run two developers in parallel only if the brief's file lists are disjoint; otherwise one after the other.
+- The developer writes `<slug>-return.md`. Then `qa-tester` reruns the brief's checks. Add `privacy-reviewer` for logs, exports or fixtures, `medical-reviewer` for clinical wording, and `docs-release` for docs or versions.
+- Before a PR is opened, `pr-verifier` checks its description and the papers it cites.
+- Never push, open a PR or merge without the user's say-so.
