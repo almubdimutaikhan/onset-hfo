@@ -1864,12 +1864,19 @@ The **Progression** tab shows how each seizure spread, one seizure at a time:
   order they changed and each change marked;
 - the **order of change**, each channel with its time from the marked onset
   and from the first channel to change;
-- the **map at a moment**: the placed contacts seen from above, coloured by
-  their energy ratio and ringed once they have changed, with the marked onset
-  zone dashed. Without placed contacts, the order is drawn as a timeline.
+- the **map at a moment**: the placed contacts coloured by their energy ratio
+  and ringed once they have changed, with the marked onset zone dashed. With
+  nilearn installed (it comes with the review extra) they are drawn on its
+  **glass brain**, the MNI152 template seen from the left, from above and from
+  the right, and the caption says whether the positions are the patient's,
+  registered from their MRI, or template positions; untick **Glass brain** to
+  see them from above instead. Without placed contacts, the order is drawn as
+  a timeline.
 
 Drag the slider to a moment, or press **Play** to watch the channels change
-one after another; **Save as PNG** keeps the picture. It shows when each
+one after another; the glass brain takes about half a second to draw, so Play
+runs at a couple of frames a second with it. **Save as PNG** keeps the
+picture. It shows when each
 channel's activity changed, not where the seizure starts: a channel that
 changes first is not thereby the onset zone, which is the clinician's to mark.
 Runs made before this tab existed kept no curves; run the analysis again to

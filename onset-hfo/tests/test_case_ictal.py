@@ -186,6 +186,49 @@ def test_the_heatmap_and_map_are_drawn_without_a_display(case, tmp_path):
     assert (tmp_path / "progression.png").stat().st_size > 0
 
 
+def _mni_positions(channels, z=True):
+    import pandas as pd
+
+    frame = pd.DataFrame({"channel": list(channels),
+                          "x": [-30.0 - 4 * i for i in range(len(channels))],
+                          "y": [-15.0] * len(channels), "placed": True})
+    if z:
+        frame["z"] = -15.0
+    return frame
+
+
+def test_the_map_is_a_glass_brain_when_the_contacts_are_in_mni_space(case, tmp_path):
+    pytest.importorskip("nilearn")
+    from matplotlib.figure import Figure
+
+    from onset_review import ictalprogression
+    from onset_review.caseictal import run_ictal
+
+    result = run_ictal(case)
+    prog = result.progression(result.analysed_seizures()[0])
+    figure = Figure(figsize=(8.0, 4.6))
+    positions = _mni_positions(prog.channels)
+    drawn = ictalprogression.draw(figure, prog, 2.0, positions, zone={prog.channels[0]},
+                                  kind="patient")
+    assert drawn["glass"] and drawn["map"] is True
+    texts = " ".join(t.get_text() for t in figure.texts)
+    assert "the patient's MRI, registered to MNI" in texts
+    assert "placed channels changed" in texts
+    figure.savefig(tmp_path / "glass.png")
+    assert (tmp_path / "glass.png").stat().st_size > 0
+    # Unticked, or without a z, the contacts are seen from above as before.
+    assert not ictalprogression.draw(figure, prog, 2.0, positions, glass=False)["glass"]
+    flat = ictalprogression.draw(figure, prog, 2.0, _mni_positions(prog.channels, z=False))
+    assert not flat["glass"] and flat["map"] is True
+
+
+def test_the_glass_brain_caption_says_where_the_positions_came_from():
+    from onset_review.ictalprogression import glass_caption
+
+    assert "template positions, approximate" in glass_caption()
+    assert "the patient's MRI and template positions" in glass_caption("mixed")
+
+
 def test_a_run_from_before_the_curves_were_kept_says_so(case):
     import shutil
 
@@ -219,5 +262,16 @@ def test_the_window_shows_the_progression_with_a_slider_and_play(qapp, case):
         view.play.setChecked(False)
         view.seizure.setCurrentIndex(1)
         assert view.prog is not None and view.order.rowCount() > 0
+        assert not view.glass.isEnabled(), "this case has no contacts placed"
+        if __import__("importlib").util.find_spec("nilearn") is not None:
+            view.set_result(view.result, _mni_positions(view.prog.channels), set(),
+                            "template")
+            assert view.glass.isEnabled() and view.last["glass"]
+            view.slider.setValue(view.slider.maximum())
+            assert view.at.text().startswith("+"), "the moment shows before the redraw"
+            view.settle.timeout.emit()
+            assert view.last["t"] == pytest.approx(view.moment())
+            view.glass.setChecked(False)
+            assert not view.last["glass"]
     finally:
         window.close()
