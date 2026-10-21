@@ -68,7 +68,8 @@ python -m onset_agent.cli --results artifacts/demo/sim-01_simulated_run-01 \
 ```
 
 Then open the desktop application (`pip install -e ".[review]"`, then
-`onset-review`) and ask the assistant which channels to resect. Watching it
+`onset-review`), or the no-install demo (`streamlit run app/Home.py` after
+`pip install -e ".[app]"`), and ask the assistant which channels to resect. Watching it
 refuse conveys the design philosophy faster than any document.
 
 For the research framing rather than the code, read
@@ -90,7 +91,8 @@ For the research framing rather than the code, read
 | `artifacts/` | **gitignored** — where runs actually write, and the dataset cache |
 | `notebooks/` | eight notebooks, each with a Colab badge; 06 and 08 need a GPU runtime |
 | `scripts/` | studies too long for a test: the model ladder, the sub-population screen, the multiplier ablation |
-| `tests/` | about seventy files, 1,737 tests, all offline |
+| `app/` | the no-install demo: a Streamlit site over the committed results (`app/README.md`) |
+| `tests/` | about seventy files, 1,751 tests, all offline |
 | `paper/` | **the preprint — untracked on purpose. Never commit it.** |
 
 ### `onset_hfo/` — the modules worth knowing first

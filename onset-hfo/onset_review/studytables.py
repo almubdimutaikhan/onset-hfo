@@ -29,9 +29,11 @@ this rule either. The event's times, frequency and amplitude all come from the
 store; the signal is fetched again only so the reader can *look* at the window
 the numbers describe. Nothing is re-detected.
 
-This module was the Streamlit site's view model (``app/panels.py``) until the
-site was retired in favour of the desktop application, whose study pages had
-already read the same tables through it.
+The no-install Streamlit demo (``app/``) reads the same tables through this
+module, so the demo and the desktop study pages cannot show different numbers.
+It was that site's ``app/panels.py`` until the site was retired in October
+2026; when the demo came back, its pages were pointed here instead of
+restoring a second copy.
 """
 
 from __future__ import annotations

@@ -121,9 +121,11 @@ module imports no interface toolkit and is tested offline
 built on — the interface shows what the pipeline wrote and computes nothing of
 its own — and its single documented exception.
 
-A Streamlit site (`app/`) served the same pages until October 2026; it was
-retired when the desktop application covered all of them, and its view model
-became `onset_review/studytables.py`.
+A Streamlit site (`app/`) shows the same results with no install, as a
+demo: it reads the committed tables through `onset_review/studytables.py`, the
+module the desktop study pages use, so the two cannot disagree. It was retired
+in October 2026 and restored as a demo after 0.3.21; `app/README.md` covers
+deploying it.
 
 ## Running it
 
