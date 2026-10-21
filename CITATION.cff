@@ -24,8 +24,7 @@ authors:
 repository-code: "https://github.com/berdakh/onset-hfo"
 url: "https://berdakh.github.io/onset-hfo/"
 license: MIT
-version: "0.3.21"
-doi: "10.5281/zenodo.23515781"
+version: "0.3.22"
 keywords:
   - intracranial EEG
   - high-frequency oscillations
