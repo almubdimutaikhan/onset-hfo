@@ -12,7 +12,7 @@ Only what the code does not show. For the project itself read `onset-hfo/README.
 - Tests are offline (`ONSET_HFO_OFFLINE=1`). Run `ruff check .` and `pytest -q` from `onset-hfo/`.
 - Never leave a failing test alone: fix it, or report it with its output.
 - Never commit `paper/`, PDFs, recordings or `artifacts/`.
-- Work in the worktree you are given. Never push, open a PR or switch branches yourself.
+- Work in the worktree you are given. You may push your own task branch, but never `main` or `master`, and never force-push. Do not switch branches, open a PR or merge without the user's say-so.
 - Briefs and return records for multi-agent work are in `.claude/handoff/`; agent specs are in `.claude/agents/`.
 
 ## How to orchestrate
@@ -22,4 +22,4 @@ The main session is the manager. The agents report to it and none spawns another
 - One worktree and one branch per task, from the current base. Run two developers in parallel only if the brief's file lists are disjoint; otherwise one after the other.
 - The developer writes `<slug>-return.md`. Then `qa-tester` reruns the brief's checks. Add `privacy-reviewer` for logs, exports or fixtures, `medical-reviewer` for clinical wording, and `docs-release` for docs or versions.
 - Before a PR is opened, `pr-verifier` checks its description and the papers it cites.
-- Never push, open a PR or merge without the user's say-so.
+- Agents may push their own task branch, never `main` or `master`, and never with force. Opening a PR or merging needs the user's say-so.
