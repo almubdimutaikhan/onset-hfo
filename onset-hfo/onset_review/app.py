@@ -961,16 +961,6 @@ class _Review:
             return state
         if state.read is not None:
             project.restore_read(state.request, state.read)
-        if state.manifest.get("study"):
-            replace = True
-            if ask:
-                replace = QMessageBox.question(
-                    host, "Your cohort and re-runs",
-                    "The project carries a cohort and re-runs of the study. Use them in place "
-                    "of this machine's? This machine's are kept in study/before-… either way.",
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) == QMessageBox.Yes
-            if replace:
-                project.restore_study(state)
         self._open_request(state.request)
         if self.parts is None or self.parts.session.request != state.request:
             return state

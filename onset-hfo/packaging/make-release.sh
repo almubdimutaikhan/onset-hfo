@@ -27,8 +27,8 @@ cp packaging/install-ubuntu.sh "${STAGE}/install.sh"
 cp packaging/onset-review.desktop packaging/onset-review.svg "${STAGE}/"
 cp README.md LICENSE "${STAGE}/"
 # The guides, and the documents the assistant answers background questions
-# from and the study pages draw their glossary tooltips from: install.sh
-# copies docs/ next to the environment, and the reviewer looks there.
+# from: install.sh copies docs/ next to the environment, and the reviewer
+# looks there.
 mkdir -p "${STAGE}/docs"
 cp docs/INSTALL.md docs/CLINICAL_GUIDE.md docs/AGENT.md docs/LIMITATIONS.md \
    docs/GLOSSARY.md docs/METHODS.md docs/EVALUATION.md docs/OUTCOME.md docs/ICTAL.md \
@@ -44,14 +44,6 @@ cp docs/images/onset-review.png docs/images/onset-review-analysis.png \
 # The manual's own pictures, so docs/MANUAL.md reads offline.
 grep -o 'images/[A-Za-z0-9_.-]*' docs/MANUAL.md | sort -u \
   | while read -r image; do cp "docs/${image}" "${STAGE}/docs/images/"; done
-# The study pages: the committed tables they read, and the two figures the
-# Outcome page shows. install.sh copies site/ next to the environment and the
-# reviewer finds it there (onset_review.studies.site_root).
-mkdir -p "${STAGE}/site/data" "${STAGE}/site/docs/img"
-for table in benchmark outcome stability cohort ictal template hup imaging; do
-  cp -R "data/${table}" "${STAGE}/site/data/"
-done
-cp docs/img/window_stability.png docs/img/run_stability.png "${STAGE}/site/docs/img/"
 chmod +x "${STAGE}/install.sh"
 tar -C dist -czf "dist/${NAME}.tar.gz" "${NAME}"
 rm -rf "${STAGE}"

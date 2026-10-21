@@ -151,11 +151,10 @@ if [[ "${SKIP_INSTALL}" == "0" ]]; then
   if [[ -n "${BUNDLE_WHEEL}" && ! -f "${HERE}/pyproject.toml" ]]; then
     say "Installing the release wheel with the desktop reviewer (a few minutes)"
     run "${VENV_PY}" -m pip install --quiet "${BUNDLE_WHEEL}[${EXTRAS}]"
-    if [[ -d "${HERE}/site" ]]; then
-      # The study pages' loaders and tables, which the wheel does not carry.
-      say "Installing the study pages' tables in ${PREFIX}/site"
+    if [[ -d "${PREFIX}/site" ]]; then
+      # The study pages' tables, installed by 0.3.22 and earlier; nothing reads them now.
+      say "Removing the study pages' tables an earlier version installed in ${PREFIX}/site"
       run rm -rf "${PREFIX}/site"
-      run cp -R "${HERE}/site" "${PREFIX}/site"
     fi
     if [[ -d "${HERE}/docs" ]]; then
       say "Installing the documents the assistant answers background questions from in ${PREFIX}/docs"

@@ -10,7 +10,7 @@ is true and `onset_review.window` decides how it looks. A panel that wants a
 number asks for it here; nothing downstream recomputes a rate.
 
 Nothing here is new analysis. Every number comes from the same functions the
-command line, the report and the study pages use -- `prepare`, the detector
+command line, the report and the cohort studies use -- `prepare`, the detector
 registry, `channel_rates`, `leader_separation`, `candidate_channels` -- so a
 rate read off the screen is the rate the paper quotes. That constraint is the
 reason this module is thin.

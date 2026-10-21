@@ -1335,7 +1335,7 @@ def _menus(figure, host: QMainWindow, panels: dict, docks: dict,
         from onset_review.pages import sections
 
         for index, (key, label, _inside) in enumerate(sections(analysis=False), start=1):
-            if key == "library":
+            if key == "validation":
                 view.addSeparator()
             entry = view.addAction(f"&{label}")
             entry.setToolTip(f"Alt+{index}")

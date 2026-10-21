@@ -12,7 +12,6 @@ that each control calls the browser method it claims to.
 from __future__ import annotations
 
 import dataclasses
-import re
 
 import numpy as np
 import pytest
@@ -2281,14 +2280,13 @@ def test_the_page_window_is_its_own_window_and_holds_every_panel(paged):
 
 def test_the_sidebar_lists_the_places_and_every_page_is_in_one(paged):
     from onset_review.pages import GUIDE_PAGES, PAGES, sections
-    from onset_review.studies import STUDIES
 
     nav = paged.pages.nav
     places = [nav.item(i) for i in range(nav.count()) if nav.item(i).data(Qt.UserRole)]
     assert [i.text() for i in places if not i.isHidden()] == \
-        ["Patient", "Review", "Assistant", "Report", "Library"]
-    assert paged.pages.page_keys() == [k for k, _ in PAGES] + [k for k, _, _ in STUDIES] \
-        + ["chat"] + [k for k, _ in GUIDE_PAGES]
+        ["Patient", "Review", "Assistant", "Report", "Validation"]
+    assert paged.pages.page_keys() == [k for k, _ in PAGES] + ["chat"] \
+        + [k for k, _ in GUIDE_PAGES]
     inside = [page for _key, _label, pages in sections() for page, _ in pages]
     assert sorted(inside) == sorted(paged.pages.page_keys()), "each page in one place"
     assert len(inside) == len(set(inside))
@@ -2341,7 +2339,7 @@ def test_the_report_page_renders_the_review_as_it_will_be_exported(paged, review
 def test_the_view_menu_switches_arrangements_both_ways(paged, built):
     actions = _actions(_menu(paged.host, "View"))
     assert "Everything at once (docked panels)" in actions
-    for label in ("Patient", "Review", "Assistant", "Report", "Library"):
+    for label in ("Patient", "Review", "Assistant", "Report", "Validation"):
         assert label in actions, f"the View menu should list the {label} place"
     actions["Everything at once (docked panels)"].trigger()
     assert paged.calls["relayout"] == ["docks"]
@@ -2530,59 +2528,29 @@ def test_the_file_menu_of_the_full_window_opens_recordings_and_files(paged):
         "the fixture gave it no chooser, so it says so rather than doing nothing"
 
 
-# -- the study pages -----------------------------------------------------------
+# -- the validation page ------------------------------------------------------
 
 
-def test_the_study_pages_are_open_in_both_states(paged, qapp):
+def test_the_validation_page_is_open_in_both_states(paged, qapp):
     from onset_review import window
-    from onset_review.studies import STUDIES
 
-    for key, _label, _what in STUDIES:
-        assert key in paged.pages.page_keys()
-        assert paged.pages.show_page(key), f"{key} opens on a loaded window"
+    assert paged.pages.show_page("validation"), "it opens on a loaded window"
+    assert "Finding HFOs" in paged.pages.stack.currentWidget().view.toPlainText()
     start = window.decorate_start(cached=lambda: None)
     try:
-        assert start.show_page("outcome"), "no recording is needed for the study"
-        assert start.current_page() == "outcome"
-        assert "Surgical outcome" in start.stack.currentWidget().view.toPlainText()
+        assert start.show_page("validation"), "no recording is needed for it"
+        assert start.current_page() == "validation"
+        assert "Interictal HFOs and surgical outcome" in \
+            start.stack.currentWidget().view.toPlainText()
     finally:
         start.close()
 
 
-def test_a_study_page_renders_its_tables_and_rebuilds_on_a_choice(paged):
-    pages = paged.pages
-    pages.show_page("detectors")
-    page = pages.stack.currentWidget()
-    text = page.view.toPlainText()
-    assert "Detectors and how they are scored" in text
-    assert "threshold (SD)" in text, "the sweep table rendered"
-    page.combos["band"].setCurrentIndex(page.combos["band"].findData("fast_ripple"))
-    assert "Fast ripples" in page.view.toPlainText()
-
-
-def test_the_patients_page_opens_a_cached_window_of_the_patient(paged):
-    pages = paged.pages
-    pages.show_page("patients")
-    page = pages.stack.currentWidget()
-    subject = page.combos["subject"]
-    assert subject.count() == 20
-    # The fixture's cache holds sub-01 only.
-    subject.setCurrentIndex(subject.findData("sub-01"))
-    assert page.open_button.isEnabled()
-    before = len(paged.calls["opened"])
-    page.open_button.click()
-    assert paged.calls["opened"][-1]["subject"] == "sub-01"
-    assert len(paged.calls["opened"]) == before + 1
-    subject.setCurrentIndex(subject.findData("sub-02"))
-    assert not page.open_button.isEnabled(), "nothing of sub-02 is cached"
-
-
-def test_the_view_menu_reaches_the_study_pages_through_the_library(paged):
+def test_the_view_menu_reaches_validation(paged):
     actions = _actions(_menu(paged.host, "View"))
-    actions["Library"].trigger()
-    assert paged.pages.current_section() == "library"
-    for key in ("detectors", "outcome", "patients", "research"):
-        assert key in paged.pages.segment_buttons
+    actions["Validation"].trigger()
+    assert paged.pages.current_section() == "validation"
+    assert paged.pages.current_page() == "validation"
 
 
 # -- regions a mouse can drag ---------------------------------------------------
@@ -3715,54 +3683,14 @@ def test_the_assistant_question_box_takes_lines_and_can_be_dragged_taller(qapp, 
         panel.deleteLater()
 
 
-def test_the_study_page_question_box_has_a_grip_that_drags_it_taller(qapp, monkeypatch):
-    from qtpy.QtCore import QEvent, QPoint, Qt
-    from qtpy.QtGui import QKeyEvent
-    from qtpy.QtTest import QTest
-
-    from onset_review.promptbox import GrowHandle, PromptBox
-    from onset_review.studypages import PageAsk
-
-    box = PageAsk()
-    asked = []
-    monkeypatch.setattr(box, "ask", lambda question=None: asked.append(box.question.text()))
-    box.question.returnPressed.disconnect()
-    box.question.returnPressed.connect(box.ask)
-    try:
-        box.resize(900, 200)
-        box.show()
-        qapp.processEvents()
-        assert isinstance(box.question, PromptBox) and isinstance(box.grow, GrowHandle)
-        box.question.setText("Summarise this page.")
-        box.question.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.ShiftModifier))
-        box.question.insertPlainText("Then the main number.")
-        box.question.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Return, Qt.NoModifier))
-        assert asked == ["Summarise this page.\nThen the main number."]
-
-        before = box.question.height()
-        QTest.mousePress(box.grow, Qt.LeftButton, Qt.NoModifier, QPoint(40, 4))
-        QTest.mouseMove(box.grow, QPoint(40, 124))
-        QTest.mouseRelease(box.grow, Qt.LeftButton, Qt.NoModifier, QPoint(40, 124))
-        qapp.processEvents()
-        assert box.question.height() == before + 120
-        # Never shorter than a line, never taller than its limit.
-        box.grow.resize_target(1)
-        assert box.question.height() == box.question._height(1)
-        box.grow.resize_target(10_000)
-        assert box.question.height() == box.question._height(GrowHandle.MAX_LINES)
-    finally:
-        box.deleteLater()
-
-
 # The Apple pass: a source list with glyphs, a toolbar that names the page and
 # carries its buttons, panels on cards, and colour spent on the exceptions.
 
 def test_every_sidebar_entry_has_a_drawn_glyph(qapp):
     from onset_review import glyphs, theme
-    from onset_review.pages import CHAT_PAGE, PAGES
-    from onset_review.studies import STUDIES
+    from onset_review.pages import CHAT_PAGE, PAGES, SECTION_GLYPHS
 
-    keys = [k for k, _ in PAGES] + [k for k, _, _ in STUDIES] + [CHAT_PAGE[0]]
+    keys = [k for k, _ in PAGES] + [CHAT_PAGE[0]] + list(SECTION_GLYPHS.values())
     assert set(keys) <= set(glyphs.NAMES), "a page without a glyph gets a dot"
     for key in keys:
         pixmap = glyphs.glyph(key, theme.LIGHT.text_muted)
@@ -3808,10 +3736,10 @@ def test_panels_sit_on_cards_and_a_card_page_answers_for_its_body(paged, qapp):
     from qtpy.QtWidgets import QFrame
 
     pages = paged.pages
-    pages.show_page("detectors")
+    pages.show_page("validation")
     page = pages.stack.currentWidget()
-    assert page.objectName() == "page_detectors"
-    assert page.view is page.body.view, "the study page's view, through the card"
+    assert page.objectName() == "page_validation"
+    assert page.view is page.body.view, "the validation page's view, through the card"
     assert callable(page.refresh)
     with pytest.raises(AttributeError):
         page.no_such_thing      # noqa: B018 - the point is the raise
@@ -3895,112 +3823,25 @@ def test_the_verdict_rows_are_segmented_controls_that_show_the_verdict(judging, 
     assert not any(b.isChecked() for b in events.buttons.values())
 
 
-# The study pages for a newcomer: a key message card, a reading column with
-# glossary tooltips and folded tables, and a box that asks about the page.
+# The Validation page reads like a page: a reading column, tables without a
+# grid, and the glossary's definitions on its terms.
 
-def test_a_study_page_opens_with_its_key_message_and_tiles(paged):
-    from onset_review import studies
+def test_the_validation_page_is_set_for_reading_with_glossary_terms(paged):
+    from onset_review.readingview import ReadingView
 
     pages = paged.pages
-    pages.show_page("outcome")
-    page = pages.stack.currentWidget()
-    message = studies.key_message("outcome")
-    assert page.lead.text() == message["lead"]
-    tiles = [w for w in page.key_card.findChildren(qt.QLabel) if w.objectName() == "onset_tile"]
-    assert len(tiles) == len(message["tiles"])
-    assert "0.71" in tiles[0].text()
-    assert page.key_card.isAncestorOf(page.lead)
-
-
-def test_a_study_page_folds_long_tables_and_marks_glossary_terms(paged):
-    pages = paged.pages
-    pages.show_page("detectors")
-    page = pages.stack.currentWidget()
-    page.combos["band"].setCurrentIndex(page.combos["band"].findData("ripple"))
-    assert not page.show_tables.isChecked()
-    text = page.view.toPlainText()
-    assert text.count("is folded") >= 2 and "Every column" in text
-    assert "1.750" not in text, "the sweep's rows wait behind the tick"
-    page.show_tables.setChecked(True)
-    assert "1.750" in page.view.toPlainText()
-    page.show_tables.setChecked(False)
-    # A glossary term on the page carries its definition.
-    document = page.view.document()
+    pages.show_page("validation")
+    view = pages.stack.currentWidget().view
+    assert isinstance(view, ReadingView)
+    assert view.document().defaultFont().pointSizeF() >= 11.0
+    document = view.document()
     cursor = document.find("HFO")
     assert not cursor.isNull()
     tip = ""
     while not cursor.isNull() and not tip:
         tip = cursor.charFormat().toolTip()
         cursor = document.find("HFO", cursor)
-    assert "oscillation" in tip.lower()
-    assert page.view.document().defaultFont().pointSizeF() >= 11.0
-    assert page.text.startswith("# Detectors"), "the whole page, tables and all, is kept"
-
-
-def test_the_ask_box_answers_from_the_page_without_a_model(paged, monkeypatch):
-    from onset_review import studies, studypages
-    from onset_review.assistant_config import AssistantDefaults
-
-    monkeypatch.setattr(studypages, "load_defaults", lambda: AssistantDefaults())
-    pages = paged.pages
-    pages.show_page("patients")
-    page = pages.stack.currentWidget()
-    answer = page.ask.ask("Summarise this page")
-    assert answer is not None and not answer.refused
-    assert page.ask.answer.isVisible() or not page.ask.answer.isHidden()
-    lead = studies.key_message("patients", band="fast_ripple", scope="reviewed")["lead"]
-    assert answer.text == lead
-    assert "Checked against this page" in page.ask.verdict.text()
-    chips = [b for b in page.ask.findChildren(qt.QPushButton) if b.property("suggested")]
-    assert len(chips) == 3
-    page.ask.question.clear()
-    assert page.ask.ask() is None, "an empty box asks nothing"
-
-
-def test_the_ask_box_shows_a_refusal_as_one(paged, monkeypatch):
-    from onset_review import studypages
-    from onset_review.assistant_config import AssistantDefaults
-
-    class Liar:
-        is_language_model = True
-        name = "fake:liar"
-
-        def chat(self, messages, tools):
-            from onset_agent.backends import AssistantMessage
-
-            return AssistantMessage(content="There were 7777 patients.")
-
-        def abort(self):
-            pass
-
-    monkeypatch.setattr(studypages, "load_defaults",
-                        lambda: AssistantDefaults(kind="ollama", model="x",
-                                                  base_url="http://127.0.0.1:1/v1"))
-    monkeypatch.setattr(studypages, "make_backend", lambda *a, **k: Liar())
-    pages = paged.pages
-    pages.show_page("data")
-    page = pages.stack.currentWidget()
-    answer = page.ask.ask("How many patients?")
-    assert answer.refused and "7777" in answer.reason
-    assert page.ask.verdict.text().startswith("Refused")
-
-
-def test_the_detectors_and_outcome_pages_show_their_figures(paged):
-    pages = paged.pages
-    for key, alt in (("detectors", "threshold sweep"), ("outcome", "Every patient")):
-        pages.show_page(key)
-        page = pages.stack.currentWidget()
-        assert alt in page.text, f"the {key} page embeds its figure"
-        html = page.view.document().toHtml()
-        assert "onset-figure-" in html, f"the {key} figure is loaded into the document"
-        # And resolves: a resource added before the text was set was cleared
-        # with it, and the page showed a broken-image icon.
-        from qtpy.QtCore import QUrl
-        from qtpy.QtGui import QTextDocument
-
-        for name in re.findall(r'src="(onset-figure-[^"]+)"', html):
-            image = page.view.document().resource(QTextDocument.ImageResource, QUrl(name))
-            assert image is not None and not image.isNull(), f"{key}: {name} did not resolve"
+    assert "oscillation" in tip.lower(), "a glossary term carries its definition"
 
 
 # Home as a start screen, and the assistant's transcript as cards.

@@ -21,11 +21,8 @@ from qtpy.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
 __all__ = ["glyph", "icon", "NAMES"]
 
 #: The glyphs there are, by the sidebar key they are drawn beside.
-NAMES = ("home", "quickstart", "case", "recording", "analysis", "contacts", "map", "quality", "report",
-         "assistant",
-         "detectors", "outcome", "patients", "ictal", "template", "data", "architecture",
-         "research",
-         "chat")
+NAMES = ("home", "case", "recording", "analysis", "contacts", "map", "quality", "report",
+         "assistant", "patients", "research", "chat")
 
 #: Stroke weight on the sixteen-point grid; the same for every glyph.
 STROKE = 1.5
@@ -98,41 +95,11 @@ def _assistant(p: QPainter, c: QColor) -> None:
     _polyline(p, [(5.5, 6.5), (7.25, 8.25), (10.5, 4.75)])
 
 
-def _detectors(p: QPainter, c: QColor) -> None:
-    p.drawEllipse(QPointF(6.5, 6.5), 4.5, 4.5)
-    p.drawLine(QPointF(9.9, 9.9), QPointF(14, 14))
-
-
-def _outcome(p: QPainter, c: QColor) -> None:
-    for x, top in ((3, 9), (7, 5), (11, 2.5)):
-        p.drawRect(QRectF(x, top, 2.5, 14 - top))
-
-
 def _patients(p: QPainter, c: QColor) -> None:
     p.drawEllipse(QPointF(8, 5), 2.75, 2.75)
     path = QPainterPath(QPointF(2.5, 14.5))
     path.cubicTo(2.5, 9.5, 13.5, 9.5, 13.5, 14.5)
     p.drawPath(path)
-
-
-def _data(p: QPainter, c: QColor) -> None:
-    p.drawEllipse(QRectF(3, 2, 10, 4))
-    p.drawLine(QPointF(3, 4), QPointF(3, 12))
-    p.drawLine(QPointF(13, 4), QPointF(13, 12))
-    path = QPainterPath(QPointF(3, 12))
-    path.cubicTo(3, 14.6, 13, 14.6, 13, 12)
-    p.drawPath(path)
-    path = QPainterPath(QPointF(3, 8))
-    path.cubicTo(3, 10.6, 13, 10.6, 13, 8)
-    p.drawPath(path)
-
-
-def _architecture(p: QPainter, c: QColor) -> None:
-    p.drawRect(QRectF(2, 2, 5, 4.5))
-    p.drawRect(QRectF(9, 2, 5, 4.5))
-    p.drawRect(QRectF(5.5, 9.5, 5, 4.5))
-    p.drawLine(QPointF(4.5, 6.5), QPointF(8, 9.5))
-    p.drawLine(QPointF(11.5, 6.5), QPointF(8, 9.5))
 
 
 def _research(p: QPainter, c: QColor) -> None:
@@ -145,26 +112,6 @@ def _research(p: QPainter, c: QColor) -> None:
     path.cubicTo(12, 2.5, 9.5, 2.5, 8, 4)
     p.drawPath(path)
     p.drawLine(QPointF(8, 4), QPointF(8, 13.5))
-
-
-def _ictal(p: QPainter, c: QColor) -> None:
-    # A seizure's onset: a flat line that breaks into fast activity.
-    _polyline(p, [(1.5, 8), (5.5, 8), (6.5, 4), (7.5, 12), (8.5, 3), (9.5, 13),
-                  (10.5, 4.5), (11.5, 11.5), (12.5, 6.5), (14.5, 8)])
-
-
-def _template(p: QPainter, c: QColor) -> None:
-    # A head outline with a crosshair: a position on a template.
-    p.drawEllipse(QRectF(2, 2.5, 12, 11))
-    p.drawLine(QPointF(8, 4.5), QPointF(8, 11.5))
-    p.drawLine(QPointF(4.5, 8), QPointF(11.5, 8))
-
-
-def _quickstart(p: QPainter, c: QColor) -> None:
-    # A signpost: where to go from here.
-    p.drawLine(QPointF(8, 2), QPointF(8, 14.5))
-    _polyline(p, [(3, 4), (12, 4), (14, 5.75), (12, 7.5), (3, 7.5), (3, 4)])
-    _polyline(p, [(13, 9), (4, 9), (2, 10.75), (4, 12.5), (13, 12.5), (13, 9)])
 
 
 def _case(p: QPainter, c: QColor) -> None:
@@ -197,12 +144,9 @@ def _chat(p: QPainter, c: QColor) -> None:
 
 
 _DRAW = {
-    "home": _home, "quickstart": _quickstart, "case": _case, "recording": _recording, "analysis": _analysis,
+    "home": _home, "case": _case, "recording": _recording, "analysis": _analysis,
     "contacts": _contacts, "map": _map, "quality": _quality, "report": _report, "assistant": _assistant,
-    "detectors": _detectors, "outcome": _outcome, "patients": _patients,
-    "ictal": _ictal, "template": _template,
-    "data": _data, "architecture": _architecture, "research": _research,
-    "chat": _chat, "workspace": _workspace,
+    "patients": _patients, "research": _research, "chat": _chat, "workspace": _workspace,
 }
 
 

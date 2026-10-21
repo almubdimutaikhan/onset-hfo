@@ -66,25 +66,25 @@ def test_every_page_can_be_looked_at_before_anything_is_open(start):
     page.buttons["do:open-file"].click()
     assert start.calls["chosen"] == 1 and start.calls["imported"] == 1
     page.buttons["page:quickstart"].click()
-    assert start.current_page() == "quickstart"
+    assert start._quickstart_dialog.isVisible(), "the guide opens beside the window"
+    start._quickstart_dialog.close()
     # The sidebar is places, not pages: nothing in it but the places and
-    # one blank gap before the Library.
+    # one blank gap before Validation.
     rows = [(start.nav.item(i).text(), start.nav.item(i).data(Qt.UserRole))
             for i in range(start.nav.count())]
     assert [text for text, key in rows if key] == ["Patient", "Review", "Assistant",
-                                                   "Report", "Library", "Analysis"]
+                                                   "Report", "Validation", "Analysis"]
     assert [text for text, key in rows if not key] == [""]
 
 
 def test_the_guides_links_do_what_they_say(start):
-    assert start.show_page("quickstart")
-    page = start.quickstart
+    page = guide.show_quickstart(start).page
     text = page.browser.toPlainText()
     for words in ("Look at a recording", "Work up a patient", "Read the evidence",
                   "Ask the local model", "Your own analysis", "Every menu entry",
-                  "Ictal onset", "Open a file…", "Open from OpenNeuro…"):
+                  "Epileptogenicity Index", "Open a file…", "Open from OpenNeuro…"):
         assert words in text, words
-    assert page.run("page:detectors") and start.current_page() == "detectors"
+    assert page.run("page:validation") and start.current_page() == "validation"
     for target, counter in (("do:open-recording", "chosen"), ("do:open-file", "imported"),
                             ("do:new-case", "new_case"), ("do:open-case", "open_case"),
                             ("do:batch", "batch"), ("do:openneuro", "openneuro")):
@@ -96,9 +96,7 @@ def test_the_menu_list_is_read_from_the_menus(start):
     help_menu = next(a.menu() for a in start.menuBar().actions()
                      if a.text().replace("&", "") == "Help")
     help_menu.addAction("A brand-new entry")
-    start.show_page("home")
-    start.show_page("quickstart")
-    assert "A brand-new entry" in start.quickstart.browser.toPlainText()
+    assert "A brand-new entry" in guide.show_quickstart(start).page.browser.toPlainText()
 
 
 def test_find_a_command_by_any_word_and_run_it(start):
@@ -108,10 +106,10 @@ def test_find_a_command_by_any_word_and_run_it(start):
     assert entry["text"] == "New case…" and entry["where"] == "File"
     assert palette.run_current() and start.calls["new_case"] == 1
     palette = guide.open_palette(start, show=False)
-    assert palette.filter("removal cured") >= 1, "a page found by the words of its tooltip"
-    assert palette.list.currentItem().data(Qt.UserRole)["text"] == "Library › Outcome"
+    assert palette.filter("surgical outcome") >= 1, "a page found by the words of its tooltip"
+    assert palette.list.currentItem().data(Qt.UserRole)["text"] == "Validation"
     palette.run_current()
-    assert start.current_page() == "outcome"
+    assert start.current_page() == "validation"
     assert guide.open_palette(start, show=False).filter("zzz nothing") == 0
 
 

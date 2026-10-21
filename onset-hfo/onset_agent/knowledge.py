@@ -25,7 +25,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-__all__ = ["Section", "docs_dir", "load_sections", "split_document", "retrieve",
+__all__ = ["Section", "docs_dir", "load_sections", "retrieve",
            "title_match", "kind_of", "follows_up", "looks_medical", "numbers_in", "plain",
            "glossary", "DOCUMENTS"]
 
@@ -152,12 +152,6 @@ def load_sections(root: Path | None = None, documents: tuple = DOCUMENTS) -> lis
             continue
         sections.extend(_split_document(name, _strip_markup(path.read_text(encoding="utf-8"))))
     return sections
-
-
-def split_document(name: str, text: str) -> list[Section]:
-    """A document's sections, for a text that is not one of the shipped
-    documents: a study page built in the window, say."""
-    return _split_document(name, text)
 
 
 #: Glossary entries that are code names rather than terms a page uses.

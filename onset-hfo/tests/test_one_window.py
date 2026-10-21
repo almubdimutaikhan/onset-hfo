@@ -3,7 +3,7 @@
 The redesign's first step. What has to hold:
 
 * the sidebar is the places, not the pages: Patient, Review, Assistant and
-  Report, the Library at its foot, and Analysis only in Analysis mode; the
+  Report, Validation at its foot, and Analysis only in Analysis mode; the
   pages inside a place are a segmented control above the page, and every
   page is still reached by its key;
 * Analysis mode is off until asked for: no Analysis place, no Workspace or
@@ -72,7 +72,7 @@ def test_the_sidebar_is_places_and_a_place_s_pages_are_its_segments(start):
 
     places = [start.nav.item(i).data(Qt.UserRole) for i in range(start.nav.count())
               if start.nav.item(i).data(Qt.UserRole)]
-    assert places == ["patient", "review", "ask", "report", "library", "code"]
+    assert places == ["patient", "review", "ask", "report", "validation", "code"]
     assert start.current_page() == "home" and start.title.text() == "Patient"
     assert list(start.segment_buttons) == ["home", "case"]
 
@@ -115,7 +115,7 @@ def test_every_page_has_a_name_the_command_search_finds(start):
     assert set(entries) == set(start.page_keys())
     assert entries["quality"]["label"] == "Review › Signal"
     assert entries["report"]["label"] == "Report"
-    assert entries["outcome"]["label"] == "Library › Outcome"
+    assert entries["validation"]["label"] == "Validation"
     from qtpy.QtCore import Qt
 
     palette = guide.open_palette(start, show=False)
