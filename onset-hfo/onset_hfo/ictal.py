@@ -36,7 +36,7 @@ import numpy as np
 import pandas as pd
 
 __all__ = ["IctalSettings", "energy_ratio", "page_hinkley", "epileptogenicity",
-           "combine", "EI_CUTOFF", "EI_COLUMNS"]
+           "progression", "Progression", "combine", "EI_CUTOFF", "EI_COLUMNS"]
 
 #: An index at or above this is taken as "involved early and strongly"
 #: (the threshold the method's authors used to delineate the zone).
@@ -124,6 +124,24 @@ def page_hinkley(x: np.ndarray, bias: float, threshold: float) -> tuple[int | No
     return alarm, change
 
 
+@dataclass(frozen=True)
+class Progression:
+    """How a seizure spread: every contact's energy ratio over time, and the
+    index table it gives.
+
+    `ratio` is contacts x windows, each contact divided by its own median in
+    the baseline (1 is "as usual"); `times` are window centres in seconds from
+    the marked onset. `table` is :func:`epileptogenicity`'s, whose `change_s`
+    is when each contact changed. Nothing here is computed that the index did
+    not already compute: this is the index's own working, kept.
+    """
+
+    times: np.ndarray
+    channels: tuple[str, ...]
+    ratio: np.ndarray
+    table: pd.DataFrame
+
+
 def epileptogenicity(data: np.ndarray, ch_names: list[str], sfreq: float, onset_s: float,
                      settings: IctalSettings = IctalSettings(), start_s: float = 0.0
                      ) -> pd.DataFrame:
@@ -131,6 +149,15 @@ def epileptogenicity(data: np.ndarray, ch_names: list[str], sfreq: float, onset_
     any unit) starts at `start_s`; `onset_s` is the marked electrographic
     onset in the same time base. Times in the result are seconds from the
     marked onset (negative: before it)."""
+    return progression(data, ch_names, sfreq, onset_s, settings, start_s).table
+
+
+def progression(data: np.ndarray, ch_names: list[str], sfreq: float, onset_s: float,
+                settings: IctalSettings = IctalSettings(), start_s: float = 0.0
+                ) -> Progression:
+    """:func:`epileptogenicity`, with the normalised energy ratio of every
+    contact over time kept beside the table, for drawing how the seizure
+    spread. Same arguments, same table."""
     centres, ratios = energy_ratio(data, sfreq, settings)
     times = centres + float(start_s) - float(onset_s)
     base = (times >= -settings.pre_s) & (times <= -settings.baseline_gap_s)
@@ -165,7 +192,8 @@ def epileptogenicity(data: np.ndarray, ch_names: list[str], sfreq: float, onset_
     frame = pd.DataFrame({"channel": list(ch_names), "ei": ei, "detected": detected,
                           "change_s": changes, "alarm_s": alarms, "er_after": after})
     frame["rank"] = frame["ei"].rank(ascending=False, method="min").astype(int)
-    return frame.sort_values(["rank", "channel"]).reset_index(drop=True)[list(EI_COLUMNS)]
+    table = frame.sort_values(["rank", "channel"]).reset_index(drop=True)[list(EI_COLUMNS)]
+    return Progression(times=times, channels=tuple(ch_names), ratio=normalised, table=table)
 
 
 def combine(seizures: dict[str, pd.DataFrame], cutoff: float = EI_CUTOFF) -> pd.DataFrame:

@@ -90,6 +90,32 @@ class IctalResult:
     def n_analysed(self) -> int:
         return int((self.seizures["status"] == "ok").sum()) if len(self.seizures) else 0
 
+    def progression(self, seizure: str):
+        """One seizure's spread (`onset_hfo.ictal.Progression`), as saved by
+        the run; None for a seizure that was not analysed or a run made before
+        the curves were kept."""
+        from onset_hfo.ictal import Progression
+
+        path = Path(self.folder) / "progression" / f"{seizure}.npz"
+        if not path.exists():
+            return None
+        try:
+            with np.load(path, allow_pickle=False) as saved:
+                times, ratio = saved["times"], saved["ratio"]
+                channels = tuple(str(c) for c in saved["channels"])
+        except (OSError, ValueError, KeyError):
+            return None
+        per = self.per_seizure
+        table = (per.loc[per["seizure"].astype(str) == str(seizure)]
+                 .drop(columns="seizure").reset_index(drop=True) if len(per) else pd.DataFrame())
+        return Progression(times=times, channels=channels, ratio=ratio, table=table)
+
+    def analysed_seizures(self) -> list[str]:
+        """The seizures with an index, in the order they were marked."""
+        if not len(self.seizures):
+            return []
+        return [str(s) for s in self.seizures.loc[self.seizures["status"] == "ok", "seizure"]]
+
     def consistent(self) -> list[str]:
         """Channels at or above the cutoff in at least half the seizures."""
         from onset_hfo.ictal import EI_CUTOFF
@@ -136,7 +162,7 @@ def _check_preprocess(preprocess, settings) -> None:
 def run_ictal(case, seizures: pd.DataFrame | None = None, settings=None, template=None,
               progress=None, should_stop=None) -> IctalResult:
     """Analyse each usable seizure, combine them, and write the results."""
-    from onset_hfo.ictal import IctalSettings, combine, epileptogenicity
+    from onset_hfo.ictal import IctalSettings, combine, progression
     from onset_hfo.ictal_study import WINDOW_AFTER_S, WINDOW_BEFORE_S
     from onset_hfo.preprocess import prepare
     from onset_review.caseinterictal import segment_request, template_for
@@ -148,6 +174,7 @@ def run_ictal(case, seizures: pd.DataFrame | None = None, settings=None, templat
     seizures = seizures_of(case) if seizures is None else seizures
     usable = seizures[seizures["usable"].astype(bool)] if len(seizures) else seizures
     tables: dict[str, pd.DataFrame] = {}
+    spreads = {}
     status = []
     for index, row in enumerate(usable.itertuples()):
         if should_stop is not None and should_stop():
@@ -164,13 +191,15 @@ def run_ictal(case, seizures: pd.DataFrame | None = None, settings=None, templat
             positions, positions_from = laplacian_positions(request)
             prep = prepare(record, preprocess, verbose=False, positions=positions,
                            positions_from=positions_from)
-            table = epileptogenicity(prep.data, list(prep.ch_names), prep.sfreq,
-                                     onset_s=onset, start_s=float(prep.t_offset),
-                                     settings=settings)
+            spread = progression(prep.data, list(prep.ch_names), prep.sfreq,
+                                 onset_s=onset, start_s=float(prep.t_offset),
+                                 settings=settings)
+            table = spread.table
         except (ValueError, OSError, RuntimeError) as error:
             status.append({"seizure": row.seizure, "status": str(error)[:200]})
             continue
         tables[str(row.seizure)] = table
+        spreads[str(row.seizure)] = spread
         top = table.iloc[0]
         status.append({"seizure": row.seizure, "status": "ok", "sfreq": float(prep.sfreq),
                        "n_channels": len(table), "n_detected": int(table["detected"].sum()),
@@ -199,6 +228,14 @@ def run_ictal(case, seizures: pd.DataFrame | None = None, settings=None, templat
     listed.to_csv(folder / "seizures.tsv", sep="\t", index=False)
     (folder / "settings.json").write_text(json.dumps(meta, indent=1, default=str) + "\n")
     (folder / "summary.md").write_text(_markdown(result), encoding="utf-8")
+    # Each seizure's energy-ratio curves, for the progression view: small
+    # (contacts x windows, float32) and enough to redraw without the signal.
+    (folder / "progression").mkdir(exist_ok=True)
+    for seizure, spread in spreads.items():
+        np.savez_compressed(folder / "progression" / f"{seizure}.npz",
+                            times=spread.times.astype(np.float32),
+                            ratio=spread.ratio.astype(np.float32),
+                            channels=np.array(spread.channels, dtype=str))
     case.record("ran the ictal onset analysis",
                 f"{result.n_analysed} of {len(seizures)} seizure(s); highest "
                 f"{combined.iloc[0]['channel'] if len(combined) else '–'}; "

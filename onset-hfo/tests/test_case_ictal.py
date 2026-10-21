@@ -134,3 +134,90 @@ def test_the_window_runs_the_ictal_step(qapp, case):
         assert case.step_done("ictal")
     finally:
         window.close()
+
+
+# -- how each seizure spread -----------------------------------------------------------------
+def test_each_seizure_keeps_its_curves_and_the_order_follows_the_signal(case):
+    from onset_review import ictalprogression
+    from onset_review.caseictal import latest_ictal, run_ictal
+
+    run_ictal(case)
+    result = latest_ictal(case)
+    seizures = result.analysed_seizures()
+    assert len(seizures) == 2
+    for seizure in seizures:
+        prog = result.progression(seizure)
+        assert prog is not None
+        assert prog.ratio.shape == (len(prog.channels), len(prog.times))
+        assert prog.times[0] < 0 < prog.times[-1], "from before the onset to after it"
+        order = ictalprogression.order_table(prog)
+        changed = list(order.loc[order["detected"], "channel"])
+        # LA's activity starts a second after the onset, LB's seven.
+        assert changed[0].startswith("LA")
+        la = [c for c in changed if c.startswith("LA")]
+        lb = [c for c in changed if c.startswith("LB")]
+        assert la and all(changed.index(a) < changed.index(b) for a in la for b in lb)
+        first = order.iloc[0]
+        assert first["delay_s"] == 0.0 and first["change_s"] == pytest.approx(1.0, abs=1.0)
+        early = ictalprogression.state_at(prog, -5.0).set_index("channel")
+        late = ictalprogression.state_at(prog, 10.0).set_index("channel")
+        assert not early["changed"].any()
+        assert late.loc[changed[0], "changed"]
+        assert late.loc[changed[0], "log_ratio"] > early.loc[changed[0], "log_ratio"]
+
+
+def test_the_heatmap_and_map_are_drawn_without_a_display(case, tmp_path):
+    from matplotlib.figure import Figure
+
+    from onset_review import ictalprogression
+    from onset_review.caseictal import run_ictal
+
+    result = run_ictal(case)
+    prog = result.progression(result.analysed_seizures()[0])
+    figure = Figure()
+    drawn = ictalprogression.draw(figure, prog, 2.0)
+    assert drawn["channels"][0].startswith("LA") and drawn["map"] is False
+    positions = __import__("pandas").DataFrame({
+        "channel": list(prog.channels), "x": range(len(prog.channels)),
+        "y": [0.0] * len(prog.channels), "placed": True})
+    drawn = ictalprogression.draw(figure, prog, 2.0, positions, zone={prog.channels[0]})
+    assert drawn["map"] is True
+    figure.savefig(tmp_path / "progression.png")
+    assert (tmp_path / "progression.png").stat().st_size > 0
+
+
+def test_a_run_from_before_the_curves_were_kept_says_so(case):
+    import shutil
+
+    from onset_review.caseictal import run_ictal
+
+    result = run_ictal(case)
+    shutil.rmtree(result.folder / "progression")
+    assert result.progression(result.analysed_seizures()[0]) is None
+
+
+def test_the_window_shows_the_progression_with_a_slider_and_play(qapp, case):
+    from onset_review.casewindow import CaseWindow
+
+    window = CaseWindow(case, reader="dr test")
+    try:
+        window.show_step("ictal")
+        page = window.ictal_page
+        page.run(wait=True)
+        view = page.progression
+        assert [page.views.tabText(i) for i in range(page.views.count())] == [
+            "Index", "Progression"]
+        assert view.seizure.count() == 2
+        assert view.order.rowCount() > 0 and view.order.item(0, 1).text().startswith("LA")
+        assert view.moment() == pytest.approx(0.0, abs=0.3), "starts at the marked onset"
+        view.slider.setValue(view.slider.maximum())
+        assert view.at.text().startswith("+")
+        view.slider.setValue(0)
+        view.play.setChecked(True)
+        view._tick()
+        assert view.slider.value() > 0
+        view.play.setChecked(False)
+        view.seizure.setCurrentIndex(1)
+        assert view.prog is not None and view.order.rowCount() > 0
+    finally:
+        window.close()
