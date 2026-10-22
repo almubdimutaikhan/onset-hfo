@@ -221,6 +221,52 @@ def test_review_mode_follows_the_list_s_filters_and_lets_go_when_closed(qapp, op
     again.close()
 
 
+def test_review_mode_goes_through_the_channels_a_reader_chooses(qapp, opened):
+    from onset_review.reviewmode import ChannelPicker, channel_phrase
+
+    events = opened.parts.panels["events"]
+    session = opened.parts.session
+    mode = opened.parts.pages.open_review_mode(full_screen=False)
+    _settle(qapp)
+    counts = events.channel_counts()
+    with_events = [name for name, n in counts.items() if n]
+    assert len(with_events) >= 3, "the fixture's recording has events on several channels"
+    total = mode.position()[1]
+    two = with_events[1:3]
+    try:
+        assert mode.choose_channels(two) == tuple(two)
+        at, shown = mode.position()
+        assert at == 1 and shown == counts[two[0]] + counts[two[1]] < total
+        assert {events.model.row_value(row, "channel")
+                for row in range(events.model.rowCount())} == set(two)
+        assert channel_phrase(two) in mode.scope.text()
+        assert events.channel.currentText() == "2 chosen channels", "the list narrows too"
+        times = [events.model.row_value(row, "t_local") for row in range(shown)]
+        assert times == sorted(times), "still in time order"
+        # One channel is that channel's own entry; every channel is no filter.
+        assert mode.choose_channels(two[:1]) == tuple(two[:1])
+        assert events.channel.currentText() == two[0]
+        assert mode.choose_channels(list(counts)) == ()
+        assert mode.position()[1] == total
+        assert events.channel.findText("2 chosen channels") < 0, "the old entry is gone"
+        # The picker: a tick per channel with its count, and the quick choices.
+        picker = ChannelPicker(counts, two, session.candidates)
+        assert picker.list.count() == len(counts)
+        assert picker.chosen() == two
+        picker.quick["all"].click()
+        assert picker.chosen() == list(counts)
+        picker.quick["none"].click()
+        assert picker.chosen() == []
+        if "busiest" in picker.quick:
+            picker.quick["busiest"].click()
+            assert picker.chosen() == [c for c in counts if c in session.candidates]
+        picker.quick["with"].click()
+        assert picker.chosen() == with_events
+        assert f"{counts[two[0]]} event" in picker.list.item(1).text()
+    finally:
+        mode.close()
+
+
 def test_review_mode_is_reached_by_space_the_toolbar_and_the_menu(qapp, opened):
     from qtpy.QtWidgets import QShortcut
 

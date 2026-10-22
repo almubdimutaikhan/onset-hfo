@@ -195,8 +195,9 @@ onset-hfo fetch --subject sub-01 --t-start 0 --t-stop 60
    follows; **←** and **→** step, **J** jumps to the next unjudged one, **N**
    adds a sentence, **Backspace** takes a verdict back, **Esc** leaves. The
    bar at the top counts what you have judged. The events come from the
-   Events list as you have filtered it, so filter it to the busiest channel
-   first to read that channel's events. Unsure? **C** shows the
+   Events list as you have filtered it: every channel's, in time order,
+   unless you narrow it. **Channels…** (**L**) picks the channels to go
+   through, one or several, or the busiest ones at a click. Unsure? **C** shows the
    neighbouring contacts and the seconds around the event, with every
    detection boxed and a count of channels that had one at the same moment;
    **K** shows the two contacts of a bipolar channel; **T** takes the full
@@ -599,7 +600,7 @@ the notebooks in `notebooks/`.
 | **Ctrl+Shift+E** | Analysis mode on or off |
 | **Space** | review mode, from the trace or the side column |
 | **A**, **D**, **U** | judge the selected event: real, not real, cannot tell |
-| **←**, **→**, **J**, **Esc** | in review mode: previous, next, next unjudged, leave |
+| **←**, **→**, **J**, **L**, **Esc** | in review mode: previous, next, next unjudged, channels, leave |
 | **Home**, **End**, **+**, **−**, **↑**, **↓**, **R** | in review mode: first, last, time, gain, reset |
 | **C**, **K**, **T**, **F11** | in review mode: context, two contacts, show in trace, full screen |
 | **N** | a note on the event |
