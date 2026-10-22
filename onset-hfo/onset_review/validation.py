@@ -37,6 +37,9 @@ class Method:
     findings: tuple[str, ...]
     limits: tuple[str, ...]
     doc: str
+    #: Between the findings and the failures, in order: ("figure", key) for a
+    #: picture (`onset_review.validationfigures`), ("text", paragraph).
+    extras: tuple[tuple[str, str], ...] = ()
 
 
 METHODS = (
@@ -90,7 +93,25 @@ METHODS = (
             "The study's result describes groups of patients; it predicts nothing about "
             "one.",
         ),
-        doc="docs/OUTCOME.md"),
+        doc="docs/OUTCOME.md",
+        extras=(
+            ("figure", "outcome"),
+            ("text", "**The busiest channel is often not one channel.** On the expert "
+                     "markings the ranking singles out one channel in only 9 of 20 "
+                     "patients, and in one patient 27 channels are tied with the busiest; "
+                     "the RMS detector's leader is tied in 14 of 20. So the study also "
+                     "asks what share of the tied channels was resected, which the figure "
+                     "shows: AUC 0.69 (0.44–0.91), p = 0.16, on the expert markings and "
+                     "0.60 (0.31–0.88), p = 0.47, with the detector."),
+            ("figure", "window"),
+            ("text", "**The result that did not hold up.** The first version of this "
+                     "study analysed the first 60 s of each recording and found AUC 0.82, "
+                     "p = 0.007. On the whole 300 s run the same code and the same metric "
+                     "give 0.71, p = 0.12. Over five separate minutes of the same "
+                     "recordings the AUC ranges from 0.57 to 0.82 and p from 0.007 to "
+                     "0.61: the 0.007 was the best of five minutes. A window short enough "
+                     "to change the conclusion is too short to report."),
+        )),
     Method(
         key="ictal",
         title="Ictal onset: the Epileptogenicity Index",
@@ -100,7 +121,8 @@ METHODS = (
         findings=(
             "Median per-patient AUC 0.80 (95% interval 0.70–0.87); the fast-over-slow "
             "energy ratio alone reaches 0.73.",
-            "With the onset put 40 s before the seizure it falls to 0.52, so the "
+            "With the onset put 40 s before the seizure it falls to 0.52 over the 27 "
+            "seizures where that could be tested (0.58 over their 12 patients), so the "
             "agreement comes from the seizure.",
             "On HUP, 54 patients: median AUC 0.79 (0.72–0.85), and 0.55 at 40 s before.",
         ),
@@ -109,7 +131,8 @@ METHODS = (
             "It needs a person to mark the electrographic onset, and a channel that "
             "changes first is not thereby the onset zone.",
         ),
-        doc="docs/ICTAL.md"),
+        doc="docs/ICTAL.md",
+        extras=(("figure", "ictal"),)),
     Method(
         key="template",
         title="Contacts placed on the template",
@@ -128,7 +151,8 @@ METHODS = (
             "Template positions are not the patient's anatomy; the patient's own imaging "
             "is.",
         ),
-        doc="docs/TEMPLATE_MAP.md"),
+        doc="docs/TEMPLATE_MAP.md",
+        extras=(("figure", "template"),)),
 )
 
 
@@ -136,10 +160,23 @@ def _method(method: Method) -> str:
     lines = [f"## {method.title}", "", f"*{method.question}*", "",
              f"**Data.** {method.data}", "", "**What was found**", ""]
     lines += [f"- {line}" for line in method.findings]
-    lines += ["", "**Where it fails**", ""]
+    lines.append("")
+    for kind, value in method.extras:
+        lines += (_figure(value) if kind == "figure" else [value, ""])
+    lines += ["**Where it fails**", ""]
     lines += [f"- {line}" for line in method.limits]
     lines += ["", f"The full study: `{method.doc}`.", ""]
     return "\n".join(lines)
+
+
+def _figure(key: str) -> list[str]:
+    """A shipped figure and its caption; nothing when the picture is missing."""
+    from onset_review.validationfigures import FIGURES, path_for
+
+    path = path_for(key)
+    if path is None:
+        return []
+    return [f"![{FIGURES[key]}]({path.as_posix()})", "", f"*{FIGURES[key]}*", ""]
 
 
 def markdown(session=None) -> str:

@@ -421,9 +421,14 @@ like any window; `F11` makes it full screen): the wideband, band-passed and
 time-frequency pictures on one time axis, the event's numbers under them, and what you have
 said about it in the corner. The same keys record your verdict and the next
 event follows; `←` and `→` step, `J` jumps to the next unjudged one, `Esc`
-leaves. The events are the Events list's, in its order and with its filters,
-so filtering the list to one channel first reviews that channel's events, and
-the bar at the top counts what you have judged of them. Nothing is kept twice:
+leaves. The events are the Events list's, in its order and with its filters:
+every channel's events in time order unless you narrow it, so consecutive
+events can come from anywhere on the implant. **Channels…** (`L`) chooses
+the channels to go through: tick one or several, or take *The busiest* (the
+channels the ranking could not tell apart from the leader) or *With events*;
+review mode starts at the first of their events nobody has judged, and the
+Events list narrows with it. The bar at the top counts what you have judged
+of the events in the list. Nothing is kept twice:
 the verdicts go through the list and are saved as they are given, and leaving
 review mode leaves the list, the trace and the event view where you stopped.
 
@@ -1019,9 +1024,17 @@ against on public data, how well it agreed, and where it fails:
   the atlas names a structure for only 51% of contacts.
 
 Each section names its full study: `docs/EVALUATION.md`, `docs/OUTCOME.md`,
-`docs/ICTAL.md` and `docs/TEMPLATE_MAP.md`. The figures are written into the
-program and a test holds them to the committed tables, so the page reads the
-same on an install without the tables. It needs no recording.
+`docs/ICTAL.md` and `docs/TEMPLATE_MAP.md`. Four figures sit beside the
+text: every patient's index AUC at the seizure, 40 s before and on HUP; the
+template's planning error by distance from the tip; every patient's share of
+the tied busiest channels resected, by outcome; and the outcome AUC as the
+analysed window grows. The outcome section also tells the result that did
+not hold up: 60 s of each recording gave AUC 0.82, p = 0.007; the whole run
+gives 0.71, p = 0.12, and five separate minutes range from p = 0.007 to 0.61.
+
+The numbers and the figures are part of the program, and a test holds every
+one of them to the committed tables, so the page reads the same on an
+install without the tables. It needs no recording.
 
 When the open window carries expert markings (the ds003498 patients' windows
 do), a section headed **This recording** at the top scores that window the

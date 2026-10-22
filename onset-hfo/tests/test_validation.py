@@ -33,7 +33,8 @@ needs_tables = pytest.mark.skipif(not (DATA / "stability").is_dir(),
 
 def _text(key: str) -> str:
     method = next(m for m in validation.METHODS if m.key == key)
-    return " ".join((method.data,) + method.findings + method.limits)
+    extras = tuple(value for kind, value in method.extras if kind == "text")
+    return " ".join((method.data,) + method.findings + extras + method.limits)
 
 
 # -- the figures are the tables' ---------------------------------------------------------------
@@ -105,7 +106,10 @@ def test_the_ictal_figures_are_the_ictal_study_s():
     assert (f"AUC {block['median']:.2f} (95% interval {block['ci_low']:.2f}–"
             f"{block['ci_high']:.2f})") in text
     assert f"energy ratio alone reaches {ictal['er_all']['median']:.2f}" in text
-    assert f"falls to {control['ei_per_seizure']['median']:.2f}" in text
+    per_seizure, per_patient = control["ei_per_seizure"], control["ei_all"]
+    assert (f"falls to {per_seizure['median']:.2f} over the {per_seizure['n']} seizures "
+            f"where that could be tested ({per_patient['median']:.2f} over their "
+            f"{per_patient['n']} patients)") in text
     assert f"in only {round(ictal['top_in_zone_patients'] * 28)} of 28" in text
     assert (f"{hup['ei_all']['n']} patients: median AUC {hup['ei_all']['median']:.2f} "
             f"({hup['ei_all']['ci_low']:.2f}–{hup['ei_all']['ci_high']:.2f}), and "
@@ -126,6 +130,60 @@ def test_the_template_figures_are_the_template_study_s():
     assert f"only {template['real_labels']['in'] * 100:.0f}% of" in text
 
 
+@needs_tables
+def test_the_ties_and_the_short_window_are_the_outcome_study_s():
+    from onset_review import studytables
+
+    text = _text("outcome")
+    cohort = studytables.cohort_overview(band="fast_ripple", scope="reviewed")
+    expert, rms = cohort["n_candidates_expert"], cohort["n_candidates_rms"]
+    assert f"one channel in only {int((expert == 1).sum())} of {len(cohort)}" in text
+    assert f"{int(expert.max())} channels are tied" in text
+    assert f"tied in {int((rms > 1).sum())} of {len(cohort)}" in text
+    groups = pd.read_csv(DATA / "stability" / "outcome_groups_300s.csv").query(
+        "scope == 'reviewed' and band == 'fast_ripple' and metric == 'candidates_resected'"
+    ).set_index("source")
+    for source in ("expert", "rms"):
+        row = groups.loc[source]
+        assert (f"{row['auc']:.2f} ({row['auc_lo']:.2f}–{row['auc_hi']:.2f}), "
+                f"p = {row['p_permutation']:.2f}") in text, source
+    curve = pd.read_csv(DATA / "stability" / "curve.csv").query("source == 'expert'")
+    first = curve[curve["window_s"] == 60].iloc[0]
+    whole = curve[curve["window_s"] == 300].iloc[0]
+    assert f"AUC {first['auc']:.2f}, p = {first['p_permutation']:.3f}" in text
+    assert f"give {whole['auc']:.2f}, p = {whole['p_permutation']:.2f}" in text
+    spread = pd.read_csv(DATA / "stability" / "spread.csv").set_index("source").loc["expert"]
+    assert int(spread["n_windows"]) == 5
+    assert (f"AUC ranges from {spread['auc_min']:.2f} to {spread['auc_max']:.2f} and p "
+            f"from {spread['p_min']:.3f} to {spread['p_max']:.2f}") in text
+
+
+@needs_tables
+def test_every_figure_shows_the_numbers_the_tables_hold_now():
+    """A figure ships as a picture; the digest beside it is of the numbers it
+    plots. Recomputed here from the tables, so a table that changes without
+    `python -m onset_review.validationfigures` being run fails here."""
+    from onset_review import validationfigures as figures
+
+    shipped = figures.shipped_digests()
+    assert set(shipped) == set(figures.FIGURES)
+    for key in figures.FIGURES:
+        assert figures.digest(figures.figure_data(key, DATA)) == shipped[key], (
+            f"the {key} figure is out of date: run python -m onset_review.validationfigures")
+        path = figures.path_for(key)
+        assert path is not None and path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_a_figure_draws_from_the_tables(tmp_path):
+    pytest.importorskip("matplotlib")
+    from onset_review import validationfigures as figures
+
+    if not (DATA / "ictal").is_dir():
+        pytest.skip("the study tables are not in this checkout")
+    path = figures.draw("ictal", tmp_path / "ictal.png", DATA)
+    assert path.stat().st_size > 10_000
+
+
 def test_the_page_names_every_method_its_data_its_failures_and_its_study():
     text = validation.markdown()
     assert text.startswith("# Validation")
@@ -137,6 +195,10 @@ def test_the_page_names_every_method_its_data_its_failures_and_its_study():
         assert (ROOT / method.doc).is_file(), method.doc
         assert "OpenNeuro ds00" in method.data
     assert "## This recording" not in text, "nothing open, nothing scored"
+    from onset_review.validationfigures import FIGURES, path_for
+
+    for key, caption in FIGURES.items():
+        assert f"![{caption}]({path_for(key).as_posix()})" in text, key
 
 
 # -- this recording ----------------------------------------------------------------------------
