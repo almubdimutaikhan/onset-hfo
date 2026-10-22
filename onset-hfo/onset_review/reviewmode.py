@@ -14,6 +14,13 @@ reader's name and moves on, and the autosave it is wired to keeps the file.
 Leaving review mode leaves the list on the event reached, so the trace and
 the event view in the window are where the reader stopped.
 
+**Which channels.** The list holds every channel's events in time order, so
+consecutive events can come from anywhere on the implant. *Channels…* (`L`)
+narrows it to the channels a reader wants to go through -- one, several, or
+the busiest ones the ranking could not separate -- and review mode starts at
+the first of their events nobody has judged. The events list in the window
+narrows with it.
+
 **When one event is not enough.** A reader who is unsure needs what is around
 the event, not a closer look at it. `+` and `-` widen and narrow the seconds
 shown, the arrows up and down set the gain, and the toolbar zooms a box or
@@ -40,8 +47,11 @@ from qtpy.QtGui import QKeySequence
 from qtpy.QtWidgets import (
     QCheckBox,
     QDialog,
+    QDialogButtonBox,
     QHBoxLayout,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QProgressBar,
     QPushButton,
     QShortcut,
@@ -52,14 +62,14 @@ from qtpy.QtWidgets import (
 
 from onset_review import theme
 
-__all__ = ["ReviewMode", "open_review", "KEYS"]
+__all__ = ["ReviewMode", "ChannelPicker", "open_review", "KEYS"]
 
 #: Key -> what it does, for the window's own hint line and the guide.
 KEYS = (
     ("A", "real"), ("D", "not real"), ("U", "unsure"), ("Backspace", "clear"),
     ("N", "note"), ("←  →", "previous, next"), ("Home  End", "first, last"),
-    ("J", "next unjudged"), ("+  −", "time"), ("↑  ↓", "gain"), ("R", "reset zoom"),
-    ("C", "context"), ("K", "two contacts"), ("T", "show in trace"),
+    ("J", "next unjudged"), ("L", "channels"), ("+  −", "time"), ("↑  ↓", "gain"),
+    ("R", "reset zoom"), ("C", "context"), ("K", "two contacts"), ("T", "show in trace"),
     ("F11", "full screen"), ("Esc", "leave"),
 )
 
@@ -202,6 +212,74 @@ class ContextView(QWidget):
         self.canvas.draw_idle()
 
 
+def channel_phrase(channels) -> str:
+    """"LA1-LA2", "LA1-LA2 and LA2-LA3", "4 channels: LA1-LA2, LA2-LA3, LA3-LA4 and 1 more"."""
+    channels = list(channels)
+    if len(channels) <= 2:
+        return " and ".join(channels)
+    shown = ", ".join(channels[:3])
+    rest = len(channels) - 3
+    return f"{len(channels)} channels: {shown}" + (f" and {rest} more" if rest else "")
+
+
+class ChannelPicker(QDialog):
+    """The channels to review: a tick per channel, in the ranking's order, each
+    with its number of events; and the quick choices a reader reaches for."""
+
+    def __init__(self, counts: dict[str, int], chosen=(), busiest=(), parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Channels to review")
+        self.setObjectName("onset_review_channels")
+        self.list = QListWidget()
+        self.list.setObjectName("onset_review_channel_list")
+        chosen = set(chosen or counts)
+        for name, n in counts.items():
+            item = QListWidgetItem(f"{name}  ·  {n} event{'s' if n != 1 else ''}")
+            item.setData(Qt.UserRole, name)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked if name in chosen else Qt.Unchecked)
+            self.list.addItem(item)
+        quick = QHBoxLayout()
+        self.quick: dict[str, QPushButton] = {}
+        busiest = [name for name in busiest if name in counts]
+        for key, text, names, tip in (
+                ("all", "All", list(counts), "Every channel"),
+                ("none", "None", [], "Untick every channel"),
+                ("busiest", "The busiest", busiest,
+                 "The channels the ranking could not tell apart from the leader"),
+                ("with", "With events", [n for n, c in counts.items() if c],
+                 "Every channel with at least one event")):
+            if key == "busiest" and not busiest:
+                continue
+            button = QPushButton(text)
+            button.setToolTip(tip)
+            button.clicked.connect(lambda _=False, names=names: self.tick(names))
+            quick.addWidget(button)
+            self.quick[key] = button
+        quick.addStretch(1)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        box = QVBoxLayout(self)
+        box.addWidget(theme.muted("Review the events of these channels, in time order.",
+                                  size=9))
+        box.addLayout(quick)
+        box.addWidget(self.list, 1)
+        box.addWidget(buttons)
+        self.resize(360, 520)
+
+    def tick(self, names) -> None:
+        names = set(names)
+        for row in range(self.list.count()):
+            item = self.list.item(row)
+            item.setCheckState(Qt.Checked if item.data(Qt.UserRole) in names
+                               else Qt.Unchecked)
+
+    def chosen(self) -> list[str]:
+        return [self.list.item(row).data(Qt.UserRole) for row in range(self.list.count())
+                if self.list.item(row).checkState() == Qt.Checked]
+
+
 class ReviewMode(QDialog):
     """The event the events list has selected, as large as the screen allows,
     with the reader's three verdicts on three keys."""
@@ -280,6 +358,7 @@ class ReviewMode(QDialog):
                            ("◀  Previous", lambda: self.step(-1)),
                            ("Next  ▶", lambda: self.step(+1)),
                            ("Next unjudged", self.next_unjudged),
+                           ("Channels…", self.choose_channels),
                            ("Context", self.toggle_context),
                            ("Show in trace", self.show_in_trace),
                            ("Done", self.close)):
@@ -335,6 +414,7 @@ class ReviewMode(QDialog):
                            ("Home", lambda: self.step(-10**9)),
                            ("End", lambda: self.step(+10**9)),
                            ("J", self.next_unjudged),
+                           ("L", self.choose_channels),
                            ("+", lambda: self.widen(-1)),
                            ("=", lambda: self.widen(-1)),
                            ("-", lambda: self.widen(+1)),
@@ -389,6 +469,24 @@ class ReviewMode(QDialog):
         return moved
 
     # -- looking closer, and around ------------------------------------------
+    def choose_channels(self, channels=None) -> tuple[str, ...]:
+        """Narrow the list to `channels`, or to those ticked in the picker when
+        none are given; then go to the first of their events nobody has
+        judged. Returns the channels now reviewed, () for all of them."""
+        events = self.events
+        if channels is None:
+            picker = ChannelPicker(events.channel_counts(), events.chosen_channels(),
+                                   getattr(self._session, "candidates", ()), self)
+            if picker.exec() != QDialog.Accepted:
+                return events.chosen_channels()
+            channels = picker.chosen()
+        chosen = events.set_channels(channels)
+        self._shown_key = ""
+        if not events.step_unjudged(+1):
+            events.step(0)
+        self._refresh()
+        return chosen
+
     def widen(self, steps: int) -> float:
         """Show more (`steps` > 0) or less signal either side of the event."""
         pads = list(PADS)
@@ -533,8 +631,10 @@ class ReviewMode(QDialog):
                                + (f" at {float(when):.2f} s" if when is not None else ""))
         else:
             self.where.setText("No event in the list as it is filtered")
-        filters = [w.currentText() for w in (events.kind, events.channel)
-                   if w.currentIndex() > 0]
+        filters = [events.kind.currentText()] if events.kind.currentIndex() > 0 else []
+        chosen = events.chosen_channels()
+        if chosen:
+            filters.append("on " + channel_phrase(chosen))
         if events.on_spike.isChecked():
             filters.append("riding a discharge")
         if events.rejected.isChecked():

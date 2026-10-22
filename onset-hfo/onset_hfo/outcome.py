@@ -173,6 +173,10 @@ _FREE, _RECUR = "S", "F"
 # --------------------------------------------------------------------------
 
 
+#: Values equal to this many decimals are a tie (`rank_comparison`).
+TIE_DECIMALS = 9
+
+
 def rank_comparison(free: np.ndarray, recurrence: np.ndarray,
                     n_boot: int = 10000, seed: int = 0) -> dict:
     """Compare two small samples without assuming a distribution.
@@ -189,8 +193,13 @@ def rank_comparison(free: np.ndarray, recurrence: np.ndarray,
     is a proportion on twenty patients: its mean is unstable and its rank is
     not.
     """
-    free = np.asarray([v for v in free if np.isfinite(v)], dtype=float)
-    recurrence = np.asarray([v for v in recurrence if np.isfinite(v)], dtype=float)
+    # Rounded before ranking: a patient's value is often a mean of a few
+    # windows' fractions, and two equal ones (14/15 and 14/15) can differ in
+    # the last bit depending on the order the library summed them in. Left
+    # alone, that noise breaks the tie one way or the other and moves the AUC.
+    free = np.round(np.asarray([v for v in free if np.isfinite(v)], dtype=float), TIE_DECIMALS)
+    recurrence = np.round(np.asarray([v for v in recurrence if np.isfinite(v)], dtype=float),
+                          TIE_DECIMALS)
     n1, n2 = len(free), len(recurrence)
     out = {
         "n_seizure_free": n1, "n_recurrence": n2,

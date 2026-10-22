@@ -117,10 +117,13 @@ measured on, and an assistant answer's citations expand to both.
 The **Validation** page says, for each kind of number the window shows, what
 it was measured against on public data, how well it agreed and where it fails.
 Its text is in `onset_review/validation.py`, which imports no interface
-toolkit; the figures are written there rather than read from the study tables,
-so the page reads the same on an install without them, and
-`tests/test_validation.py` holds every figure to the committed tables in
-`data/`. `onset_review/readingview.py` renders it.
+toolkit; the numbers are written there rather than read from the study tables,
+so the page reads the same on an install without them. Its four pictures are
+drawn from the tables by `onset_review/validationfigures.py` and ship as PNG
+files in `onset_review/figures/`, with a digest of the numbers each plots
+(`python -m onset_review.validationfigures` redraws them).
+`tests/test_validation.py` holds every number and every picture to the
+committed tables in `data/`. `onset_review/readingview.py` renders the page.
 
 A Streamlit site (`app/`) shows the full studies — every threshold, patient
 and chart — with no install, as a demo. It reads the committed tables through

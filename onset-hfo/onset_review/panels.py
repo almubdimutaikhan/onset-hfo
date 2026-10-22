@@ -619,11 +619,16 @@ class EventsPanel(QWidget):
     #: any caller that has already named the reader.
     reader_prompt = None
 
+    #: The channel menu's entry for several channels chosen at once
+    #: (`set_channels`), told apart from a channel's own entry by this data.
+    CHOSEN = "onset-chosen-channels"
+
     def __init__(self, session: ReviewSession, parent=None):
         super().__init__(parent)
         self._session = session
         self._all = trends.event_table(session, include_rejected=True)
         self._shown = self._all
+        self._chosen: tuple[str, ...] = ()
 
         self.kind = QComboBox()
         self.kind.addItems(["All kinds", "Ripples only", "Fast ripples only",
@@ -836,8 +841,9 @@ class EventsPanel(QWidget):
             self.kind.currentIndex())
         if wanted:
             frame = frame[frame["kind"] == wanted]
-        if self.channel.currentIndex() > 0:
-            frame = frame[frame["channel"] == self.channel.currentText()]
+        chosen = self.chosen_channels()
+        if chosen:
+            frame = frame[frame["channel"].isin(chosen)]
         if self.on_spike.isChecked():
             frame = frame[frame["with_spike"]]
         # `_shown` is the filtered frame in its natural order, which the
@@ -918,6 +924,53 @@ class EventsPanel(QWidget):
         self.view.selectRow(best)
         self.view.scrollTo(self.model.index(best, 0))
         return True
+
+    # -- which channels -----------------------------------------------------
+    def channel_names(self) -> list[str]:
+        """Every channel the menu offers, in the ranking's order."""
+        return [self.channel.itemText(i) for i in range(1, self.channel.count())
+                if self.channel.itemData(i) != self.CHOSEN]
+
+    def channel_counts(self) -> dict[str, int]:
+        """Accepted events per channel, whatever the filters."""
+        accepted = self._all[self._all["accepted"]] if len(self._all) else self._all
+        counts = accepted["channel"].value_counts() if len(accepted) else {}
+        return {name: int(counts.get(name, 0)) for name in self.channel_names()}
+
+    def chosen_channels(self) -> tuple[str, ...]:
+        """The channels the list is narrowed to: one, several, or () for all."""
+        index = self.channel.currentIndex()
+        if index <= 0:
+            return ()
+        if self.channel.itemData(index) == self.CHOSEN:
+            return self._chosen
+        return (self.channel.currentText(),)
+
+    def set_channels(self, channels) -> tuple[str, ...]:
+        """Narrow the list to `channels`, in the ranking's order: all of them
+        (or none named) is every channel, one is that channel's own entry in
+        the menu, several are one entry saying how many. Returns the set."""
+        names = self.channel_names()
+        wanted = set(channels or ())
+        chosen = tuple(name for name in names if name in wanted)
+        self.channel.blockSignals(True)
+        for index in range(self.channel.count() - 1, 0, -1):
+            if self.channel.itemData(index) == self.CHOSEN:
+                self.channel.removeItem(index)
+        if not chosen or len(chosen) == len(names):
+            chosen = ()
+            self.channel.setCurrentIndex(0)
+        elif len(chosen) == 1:
+            self.channel.setCurrentIndex(self.channel.findText(chosen[0]))
+        else:
+            self._chosen = chosen
+            self.channel.addItem(f"{len(chosen)} chosen channels", self.CHOSEN)
+            self.channel.setItemData(self.channel.count() - 1, ", ".join(chosen),
+                                     Qt.ToolTipRole)
+            self.channel.setCurrentIndex(self.channel.count() - 1)
+        self.channel.blockSignals(False)
+        self.refilter()
+        return chosen
 
     def step(self, delta: int) -> None:
         """Move the selection by `delta` rows, which is what the toolbar does."""

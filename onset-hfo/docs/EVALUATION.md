@@ -644,13 +644,13 @@ from any arm** in either band.
 | band | metric | bipolar | referential | average |
 |---|---|---|---|---|
 | ripple | `top_channel_resected` | 0.747 [0.53–0.93], *p* 0.072 | 0.681 [0.42–0.92], *p* 0.175 | **0.764** [0.53–0.96], *p* 0.046 |
-| ripple | `top3_resected` | **0.698** | 0.610 | 0.632 |
+| ripple | `top3_resected` | **0.698** | 0.604 | 0.626 |
 | ripple | `share_in_rz` | **0.527** | 0.429 | 0.484 |
 | ripple | `candidates_resected` | **0.648** | 0.505 | 0.626 |
 | fast ripple | `top_channel_resected` | **0.753** [0.53–0.95], *p* 0.038 | 0.615 [0.33–0.87], *p* 0.411 | 0.720 [0.47–0.92], *p* 0.106 |
 | fast ripple | `top3_resected` | **0.654** | 0.566 | 0.626 |
 | fast ripple | `share_in_rz` | **0.714** | 0.560 | 0.549 |
-| fast ripple | `candidates_resected` | **0.577** | 0.379 | 0.533 |
+| fast ripple | `candidates_resected` | **0.577** | 0.374 | 0.533 |
 
 The bipolar arm is first on seven of the eight cells. The exception is
 ripple `top_channel_resected`, where the common average edges it by 0.017
