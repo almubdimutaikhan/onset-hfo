@@ -13,6 +13,12 @@ on:
   pull_request:
     paths: ["onset-hfo/**", ".github/workflows/onset-hfo.yml"]
   workflow_dispatch:
+  # Weekly, on master, with whatever the libraries released that week: the
+  # dependencies are not pinned, so a new pandas or numpy can break a test
+  # with no change here, as pandas 3.1 did during the 0.3.23 release. This
+  # shows it within a week rather than in the middle of a release.
+  schedule:
+    - cron: "17 6 * * 1"
 
 jobs:
   test:
