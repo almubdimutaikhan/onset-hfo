@@ -5,7 +5,7 @@ A new reader should be able to see everything the program does from the
 first screen, without loading anything and without knowing which menu hides
 what. So:
 
-* **Quick start** (sidebar, Help → Quick start guide, F1) lays the program out
+* **Quick start** (Help → Quick start guide, F1) lays the program out
   as the jobs people come with: look at a recording, work up a patient, read
   the evidence, ask the model, write your own analysis. Each step is a link
   that does the thing. Under that is every menu entry with its shortcut,
@@ -19,6 +19,7 @@ what. So:
 
 from __future__ import annotations
 
+import contextlib
 import html
 from pathlib import Path
 
@@ -217,7 +218,7 @@ oscillations, interictal discharges and seizure onset, in public recordings or
 your own. It is <b>not a medical device</b>. Every page that needs a
 recording works the same way: open one, and it fills in.</p>
 <p>The sidebar has four places: <b>Patient</b>, <b>Review</b>, <b>Assistant</b>
-and <b>Report</b>, with the <b>Library</b> at its foot. The pages inside a place
+and <b>Report</b>, with <b>Validation</b> at its foot. The pages inside a place
 are the row of buttons above the page.</p>
 <p style='color:{muted}'>Every underlined line below does what it says.
 {_link('do:find', f'Find any command ({FIND_SHORTCUT})')} searches all of them by
@@ -251,12 +252,12 @@ steps, in order:</p>
 <ol>{steps}</ol>
 
 <h3>3 · Read the evidence behind the numbers</h3>
-<p>The <b>Library</b> holds the study's pages, and needs no recording:
-{_link('page:detectors', 'Detectors')} (against expert markings),
-{_link('page:outcome', 'Outcome')} (against surgery),
-{_link('page:patients', 'Patients')}, {_link('page:ictal', 'Ictal onset')},
-{_link('page:template', 'Template map')} and {_link('page:data', 'Data')}.
-Each opens with its main result and says what it cannot support.</p>
+<p>{_link('page:validation', 'Validation')} says, for each kind of number this program
+shows, what it was measured against on public recordings, how well it agreed and
+where it fails: the detectors against expert markings, interictal HFOs against
+surgical outcome, the Epileptogenicity Index against the onset zone, and contacts
+placed on the template. It needs no recording; with one open that carries expert
+markings, it scores that window too.</p>
 
 <h3>4 · Ask the local model</h3>
 <p>{_link('page:assistant', 'Assistant › This recording')} answers about the open
@@ -336,6 +337,9 @@ class QuickStartPage(QWidget):
 def run_target(window, target: str) -> bool:
     """Do what a guide link names: ``page:KEY`` or ``do:ACTION``."""
     kind, _, what = target.partition(":")
+    if target == "page:quickstart":
+        show_quickstart(window)
+        return True
     if kind == "page":
         return bool(window.show_page(what))
     handlers = {
@@ -569,15 +573,22 @@ def add_help_entries(help_menu, host) -> None:
 
 
 def show_quickstart(host):
-    """The guide's page in a window with pages; the guide in a dialog otherwise."""
-    if hasattr(host, "show_page") and host.show_page("quickstart"):
-        return host
+    """The guide in a window of its own, beside the one it describes; a
+    second F1 brings the open one forward rather than opening another."""
+    dialog = getattr(host, "_quickstart_dialog", None)
+    if dialog is not None and dialog.isVisible():
+        dialog.raise_()
+        dialog.activateWindow()
+        return dialog
     dialog = QDialog(host)
     dialog.setWindowTitle("Quick start guide")
     dialog.resize(820, 680)
     box = QVBoxLayout(dialog)
-    box.addWidget(QuickStartPage(host))
+    dialog.page = QuickStartPage(host)
+    box.addWidget(dialog.page)
     dialog.show()
+    with contextlib.suppress(AttributeError, TypeError):
+        host._quickstart_dialog = dialog
     return dialog
 
 

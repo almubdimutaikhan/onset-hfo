@@ -177,7 +177,7 @@ python -m onset_hfo.cli benchmark
 python -m onset_hfo.cli outcome
 
 # 10. sit with the signal itself: the desktop application, installed on Ubuntu
-#     (its Library pages read the committed study tables)
+#     (its Validation page says what each kind of number was measured against)
 ./packaging/install-ubuntu.sh --with-sample
 onset-review                                  # or the applications menu
 onset-review --subject sub-01 --window 0 60 --expert    # straight in
@@ -457,7 +457,7 @@ onset_review/         the desktop reviewer (Qt), installable on Ubuntu
 
 packaging/            install-ubuntu.sh, the .desktop entry and the icon
 
-data/outcome/         the outcome study's per-subject tables, for the Patients page
+data/outcome/         the outcome study's per-subject tables, for the demo's Patients page
 
 data/example_analysis/  a real 60 s analysis, so the app works on a fresh clone
 

@@ -10,9 +10,11 @@ streamlit run app/Home.py
 ```
 
 A Streamlit site for people who want to see the results without installing
-anything. The working tool is the desktop application (`onset_review/`,
-`onset-review`); this demo reads the same committed tables through the same
-module, `onset_review/studytables.py`, so the two cannot show different numbers.
+anything, with every study's tables, patients and charts. The working tool is
+the desktop application (`onset_review/`, `onset-review`); its Validation page
+gives each study's headline figures, which `tests/test_validation.py` holds to
+the committed tables this demo reads through `onset_review/studytables.py`, so
+the two cannot show different numbers.
 
 Works on a fresh clone with **no download**. Every page reads a committed
 file: a real 60-second analysis in `data/example_analysis/`, the group results
@@ -164,8 +166,8 @@ a control that cannot work.
 ## Testing
 
 Everything the pages decide lives in `onset_review/studytables.py`, which
-imports no interface toolkit and is shared with the desktop application's study
-pages; `tests/test_studytables.py` covers it offline. `tests/test_streamlit_app.py`
+imports no interface toolkit; the desktop application uses it only for its
+disclaimer. `tests/test_studytables.py` covers it offline. `tests/test_streamlit_app.py`
 opens every page headless with Streamlit's own test runner and fails on any
 exception, and checks that each page shows the research-tool disclaimer. It
 runs when the `app` extra is installed, which CI does. Before a deploy,

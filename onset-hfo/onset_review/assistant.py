@@ -908,7 +908,7 @@ class AssistantPanel(QWidget):
         """The cited document section, in a window of its own."""
         from qtpy.QtWidgets import QDialog, QVBoxLayout
 
-        from onset_review.studypages import set_markdown
+        from onset_review.readingview import set_markdown
 
         try:
             label, body = self._sources[int(index)]

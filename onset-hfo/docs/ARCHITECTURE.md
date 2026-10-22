@@ -114,18 +114,22 @@ Every number this project produces carries its signal window; in the window a
 rate leads to the events behind it, an event leads to the signal it was
 measured on, and an assistant answer's citations expand to both.
 
-The study pages (Library) are built by `onset_review/studies.py` from the
-committed tables, through the loaders in `onset_review/studytables.py`. That
-module imports no interface toolkit and is tested offline
-(`tests/test_studytables.py`); its docstring states the one rule the pages are
-built on — the interface shows what the pipeline wrote and computes nothing of
-its own — and its single documented exception.
+The **Validation** page says, for each kind of number the window shows, what
+it was measured against on public data, how well it agreed and where it fails.
+Its text is in `onset_review/validation.py`, which imports no interface
+toolkit; the figures are written there rather than read from the study tables,
+so the page reads the same on an install without them, and
+`tests/test_validation.py` holds every figure to the committed tables in
+`data/`. `onset_review/readingview.py` renders it.
 
-A Streamlit site (`app/`) shows the same results with no install, as a
-demo: it reads the committed tables through `onset_review/studytables.py`, the
-module the desktop study pages use, so the two cannot disagree. It was retired
-in October 2026 and restored as a demo after 0.3.21; `app/README.md` covers
-deploying it.
+A Streamlit site (`app/`) shows the full studies — every threshold, patient
+and chart — with no install, as a demo. It reads the committed tables through
+the loaders in `onset_review/studytables.py`. That module imports no interface
+toolkit and is tested offline (`tests/test_studytables.py`); its docstring
+states the one rule the pages are built on — the interface shows what the
+pipeline wrote and computes nothing of its own — and its single documented
+exception. The site was retired in October 2026 and restored as a demo after
+0.3.21; `app/README.md` covers deploying it.
 
 ## Running it
 

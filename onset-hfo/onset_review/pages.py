@@ -4,8 +4,8 @@ The sidebar holds a handful of places rather than every page: **Patient**
 (the recordings on this machine, and a patient's case worked up step by
 step), **Review** (the open recording: its ranking and trace, the signal as
 analysed, the contacts, the map), **Assistant** (the local model about this
-recording, or on its own), **Report**, and at its foot the **Library** (the
-quick start guide and the study behind every number). The pages inside a
+recording, or on its own), **Report**, and at its foot **Validation** (what
+each method was measured to do, on which data, and where it fails). The pages inside a
 place are a segmented control above the page. Python on the recording, as in
 Spyder, is the **Analysis** place, shown only in Analysis mode (View →
 Analysis mode), with the Workspace and Files panes it brings.
@@ -56,8 +56,7 @@ from onset_review.studytables import DATA_SENTENCE as _DATA_SENTENCE
 from onset_review.studytables import DISCLAIMER_LEAD as _DISCLAIMER_LEAD
 from onset_review.studytables import DISCLAIMER_TAIL as _DISCLAIMER_TAIL
 
-__all__ = ["PageWindow", "PAGES", "STUDY_PAGES", "DISCLAIMER", "SECTIONS",
-           "sections", "page_label"]
+__all__ = ["PageWindow", "PAGES", "DISCLAIMER", "SECTIONS", "sections", "page_label"]
 
 #: (key, sidebar label). The order is the site's.
 PAGES = (
@@ -71,15 +70,10 @@ PAGES = (
     ("assistant", "Assistant"),
 )
 
-#: Pages for finding your way, open in every state: the quick start guide
-#: and a patient case's front door (`onset_review.guide`).
-GUIDE_PAGES = (("quickstart", "Quick start"), ("case", "Case"))
-
-#: The site's cohort pages, read-only, built from the committed tables by
-#: `onset_review.studies` and shown by `onset_review.studypages`. They need
-#: no recording, so they are open in the start state too.
-STUDY_PAGES = ("Detectors", "Outcome", "Patients", "Data", "Architecture",
-               "Research")
+#: Pages open in every state: a patient case's front door
+#: (`onset_review.guide`), and what each method was measured to do
+#: (`onset_review.validation`). The quick start guide is under Help (F1).
+GUIDE_PAGES = (("case", "Case"), ("validation", "Validation"))
 
 #: The standing disclaimer, assembled from its canonical parts in
 #: `onset_review.studytables`.
@@ -131,7 +125,7 @@ CHAT_PAGE = ("chat", "Chat")
 
 #: The sidebar's places, in order: (key, label, ((page key, segment label), ...)).
 #: A place with more than one page shows them as a segmented control above
-#: the page. The Library (`library_section`) follows at the foot of the
+#: the page. Validation (`VALIDATION_SECTION`) follows at the foot of the
 #: sidebar, and the Analysis place (`ANALYSIS_SECTION`) only in Analysis mode.
 SECTIONS = (
     ("patient", "Patient", (("home", "Overview"), ("case", "Case"))),
@@ -140,6 +134,7 @@ SECTIONS = (
     ("ask", "Assistant", (("assistant", "This recording"), ("chat", "Chat"))),
     ("report", "Report", (("report", "Report"),)),
 )
+VALIDATION_SECTION = ("validation", "Validation", (("validation", "Validation"),))
 ANALYSIS_SECTION = ("code", "Analysis", (("analysis", "Analysis"),))
 
 #: What each place is for: its tooltip, and the line the guide prints.
@@ -152,30 +147,22 @@ SECTION_ABOUT = {
            "its own",
     "report": "The structured, cited report: findings, your read, data quality, "
               "limitations",
-    "library": "The quick start guide, and the study behind every number; needs no "
-               "recording",
+    "validation": "What each method was measured to do, on which public data, and where "
+                  "it fails; needs no recording",
     "code": "Your own Python on this recording, as in Spyder (View → Analysis mode)",
 }
 
 #: The glyph drawn beside each place (`onset_review.glyphs`).
 SECTION_GLYPHS = {"patient": "patients", "review": "recording", "ask": "assistant",
-                  "report": "report", "library": "research", "code": "analysis"}
+                  "report": "report", "validation": "research", "code": "analysis"}
 
 #: View → Analysis mode.
 ANALYSIS_MODE_SHORTCUT = "Ctrl+Shift+E"
 
 
-def library_section() -> tuple:
-    """The Library: the quick start guide, then the study's pages."""
-    from onset_review.studies import STUDIES
-
-    return ("library", "Library",
-            (("quickstart", "Quick start"),) + tuple((key, label) for key, label, _ in STUDIES))
-
-
 def sections(analysis: bool = True) -> tuple:
     """Every place, in the sidebar's order; the Analysis place last."""
-    return SECTIONS + (library_section(),) + ((ANALYSIS_SECTION,) if analysis else ())
+    return SECTIONS + (VALIDATION_SECTION,) + ((ANALYSIS_SECTION,) if analysis else ())
 
 
 def page_label(key: str) -> str:
@@ -256,6 +243,31 @@ class _CardPage(QWidget):
         if body is None or name.startswith("_"):
             raise AttributeError(name)
         return getattr(body, name)
+
+
+class ValidationPage(QWidget):
+    """What each method was measured to do (`onset_review.validation`), and
+    the open window scored against its expert markings when it has them."""
+
+    def __init__(self, session=None, parent=None):
+        super().__init__(parent)
+        from onset_review.readingview import ReadingView
+
+        self.session = session
+        self.view = ReadingView()
+        self.view.setObjectName("onset_validation")
+        self.view.setAccessibleName("Validation")
+        box = QVBoxLayout(self)
+        box.setContentsMargins(0, 0, 0, 0)
+        box.addWidget(self.view)
+        self.refresh()
+
+    def refresh(self) -> None:
+        from onset_review import validation
+        from onset_review.readingview import annotate_terms, glossary, set_markdown
+
+        set_markdown(self.view, validation.markdown(self.session))
+        annotate_terms(self.view.document(), glossary())
 
 
 class PageWindow(QMainWindow):
@@ -376,7 +388,7 @@ class PageWindow(QMainWindow):
         # a second shortcut on the same keys would make both ambiguous.
         self.nav.setAccessibleName("Places")
         self.nav.setAccessibleDescription(
-            "Patient, Review, Assistant, Report and the Library; Alt+1 to Alt+5, "
+            "Patient, Review, Assistant, Report and Validation; Alt+1 to Alt+5, "
             "Ctrl+Page Down for the next page inside one, Ctrl+K to search everything")
         self.show_page("home")
 
@@ -439,7 +451,7 @@ class PageWindow(QMainWindow):
 
     def _build_sidebar(self) -> None:
         """A handful of places, not every page: Patient, Review, Assistant
-        and Report, the Library at the foot, Analysis only in Analysis mode.
+        and Report, Validation at the foot, Analysis only in Analysis mode.
         A place's pages are the segmented control above the page."""
         from onset_review import glyphs
 
@@ -484,7 +496,7 @@ class PageWindow(QMainWindow):
         for key, label, pages in SECTIONS:
             place(key, label, pages)
         gap()
-        place(*library_section())
+        place(*VALIDATION_SECTION)
         place(*ANALYSIS_SECTION).setHidden(not self._analysis_mode)
 
         sidebar = QWidget()
@@ -664,22 +676,10 @@ class PageWindow(QMainWindow):
             page.setObjectName(f"page_{key}")
             self._pages[key] = page
             self.stack.addWidget(page)
-        self.quickstart = guide.QuickStartPage(self)
         self.case_page = guide.CasePage(self)
-        for (key, _label), page in zip(GUIDE_PAGES, (self.quickstart, self.case_page),
+        self.validation_page = self._on_card(ValidationPage(self.session))
+        for (key, _label), page in zip(GUIDE_PAGES, (self.case_page, self.validation_page),
                                        strict=True):
-            page.setObjectName(f"page_{key}")
-            self._pages[key] = page
-            self.stack.addWidget(page)
-        from onset_review.studies import STUDIES
-        from onset_review.studypages import StudyPage
-
-        for key, _label, _what in STUDIES:
-            study = StudyPage(key, cached=self._cached, session=self.session)
-            if self._on_open_cached is not None:
-                study.openRequested.connect(self._on_open_cached)
-            study.notebookRequested.connect(self._open_notebook)
-            page = self._on_card(study)
             page.setObjectName(f"page_{key}")
             self._pages[key] = page
             self.stack.addWidget(page)
@@ -742,7 +742,7 @@ class PageWindow(QMainWindow):
                             "(F1) shows everything the program does; every page in the "
                             "sidebar can be looked at before anything is open.")
             opener.setTextFormat(Qt.RichText)
-            opener.linkActivated.connect(lambda _link: self.show_page("quickstart"))
+            opener.linkActivated.connect(lambda _link: self._quickstart())
             opener.setObjectName("onset_nothing_open")
             opener.setWordWrap(True)
             opener.setStyleSheet(theme.card("info"))
@@ -1373,15 +1373,10 @@ class PageWindow(QMainWindow):
         if callable(handler):
             handler(*args)
 
-    def _open_notebook(self, path: str) -> None:
-        """A study page written as a notebook: on the Analysis page when there
-        is one; otherwise where it was written is said, for Jupyter or later."""
-        if "analysis" in self._pages and self.panels.get("editor") is not None:
-            self._open_script(path)
-        elif self.statusBar() is not None:
-            self.statusBar().showMessage(
-                f"Notebook written to {path}. Open a recording to run it on the Analysis "
-                "page, or open it in Jupyter.", 10000)
+    def _quickstart(self) -> None:
+        from onset_review import guide
+
+        guide.show_quickstart(self)
 
     def _open_script(self, path: str) -> None:
         """A script or notebook double-clicked in the Files pane."""
@@ -1913,7 +1908,7 @@ class PageWindow(QMainWindow):
     def refresh_report(self) -> None:
         """Rebuild the preview from the session as it is now, verdicts and all."""
         from onset_review import report
-        from onset_review.studypages import set_markdown
+        from onset_review.readingview import set_markdown
 
         reader = getattr(getattr(self.session, "read", None), "reader", "") or None
         appendix = bool(getattr(self, "appendix", None) and self.appendix.isChecked())
@@ -2300,10 +2295,8 @@ class PageWindow(QMainWindow):
 
     # -- the public surface ----------------------------------------------
     def page_keys(self) -> list[str]:
-        from onset_review.studies import STUDIES
-
-        return ([key for key, _label in PAGES] + [key for key, _, _ in STUDIES]
-                + [CHAT_PAGE[0]] + [key for key, _label in GUIDE_PAGES])
+        return ([key for key, _label in PAGES] + [CHAT_PAGE[0]]
+                + [key for key, _label in GUIDE_PAGES])
 
     def current_page(self) -> str:
         widget = self.stack.currentWidget()
@@ -2342,12 +2335,10 @@ class PageWindow(QMainWindow):
 
     def page_entries(self) -> list[dict]:
         """Every page by its name, for the command search."""
-        from onset_review.studies import STUDIES
-
         about = dict(HOW_TO_READ)
-        about.update({key: what for key, _label, what in STUDIES})
-        about["quickstart"] = ("everything this program does, as the jobs people come with, "
-                               "and every menu entry (F1)")
+        about["validation"] = ("what each method was measured to do: agreement with expert "
+                               "markings, the onset zone and surgical outcome, on public "
+                               "recordings, and where it fails")
         about["case"] = "one patient's recordings worked up step by step"
         return [{"key": key, "label": self._labels.get(key, key),
                  "about": about.get(key, SECTION_ABOUT.get(self._section_of[key], ""))}

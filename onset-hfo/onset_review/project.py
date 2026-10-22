@@ -12,14 +12,16 @@ them:
 * **read.json** -- the verdicts and the findings paragraph;
 * **variables.pkl** -- what the console made, when there is any (a pickle,
   so opening one asks first);
-* **study/** -- your cohort and your re-runs of the study;
 * **recording/** -- the recording itself, for a file of your own, when asked
   for. An archive window needs no copy: the request names it, and it is
   fetched or found in the cache as any other. A file left out is named by
   path and by its SHA-256, so opening the project somewhere else can say
   whether the file found there is the same one.
 
-Opening one restores what it can and says what it could not. Nothing in it
+Opening one restores what it can and says what it could not. A project
+saved by 0.3.22 or earlier may carry a ``study/`` folder, the cohort and
+re-runs of the study pages that are no longer in the program; it is left
+unread. Nothing in it
 is a new number: the analysis is run again from the request, by the same
 pipeline, so a project reopened is the same analysis rather than a copy of
 its results. The console history comes back as a script in the editor, not
@@ -39,7 +41,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 __all__ = ["SUFFIX", "request_to_dict", "request_from_dict", "save_project", "open_project",
-           "ProjectState", "restore_read", "restore_study", "sha256"]
+           "ProjectState", "restore_read", "sha256"]
 
 SUFFIX = ".onsetproj"
 SCHEMA = 1
@@ -103,7 +105,7 @@ def save_project(path: str | Path, *, request=None, read=None, page: str = "",
                  note: str = "") -> dict:
     """Write a project. `editor_tabs` are {title, path, text}; `variables`
     the console's own names. Returns what went in and what was left out."""
-    from onset_review import __version__, yourstudy
+    from onset_review import __version__
     from onset_review import variables as workspace
 
     path = Path(path)
@@ -114,7 +116,7 @@ def save_project(path: str | Path, *, request=None, read=None, page: str = "",
                       "request": request_to_dict(request) if request is not None else None,
                       "editor": list(editor_tabs or []), "console_log": list(console_log or []),
                       "recording": None, "electrodes": None, "variables": [],
-                      "variables_left_out": {}, "study": []}
+                      "variables_left_out": {}}
     path.parent.mkdir(parents=True, exist_ok=True)
     partial = path.with_suffix(SUFFIX + ".partial")
     with zipfile.ZipFile(partial, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
@@ -128,11 +130,6 @@ def save_project(path: str | Path, *, request=None, read=None, page: str = "",
                     bundle.write(pkl, "variables.pkl")
                 manifest["variables"] = kept
                 manifest["variables_left_out"] = skipped
-        folder = yourstudy.state_dir()
-        for name in yourstudy.COHORT_FILES:
-            if (folder / name).is_file():
-                bundle.write(folder / name, f"study/{name}")
-                manifest["study"].append(name)
         for key, attribute in (("recording", "path"), ("electrodes", "electrodes_path")):
             source = getattr(request, attribute, None) if request is not None else None
             if source is None:
@@ -255,28 +252,4 @@ def restore_read(request, read) -> Path | None:
         backup = target.with_name(f"{target.stem}-before-{time.strftime('%Y%m%d-%H%M%S')}.json")
         shutil.copy2(target, backup)
     adjudication.save(request, read)
-    return backup
-
-
-def restore_study(state: ProjectState) -> Path | None:
-    """Your cohort and re-runs from the project. What this machine had is
-    moved to ``study/before-<time>/`` first. Returns that folder, or None."""
-    from onset_review import yourstudy
-
-    names = list(state.manifest.get("study") or [])
-    if not names:
-        return None
-    folder = yourstudy.state_dir()
-    folder.mkdir(parents=True, exist_ok=True)
-    backup = None
-    existing = [folder / n for n in yourstudy.COHORT_FILES if (folder / n).is_file()]
-    if existing:
-        backup = folder / f"before-{time.strftime('%Y%m%d-%H%M%S')}"
-        backup.mkdir()
-        for file in existing:
-            shutil.move(str(file), backup / file.name)
-    for name in names:
-        source = state.folder / "study" / name
-        if source.is_file():
-            shutil.copy2(source, folder / name)
     return backup

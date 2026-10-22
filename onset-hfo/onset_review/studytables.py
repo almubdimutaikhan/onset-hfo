@@ -4,8 +4,8 @@ page can show.
 Every function here is pure, takes a :class:`~onset_hfo.store.ResultStore` or
 reads a committed table, and returns plain data or a DataFrame. None of them
 imports an interface toolkit, which is what makes them testable and what keeps
-the desktop study pages (:mod:`onset_review.studies`) a *view*: the page
-arranges what these return and does not decide anything.
+the no-install demo (``app/``) a *view*: a page arranges what these return
+and does not decide anything.
 
 The one rule this module exists to enforce
 ------------------------------------------
@@ -29,9 +29,8 @@ this rule either. The event's times, frequency and amplitude all come from the
 store; the signal is fetched again only so the reader can *look* at the window
 the numbers describe. Nothing is re-detected.
 
-The no-install Streamlit demo (``app/``) reads the same tables through this
-module, so the demo and the desktop study pages cannot show different numbers.
-It was that site's ``app/panels.py`` until the site was retired in October
+The no-install Streamlit demo (``app/``) reads the committed tables through
+this module. It was that site's ``app/panels.py`` until the site was retired in October
 2026; when the demo came back, its pages were pointed here instead of
 restoring a second copy.
 """
@@ -47,9 +46,7 @@ from onset_hfo.config import PROJECT_ROOT, RESULTS_DIR
 from onset_hfo.store import ResultStore
 
 #: Where the committed tables live. The checkout's ``data/`` unless
-#: ``ONSET_HFO_DATA_ROOT`` says otherwise -- which the desktop reviewer sets
-#: when it reads the tables of an installed release bundle rather than a
-#: checkout (:func:`onset_review.studies.site_root`).
+#: ``ONSET_HFO_DATA_ROOT`` says otherwise.
 DATA_ROOT = Path(os.environ.get("ONSET_HFO_DATA_ROOT") or PROJECT_ROOT / "data")
 
 #: A real 60 s analysis that ships with the source, so every page works on a

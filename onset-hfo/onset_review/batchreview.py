@@ -23,8 +23,7 @@ Three rules make the table something to rely on:
 * **A failure is a row, not a stop.** A recording that cannot be read or
   analysed gets its reason in the table, and the batch goes on.
 
-Each recording's ranking is written beside the table (``findings/``), which
-is what adding a row to *Your cohort* measures from (`onset_review.yourstudy`).
+Each recording's ranking is written beside the table (``findings/``).
 """
 
 from __future__ import annotations

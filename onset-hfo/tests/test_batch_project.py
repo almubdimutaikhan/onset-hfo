@@ -1,15 +1,13 @@
 """Many recordings at once, and a whole analysis saved as one file.
 
-Asked for: analyse many recordings in one go and turn them into a cohort;
-save an analysis and reopen it later or elsewhere. What has to hold:
+Asked for: analyse many recordings in one go; save an analysis and reopen it
+later or elsewhere. What has to hold:
 
 * every recording in a batch is analysed with the same settings, a file's
   channels are typed by the one rule the reader stated, and a recording
   that fails is a row with its reason while the batch goes on;
-* a batch row joins the cohort measured exactly as the same recording open
-  in the window would be;
 * a project brings back the request, the verdicts, the scripts, the console's
-  variables, the cohort and the page; a recording it does not carry is
+  variables and the page; a recording it does not carry is
   found or named, and a different file is said to be different;
 * the window saves a project and reopens it, end to end.
 """
@@ -25,7 +23,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from onset_review import batchreview, project, yourstudy
+from onset_review import batchreview, project
 from onset_review.session import ReviewRequest, session_from_recording
 
 
@@ -201,24 +199,6 @@ def test_a_file_is_requested_with_the_rule_s_types(tmp_path, monkeypatch):
     assert (request.t_start, request.t_stop, request.line_freq) == (10, 40, 60.0)
 
 
-def test_a_batch_row_joins_the_cohort_as_the_open_window_would(analyse, config, tmp_path):
-    result = batchreview.run_batch([batchreview.BatchItem(dataset="d", subject="sub-09")],
-                                   ReviewRequest(detectors=("rms",)), folder=tmp_path / "c",
-                                   load=analyse)
-    row = result.rows.iloc[0].to_dict()
-    session = analyse(ReviewRequest(dataset="d", subject="sub-09", detectors=("rms",)))
-    resected = yourstudy.contacts_of(session.candidates[:1])
-    from_batch = yourstudy.add_batch_row(row, batchreview.findings_for(result, row),
-                                         result.settings, "recurrence", resected, label="b")
-    from_window = yourstudy.measure(session, resected)
-    for key in ("candidates", "candidates_resected", "top_channel_resected", "n_candidates"):
-        assert from_batch[key] == from_window[key], key
-    assert from_batch["from_batch"] and from_batch["outcome"] == "recurrence"
-    with pytest.raises(ValueError):
-        yourstudy.add_batch_row({**row, "analysed_seconds": 0}, batchreview.findings_for(
-            result, row), result.settings, "recurrence", resected)
-
-
 # -- projects --------------------------------------------------------------------------------
 def test_a_request_survives_json_with_its_preprocessing():
     from onset_hfo.config import PreprocessConfig
@@ -239,7 +219,6 @@ def test_a_project_brings_back_what_was_saved(config, tmp_path):
     request = ReviewRequest(subject="sub-05", t_start=0, t_stop=30)
     read = adjudication.Adjudication(window=adjudication.window_id(request), reader="Dr R",
                                      note="looked at it")
-    yourstudy.set_cohort([{"id": "x", "label": "theirs"}])
     saved = project.save_project(tmp_path / "work", request=request, read=read, page="map",
                                  editor_tabs=[{"title": "power.py", "path": None,
                                                "text": "p = 1\n"}],
@@ -247,10 +226,10 @@ def test_a_project_brings_back_what_was_saved(config, tmp_path):
                                  variables={"mine": np.arange(4), "fn": lambda: 1})
     assert saved["path"].endswith("work.onsetproj")
     assert saved["variables"] == ["mine"] and "fn" in saved["variables_left_out"]
-    assert {"project.json", "read.json", "variables.pkl", "study/cohort.json"} <= \
-        set(zipfile.ZipFile(saved["path"]).namelist())
+    names = set(zipfile.ZipFile(saved["path"]).namelist())
+    assert {"project.json", "read.json", "variables.pkl"} <= names
+    assert not any(name.startswith("study/") for name in names)
 
-    yourstudy.set_cohort([{"id": "y", "label": "mine"}])
     adjudication.save(request, adjudication.Adjudication(window=read.window, note="local"))
     state = project.open_project(saved["path"])
     assert state.request == request and state.page == "map"
@@ -260,9 +239,10 @@ def test_a_project_brings_back_what_was_saved(config, tmp_path):
     backup = project.restore_read(request, state.read)
     assert backup is not None and json.loads(backup.read_text())["note"] == "local"
     assert adjudication.load(request).note == "looked at it"
-    moved = project.restore_study(state)
-    assert [e["label"] for e in yourstudy.cohort_entries()] == ["theirs"]
-    assert json.loads((moved / "cohort.json").read_text())[0]["label"] == "mine"
+    # A project from a version that kept a cohort opens, its study/ unread.
+    with zipfile.ZipFile(saved["path"], "a") as bundle:
+        bundle.writestr("study/cohort.json", "[]")
+    assert project.open_project(saved["path"], folder=tmp_path / "old").request == request
 
 
 def test_a_file_recording_travels_or_is_found_and_checked(config, tmp_path):
@@ -309,8 +289,7 @@ def _settle(app, n=10):
         QThread.msleep(15)
 
 
-def test_the_batch_window_runs_shows_and_adds_to_the_cohort(qapp, analyse, config,
-                                                             monkeypatch):
+def test_the_batch_window_runs_and_shows_the_batch(qapp, analyse, config, monkeypatch):
     from onset_review import session as session_module
     from onset_review.batchwindow import BatchWindow
 
@@ -335,9 +314,6 @@ def test_the_batch_window_runs_shows_and_adds_to_the_cohort(qapp, analyse, confi
         window.table.selectRow(0)
         request = window.open_selected()
         assert emitted == [request] and request.subject == "sub-01"
-        channels = window.result.rows.iloc[0]["channel_names"].split("|")
-        entry = window.add_to_cohort(0, "seizure-free", yourstudy.contacts_of(channels[:1]))
-        assert entry is not None and yourstudy.cohort_entries()[-1]["from_batch"]
         across = window.across_view
         assert [window.tabs.tabText(i) for i in range(window.tabs.count())] == [
             "Table", "Across the batch"]
@@ -383,9 +359,6 @@ def test_a_batch_run_before_opens_again_with_rows_that_work(qapp, analyse, confi
         assert emitted == [request]
         assert (request.subject, request.band, request.threshold_sd, request.t_stop) == \
             ("sub-01", "fast_ripple", 4.0, 30.0)
-        channels = str(result.rows.iloc[0]["channel_names"]).split("|")
-        entry = again.add_to_cohort(0, "seizure-free", yourstudy.contacts_of(channels[:1]))
-        assert entry is not None
         # A batch from before batches kept their recordings: shown, not openable.
         settings = json.loads((folder / "settings.json").read_text())
         for key in ("items", "template", "rule"):
@@ -393,7 +366,7 @@ def test_a_batch_run_before_opens_again_with_rows_that_work(qapp, analyse, confi
         (folder / "settings.json").write_text(json.dumps(settings))
         assert again.open_batch(folder) is not None
         assert again.table.rowCount() == 2 and again.items == []
-        assert not again.open_button.isEnabled() and again.cohort_button.isEnabled()
+        assert not again.open_button.isEnabled() and again.folder_button.isEnabled()
         assert again.list.count() == 2
         assert again.open_batch(config) is None and "not a batch folder" in again.status.text()
     finally:

@@ -658,9 +658,10 @@ says nothing about the channels at all.
 **What is open.** No clinician has used it for an afternoon yet — which is the
 only test that matters and the reason it was built.
 
-**Status, the reading interface.** *(Retired in October 2026: the desktop
-application's Library pages replaced it, and its view model became
-`onset_review/studytables.py`. The record below is kept as written.)* `app/` —
+**Status, the reading interface.** *(Retired in October 2026 in favour of the
+desktop application, and restored after 0.3.21 as the no-install demo; its view
+model became `onset_review/studytables.py`, which the demo reads. The record
+below is kept as written.)* `app/` —
 `streamlit run app/Home.py`, installed with `pip install -e ".[app]"`. Five tabs: ranking (with intervals and the "does
 anything stand out?" verdict above the table), evidence (a channel's citable
 events and the three-panel figure for the one you pick), disagreements (both

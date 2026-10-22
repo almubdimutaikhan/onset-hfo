@@ -6,8 +6,7 @@ background with the settings of the window that opened it, into one table
 (`onset_review.batchreview`). The rule that types a file's channels is
 stated once, above the list, because a batch cannot stop to ask about each
 file. Stop ends the batch between recordings; what finished is kept. A row
-can be opened in the main window, or added to *Your cohort* with the
-resection and outcome the reader enters. *Across the batch* reads the finished
+can be opened in the main window. *Across the batch* reads the finished
 table down its columns (`onset_review.batchresults`): each recording's
 busiest channel on one chart, each detector's agreement with the experts
 across the recordings that have markings, and the recordings that differ
@@ -313,7 +312,7 @@ class BatchWindow(QWidget):
         self.reopen_button = QPushButton("Open a batch…")
         self.reopen_button.setObjectName("onset_batch_reopen")
         self.reopen_button.setToolTip("A batch run before: its table, its charts, and its rows "
-                                      "to open or add to your cohort")
+                                      "to open")
         self.reopen_menu = QMenu(self.reopen_button)
         self.reopen_menu.aboutToShow.connect(self._fill_reopen_menu)
         self.reopen_button.setMenu(self.reopen_menu)
@@ -396,17 +395,14 @@ class BatchWindow(QWidget):
         self.open_button = button("Open in the window", "Open the selected recording in the "
                                   "main window, analysed the same way", self.open_selected)
         self._open_tip = self.open_button.toolTip()
-        self.cohort_button = button("Add to your cohort…", "Measure the selected recording "
-                                    "the way the Outcome study measures a patient",
-                                    self.add_to_cohort_dialog)
         self.folder_button = button("Open the folder", "summary.csv, summary.md, settings.json "
                                     "and each recording's ranking",
                                     lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(
                                         str(self.result.folder))) if self.result else None)
-        for widget in (self.open_button, self.cohort_button, self.folder_button):
+        for widget in (self.open_button, self.folder_button):
             widget.setEnabled(False)
         result_row = QHBoxLayout()
-        for widget in (self.open_button, self.cohort_button, self.folder_button):
+        for widget in (self.open_button, self.folder_button):
             result_row.addWidget(widget)
         result_row.addStretch(1)
         bottom = QWidget()
@@ -472,8 +468,8 @@ class BatchWindow(QWidget):
 
     def open_batch(self, folder):
         """Show a batch written before: its table and its charts, and, when it
-        kept how each recording was asked for, rows that open and join the
-        cohort as they did when it ran."""
+        kept how each recording was asked for, rows that open as they did
+        when it ran."""
         if self._worker is not None and self._worker.isRunning():
             self.status.setText("Wait for this batch to finish, or stop it, first.")
             return None
@@ -640,7 +636,7 @@ class BatchWindow(QWidget):
             self.across_view.show_result(result)
         except Exception as error:      # noqa: BLE001 - the table stands without it
             self.across_view.summary.setText(f"Could not read the batch across: {error}")
-        for widget in (self.open_button, self.cohort_button, self.folder_button):
+        for widget in (self.open_button, self.folder_button):
             widget.setEnabled(True)
         self.open_button.setToolTip(self._open_tip)
 
@@ -658,37 +654,6 @@ class BatchWindow(QWidget):
         request = batchreview.request_for(self.items[index], self.template, self.rule())
         self.openRequested.emit(request)
         return request
-
-    def add_to_cohort_dialog(self):
-        index = self._selected()
-        if index is None or self.result is None:
-            return None
-        row = self.result.rows.iloc[index].to_dict()
-        if row.get("error"):
-            self.status.setText("That recording was not analysed, so it cannot be measured.")
-            return None
-        from onset_review.studypages import CohortDialog
-
-        channels = [c for c in str(row.get("channel_names", "")).split("|") if c]
-        dialog = CohortDialog.for_channels(str(row.get("subject", "")), channels, self)
-        if dialog.exec() != QDialog.Accepted:
-            return None
-        return self.add_to_cohort(index, *dialog.values())
-
-    def add_to_cohort(self, index: int, outcome: str, resected, label: str = ""):
-        from onset_review import yourstudy
-
-        row = self.result.rows.iloc[index].to_dict()
-        try:
-            entry = yourstudy.add_batch_row(row, batchreview.findings_for(self.result, row),
-                                            self.result.settings, outcome, resected, label)
-        except ValueError as error:
-            self.status.setText(str(error))
-            return None
-        self.status.setText(f"{entry['label']} is in your cohort: {entry['n_candidates']} tied "
-                            f"channel(s), {entry['candidates_resected']:.0%} inside the "
-                            "resection you entered. The Outcome page shows it.")
-        return entry
 
     def closeEvent(self, event) -> None:      # noqa: N802
         self.stop()

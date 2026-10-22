@@ -724,7 +724,7 @@ importantly — **the traps**: large sharp transients that ring through an
 80–250 Hz filter and look exactly like ripples.
 
 **Where this sits.** The desktop application, Onset Review, reports the
-measured scores under **Library › Detectors** (against the ds003498 expert
+measured scores under **Validation** (against the ds003498 expert
 markings) and lets you re-run the detector at stricter thresholds in the
 **Threshold** tab of **Review › Recording**. This notebook is where the
 detectors are tested against a known truth, in code you can change.
@@ -976,7 +976,7 @@ uncertainty — plus the place where they meet.
 this directly: the **Threshold** tab of **Review › Recording** re-runs the
 ranking detector at stricter thresholds through the same `AnalysisSession`
 the planner below drives. The planner ladder and the learned model are
-research code with no page of their own; **Library › Research** reports their
+research code with no page of their own; `docs/LOCALIZATION.md` reports their
 measured state. This notebook is where they run.
 
 **Nothing here downloads a recording.** The orchestration runs on simulated
@@ -1406,8 +1406,8 @@ minutes — which is the most useful result in the notebook, because it says the
 number is not stable yet.
 
 **Where this sits.** The desktop application, Onset Review, shows this study's
-published result under **Library › Outcome** and the same study one patient
-at a time under **Library › Patients**, read from the committed tables. This
+published result under **Validation**, and the no-install demo the same study
+one patient at a time from the committed tables. This
 notebook is the analysis behind those pages, re-run from the archive: change
 a window or a threshold here and you get your own version of them.
 
@@ -1700,7 +1700,7 @@ open-weight models across a quantization sweep, and scores each cell.
 
 **Where this sits.** The desktop application, Onset Review, runs one local
 model at a time behind its **Assistant** pages and does not run this ladder;
-**Library › Research** lists a real model driving the analysis ladder as open
+`docs/ROADMAP.md` lists a real model driving the analysis ladder as open
 work. This notebook is how that measurement is made. It needs a GPU runtime
 (Runtime → Change runtime type → **T4 GPU**).
 
@@ -1917,7 +1917,7 @@ The notebook prints that sentence before it prints any score.
 **Where this sits.** In the desktop application, Onset Review, a reader
 records their own read of each channel and event on **Review › Recording** —
 with the detector's verdict in view, which makes it a review rather than a
-benchmark. **Library › Research** lists the hand-annotated benchmark as open
+benchmark. `docs/ROADMAP.md` lists the hand-annotated benchmark as open
 work; this notebook is how it is collected, blinded, on Colab or locally.
 
 **Runtime.** Minutes of compute; the marking is however long you take.
