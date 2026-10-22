@@ -81,7 +81,8 @@ class ReportDialog(QDialog):
                       "in report.txt; the logs say what was opened and what each background "
                       "job did. There is no signal in any of them and no screenshot, but the "
                       "logs do name the recordings and files that were opened, so untick them "
-                      "if a name is private. Your home folder is written as ~.")
+                      "if a name is private: report.txt quotes none of them. Your home folder "
+                      "is written as ~.")
         self.bundle = applog.build_bundle()
         self.files = QListWidget()
         self.files.setObjectName("onset_report_files")

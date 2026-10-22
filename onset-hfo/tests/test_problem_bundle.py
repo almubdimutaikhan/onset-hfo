@@ -9,6 +9,8 @@ What has to hold:
 * a file left out is not in the zip, and the rest is unchanged;
 * the person's own words are in `report.txt`, and the home folder is `~`
   everywhere;
+* `report.txt` quotes no log, so unticking the logs leaves out every name
+  they hold -- the recordings that were opened included;
 * a command line report carries no window log, even when one exists, and saves
   nothing unless the person says yes -- or cannot be asked.
 """
@@ -95,8 +97,22 @@ def test_the_home_folder_is_written_as_a_tilde_in_every_file(logs):
     assert "~/data/sub-07.edf" in bundle.files[applog.LOG_NAME]
 
 
+def test_the_report_lists_the_logs_and_quotes_none_of_them(logs, tmp_path):
+    text = applog.build_bundle("it froze").files["report.txt"]
+    for name in (applog.LOG_NAME, f"{applog.LOG_NAME}.1", applog.CRASH_NAME,
+                 "model-check-1.json"):
+        assert f"- {name}" in text, name
+    for line in ("sub-07.edf", "second", "an older line", "Fatal Python error"):
+        assert line not in text, line
+    # Unticking the logs leaves no trace of what they name.
+    kept = applog.build_bundle().only(["report.txt"])
+    saved = _zip_texts(applog.write_bundle(kept, tmp_path / "plain.zip"))
+    assert list(saved) == ["report.txt"]
+    assert "sub-07" not in saved["report.txt"]
+
+
 def test_the_old_entry_points_still_work(logs, tmp_path):
-    assert "Fatal Python error" in applog.report_text()
+    assert applog.CRASH_NAME in applog.report_text()
     written = applog.write_report(tmp_path / "report")
     assert {"report.txt", applog.LOG_NAME, applog.CRASH_NAME} <= set(_zip_texts(written))
 
