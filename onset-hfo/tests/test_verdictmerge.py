@@ -50,11 +50,40 @@ def test_two_machines_with_the_same_filename_both_survive(tmp_path):
 
 
 def test_a_reader_sent_twice_keeps_the_later_verdict(tmp_path):
-    _write(tmp_path, "first/read.json", "P01", {KEYS[0]: "agree"}, at="2026-10-20T10:00:00Z")
-    _write(tmp_path, "second/read.json", "P01", {KEYS[0]: "disagree"}, at="2026-10-20T11:00:00Z")
+    _write(tmp_path, "p01/first.json", "P01", {KEYS[0]: "agree"}, at="2026-10-20T10:00:00Z")
+    _write(tmp_path, "p01/second.json", "P01", {KEYS[0]: "disagree"}, at="2026-10-20T11:00:00Z")
     table, _ = verdictmerge.collect(tmp_path)
     assert len(table) == 1
     assert table.iloc[0]["verdict"] == "disagree"
+    assert verdictmerge.identity_notes(table) == []
+
+
+def test_readers_who_left_their_name_blank_are_not_one_reader(tmp_path):
+    _write(tmp_path, "a/read.json", "", {KEYS[0]: "agree", KEYS[1]: "agree"})
+    _write(tmp_path, "b/read.json", "", {KEYS[0]: "disagree", KEYS[1]: "agree"})
+    _write(tmp_path, "loose.json", "", {KEYS[0]: "unsure"})
+    table, _ = verdictmerge.collect(tmp_path)
+    assert len(table) == 5, "nobody's verdict is dropped as a duplicate of another's"
+    assert set(table["reader"]) == {"unnamed · a", "unnamed · b", "unnamed · loose.json"}
+    assert set(table["name"]) == {""}
+    pairs = verdictmerge.agreement(table).set_index(["reader_a", "reader_b"])
+    assert pairs.loc[("unnamed · a", "unnamed · b"), "n"] == 2
+    assert pairs.loc[("unnamed · a", "unnamed · b"), "percent_agree"] == 50.0
+    notes = verdictmerge.identity_notes(table)
+    assert len(notes) == 1 and "left their name blank" in notes[0]
+    assert "Who is who" in verdictmerge.summary(table, [])
+
+
+def test_one_name_in_two_folders_is_two_readers_and_the_summary_says_so(tmp_path):
+    """Two people whose machines both call them `user`."""
+    _write(tmp_path, "ward/read.json", "user", {KEYS[0]: "agree"})
+    _write(tmp_path, "lab/read.json", "user", {KEYS[0]: "disagree"})
+    table, _ = verdictmerge.collect(tmp_path)
+    assert set(table["reader"]) == {"user · ward", "user · lab"}
+    pairs = verdictmerge.agreement(table)
+    assert len(pairs) == 1 and pairs.iloc[0]["percent_agree"] == 0.0
+    text = verdictmerge.summary(table, [])
+    assert "The name 'user' is in 2 folders and is counted as 2 readers" in text
 
 
 def test_an_unreadable_file_is_named_and_skipped_not_fatal(tmp_path):

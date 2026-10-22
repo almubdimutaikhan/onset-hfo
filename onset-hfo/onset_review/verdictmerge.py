@@ -20,6 +20,15 @@ detector), which is identical across machines only when every reader opened
 the same window with the same settings. Give every reader the same command.
 Verdicts that match nothing are still in the table; they just do not enter an
 agreement figure.
+
+**A reader is a name in a folder.** The name each verdict carries is whatever
+the reader typed, which can be blank, or the same login name on two machines.
+Taken alone, every blank name would be one reader and two people called
+`user` would be one, and their verdicts would agree with themselves. So a
+reader with no name is told apart by the subfolder their file is in (by the
+file itself when it sits at the top), and a name found in two subfolders is
+two readers, `name · folder`. The summary says each time it has done either;
+put one person's files in one subfolder and give every reader their own name.
 """
 
 from __future__ import annotations
@@ -38,7 +47,10 @@ from onset_review import adjudication
 
 __all__ = ["collect", "agreement", "summary", "main"]
 
-COLUMNS = ["window", "scope", "key", "reader", "verdict", "at", "note", "source"]
+COLUMNS = ["window", "scope", "key", "reader", "verdict", "at", "note", "source", "name"]
+
+#: How a reader with no name is shown.
+UNNAMED = "unnamed"
 
 
 def collect(folder: str | Path) -> tuple[pd.DataFrame, list[str]]:
@@ -47,6 +59,8 @@ def collect(folder: str | Path) -> tuple[pd.DataFrame, list[str]]:
     One row per (window, scope, key, reader). A reader who judged the same
     thing in two files -- sent twice, or changed their mind between sends --
     keeps the later verdict (the `at` stamp decides, not the file's age).
+    `name` is the name as typed; `reader` is who the merge takes them to be
+    (see the module's notes), which is what agreement is computed between.
     """
     root = Path(folder)
     rows: list[dict] = []
@@ -65,16 +79,59 @@ def collect(folder: str | Path) -> tuple[pd.DataFrame, list[str]]:
         for scope, judged in (("event", read.events), ("channel", read.channels)):
             for key, judgement in judged.items():
                 rows.append({"window": window, "scope": scope, "key": key,
-                             "reader": judgement.reader, "verdict": judgement.verdict,
-                             "at": judgement.at, "note": judgement.note, "source": source})
+                             "reader": "", "verdict": judgement.verdict,
+                             "at": judgement.at, "note": judgement.note, "source": source,
+                             "name": judgement.reader.strip()})
     table = pd.DataFrame(rows, columns=COLUMNS)
     if table.empty:
         return table, unreadable
+    table["reader"] = reader_ids(table)
     table = (table.sort_values("at", kind="stable")
                   .drop_duplicates(["window", "scope", "key", "reader"], keep="last")
                   .sort_values(["window", "scope", "key", "reader"])
                   .reset_index(drop=True))
     return table, unreadable
+
+
+def _folder(source: str) -> str:
+    """The top subfolder a file is in, or "" for a file at the top."""
+    parts = Path(source).parts
+    return parts[0] if len(parts) > 1 else ""
+
+
+def reader_ids(table: pd.DataFrame) -> pd.Series:
+    """Who each verdict's reader is taken to be: their name, unless it is
+    blank (then the folder, or the file at the top) or found in more than one
+    folder (then `name · folder`)."""
+    folders = table["source"].map(_folder)
+    spread = table.assign(folder=folders).groupby("name")["folder"].nunique()
+    ids = []
+    for name, folder, source in zip(table["name"], folders, table["source"], strict=True):
+        if not name:
+            ids.append(f"{UNNAMED} · {folder or source}")
+        elif spread.get(name, 1) > 1:
+            ids.append(f"{name} · {folder or 'top'}")
+        else:
+            ids.append(name)
+    return pd.Series(ids, index=table.index, dtype=object)
+
+
+def identity_notes(table: pd.DataFrame) -> list[str]:
+    """What the merge had to decide about who is who, in plain words."""
+    if table.empty:
+        return []
+    notes = []
+    unnamed = sorted(set(table.loc[table["name"] == "", "reader"]))
+    if unnamed:
+        notes.append(f"{len(unnamed)} reader(s) left their name blank and are told apart by "
+                     f"folder or file: {', '.join(unnamed)}.")
+    named = table[table["name"] != ""]
+    for name, readers in named.groupby("name")["reader"].unique().items():
+        if len(readers) > 1:
+            notes.append(f"The name {name!r} is in {len(readers)} folders and is counted as "
+                         f"{len(readers)} readers ({', '.join(sorted(readers))}). If it is one "
+                         "person, put their files in one folder.")
+    return notes
 
 
 def agreement(table: pd.DataFrame) -> pd.DataFrame:
@@ -123,6 +180,9 @@ def summary(table: pd.DataFrame, unreadable: list[str]) -> str:
         if len(counts):
             lines += ["", "Event verdicts per reader:",
                       counts[list(adjudication.EVENT_VERDICTS)].to_string()]
+        notes = identity_notes(table)
+        if notes:
+            lines += ["", "Who is who:"] + [f"  {note}" for note in notes]
         pairs = agreement(table)
         if len(pairs):
             lines += ["", "Agreement on events both readers judged:", pairs.to_string(index=False)]
