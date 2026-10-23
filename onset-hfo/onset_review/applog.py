@@ -19,8 +19,10 @@ never data.
 **What is shown is what is saved.** The report is built once, as a
 :class:`Bundle` -- the exact text of every file -- and both the preview and the
 zip are made from that object, so there is no file in the zip that the person
-did not have the chance to read, and any file can be left out. Nothing is
-sent anywhere: the person sends the file themselves.
+did not have the chance to read, and any file can be left out. `report.txt`
+holds no line of any log -- it lists the log files instead -- so unticking the
+logs leaves out everything they say, the names of recordings included.
+Nothing is sent anywhere: the person sends the file themselves.
 
 The log is for diagnosis, not provenance: the record of an analysis is the
 exported report, as before.
@@ -201,14 +203,6 @@ def _redact(text: str) -> str:
     return text.replace(home, "~") if home and home != "/" else text
 
 
-def _tail(path: Path, lines: int) -> str:
-    try:
-        content = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    except OSError:
-        return ""
-    return "\n".join(content[-lines:])
-
-
 def latest_model_check() -> Path | None:
     folder = log_dir() / "model-checks"
     found = sorted(folder.glob("*.json"), key=lambda p: p.stat().st_mtime) \
@@ -216,10 +210,15 @@ def latest_model_check() -> Path | None:
     return found[-1] if found else None
 
 
-def report_text(lines: int = 200, description: str = "", with_logs: bool = True) -> str:
-    """The report as one readable text: what the person said went wrong, about,
-    the log's tail, the crash log's. `with_logs=False` leaves the window's log
-    out, for a command line tool that never wrote one."""
+def report_text(description: str = "", with_logs: bool = True) -> str:
+    """The report as one readable text: what the person said went wrong, the
+    versions and the machine, and which log files sit beside it.
+
+    It quotes no log line. The logs name the recordings that were opened, and
+    they travel as files of their own that the person can untick; a copy of
+    their tail in here would go with the report whatever was unticked.
+    `with_logs=False` leaves the list out too, for a command line tool that
+    never wrote a log."""
     flush()
     parts = ["# Onset Review problem report", time.strftime("%Y-%m-%d %H:%M:%S"), ""]
     if description.strip():
@@ -229,13 +228,11 @@ def report_text(lines: int = 200, description: str = "", with_logs: bool = True)
         parts.append(f"{key}: {value}")
     if not with_logs:
         return _redact("\n".join(parts)) + "\n"
-    parts += ["", f"## The last {lines} lines of the log", _tail(log_dir() / LOG_NAME, lines)]
-    crash = _tail(log_dir() / CRASH_NAME, 80)
-    if crash.strip():
-        parts += ["", "## The crash log (Python's faulthandler)", crash]
-    check = latest_model_check()
-    if check is not None:
-        parts += ["", f"## The latest model check: {check.name} (in the saved report)"]
+    present = [file for file in _log_files() if file.is_file()]
+    parts += ["", "## Logs",
+              "Each is a file of its own beside this one, sent only if it was ticked; "
+              "this text quotes none of them."]
+    parts += [f"- {file.name}" for file in present] or ["- none on this machine"]
     return _redact("\n".join(parts)) + "\n"
 
 

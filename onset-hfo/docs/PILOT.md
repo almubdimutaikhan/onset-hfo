@@ -108,6 +108,12 @@ This writes one row per verdict (window, event, reader, verdict, time, note)
 and prints how many events each reader judged as real, not real or cannot tell,
 and the agreement between each pair of readers on the events both judged.
 
+Each subfolder is one reader. A participant who left the reader name blank is
+told apart by their subfolder, and one name found in two subfolders (two
+machines that both call their user `user`) counts as two readers; the summary
+says under *Who is who* whenever it had to do either. Keep each participant's
+files in their own subfolder and they are never merged into someone else.
+
 Read the agreement figures with their `n`. With a few readers and a few dozen
 events a kappa is a rough indication, not a measurement. Files that cannot be
 read are named and skipped. Nothing is written back to the participants' files.

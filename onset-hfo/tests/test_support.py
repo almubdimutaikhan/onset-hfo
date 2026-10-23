@@ -76,8 +76,9 @@ def test_the_log_and_the_report_hold_what_a_problem_needs(tmp_path):
     assert "a warning worth keeping" in log, "warnings are captured"
     assert "ValueError: an error with a traceback" in log and "Traceback" in log
     text = result["text"]
-    assert "onset-review:" in text and "numpy:" in text and "Busy started" in text
-    assert "model-check-1.json" in text
+    assert "onset-review:" in text and "numpy:" in text
+    assert "Busy started" not in text, "report.txt lists the log and quotes none of it"
+    assert "- onset-review.log" in text and "model-check-1.json" in text
     assert result["report"].endswith("report.zip")
     assert {"report.txt", "onset-review.log", "crash.log", "model-check-1.json",
             "model-check-1.md"} <= set(result["names"])
@@ -255,7 +256,11 @@ def test_the_report_dialog_shows_and_saves_the_report(qapp, tmp_path, monkeypatc
     (tmp_path / "logs" / "onset-review.log").write_text("2026-10-08 INFO onset_review: hello\n")
     dialog = ReportDialog()
     try:
-        assert "hello" in dialog.text.toPlainText() and "onset-review:" in dialog.text.toPlainText()
+        shown = dialog.text.toPlainText()          # report.txt, the first file
+        assert "onset-review:" in shown and "- onset-review.log" in shown
+        assert "hello" not in shown, "the log is its own file, not quoted in report.txt"
+        dialog.files.setCurrentRow(1)
+        assert "hello" in dialog.text.toPlainText()
         saved = dialog.save(tmp_path / "sent.zip")
         assert saved == tmp_path / "sent.zip"
         assert "report.txt" in zipfile.ZipFile(saved).namelist()
