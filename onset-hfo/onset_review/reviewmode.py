@@ -19,7 +19,11 @@ consecutive events can come from anywhere on the implant. *Channels…* (`L`)
 narrows it to the channels a reader wants to go through -- one, several, or
 the busiest ones the ranking could not separate -- and review mode starts at
 the first of their events nobody has judged. The events list in the window
-narrows with it.
+narrows with it. The channels chosen are remembered for each recording and
+come back the next time review mode opens on it, unless the list has been
+narrowed some other way. **Order** (`O`) goes through the events channel by
+channel, the busiest first and each channel in time, instead of every
+channel's events by time.
 
 **When one event is not enough.** A reader who is unsure needs what is around
 the event, not a closer look at it. `+` and `-` widen and narrow the seconds
@@ -68,7 +72,8 @@ __all__ = ["ReviewMode", "ChannelPicker", "open_review", "KEYS"]
 KEYS = (
     ("A", "real"), ("D", "not real"), ("U", "unsure"), ("Backspace", "clear"),
     ("N", "note"), ("←  →", "previous, next"), ("Home  End", "first, last"),
-    ("J", "next unjudged"), ("L", "channels"), ("+  −", "time"), ("↑  ↓", "gain"),
+    ("J", "next unjudged"), ("L", "channels"), ("O", "order"), ("+  −", "time"),
+    ("↑  ↓", "gain"),
     ("R", "reset zoom"), ("C", "context"), ("K", "two contacts"), ("T", "show in trace"),
     ("F11", "full screen"), ("Esc", "leave"),
 )
@@ -78,6 +83,10 @@ KEYS = (
 PADS = (0.1, 0.25, 0.5, 1.0, 2.0, 5.0)
 #: The factor one press of the arrows up or down changes the gain by.
 GAIN_STEP = 1.5
+#: Recordings whose chosen channels are remembered, the most recent kept.
+REMEMBERED_WINDOWS = 100
+#: The order button's text, by the order it would show.
+ORDER_TEXT = {"time": "Order: by time", "channel": "Order: by channel"}
 
 
 def _prefs_file():
@@ -359,6 +368,7 @@ class ReviewMode(QDialog):
                            ("Next  ▶", lambda: self.step(+1)),
                            ("Next unjudged", self.next_unjudged),
                            ("Channels…", self.choose_channels),
+                           ("Order: by time", self.toggle_order),
                            ("Context", self.toggle_context),
                            ("Show in trace", self.show_in_trace),
                            ("Done", self.close)):
@@ -415,6 +425,7 @@ class ReviewMode(QDialog):
                            ("End", lambda: self.step(+10**9)),
                            ("J", self.next_unjudged),
                            ("L", self.choose_channels),
+                           ("O", self.toggle_order),
                            ("+", lambda: self.widen(-1)),
                            ("=", lambda: self.widen(-1)),
                            ("-", lambda: self.widen(+1)),
@@ -440,6 +451,15 @@ class ReviewMode(QDialog):
         self.context.setVisible(bool(prefs.get("context")))
         events.eventKeyPicked.connect(self._show)
         events.judged.connect(self._judged)
+        self.remembered: tuple[str, ...] = ()
+        saved = (prefs.get("channels") or {}).get(self._window_id())
+        if saved and not events.chosen_channels():
+            # Only when nothing else narrows the list: a reader who filtered
+            # it by hand meant that, not what they chose last time.
+            self.remembered = events.set_channels(saved)
+        if prefs.get("order") in events.ORDERS and prefs["order"] != events.order():
+            events.set_order(prefs["order"])
+        self.buttons["Order: by time"].setText(ORDER_TEXT[events.order()])
         if not events.selected_key():
             # Start where the work is: the first event nobody has judged, or
             # the first one at all when every one has a verdict.
@@ -481,11 +501,46 @@ class ReviewMode(QDialog):
                 return events.chosen_channels()
             channels = picker.chosen()
         chosen = events.set_channels(channels)
+        self.remembered = ()
+        self._remember_channels(chosen)
         self._shown_key = ""
         if not events.step_unjudged(+1):
             events.step(0)
         self._refresh()
         return chosen
+
+    def toggle_order(self) -> str:
+        """By time, or channel by channel; the event shown stays shown."""
+        return self.set_order("channel" if self.events.order() == "time" else "time")
+
+    def set_order(self, order: str) -> str:
+        events = self.events
+        events.set_order(order)
+        if not events.selected_key() and not events.step_unjudged(+1):
+            events.step(0)
+        self.buttons["Order: by time"].setText(ORDER_TEXT[order])
+        self.remember()
+        self._refresh()
+        return order
+
+    def _window_id(self) -> str:
+        from onset_review.adjudication import window_id
+
+        try:
+            return window_id(self._session.request)
+        except (AttributeError, TypeError, ValueError):
+            return ""
+
+    def _remember_channels(self, chosen) -> None:
+        window = self._window_id()
+        if not window:
+            return
+        prefs = load_prefs()
+        remembered = {k: v for k, v in (prefs.get("channels") or {}).items() if k != window}
+        if chosen:
+            remembered[window] = list(chosen)
+        prefs["channels"] = dict(list(remembered.items())[-REMEMBERED_WINDOWS:])
+        save_prefs(prefs)
 
     def widen(self, steps: int) -> float:
         """Show more (`steps` > 0) or less signal either side of the event."""
@@ -578,9 +633,12 @@ class ReviewMode(QDialog):
             self.showFullScreen()
 
     def remember(self) -> None:
-        save_prefs({"geometry": base64.b64encode(bytes(self.saveGeometry().data())).decode("ascii"),
-                    "pad_s": self.detail.pad_s, "context": self.context.isVisible(),
-                    "contacts": self.context.contacts.isChecked()})
+        prefs = load_prefs()
+        prefs.update({"geometry": base64.b64encode(bytes(self.saveGeometry().data())).decode("ascii"),
+                      "pad_s": self.detail.pad_s, "context": self.context.isVisible(),
+                      "contacts": self.context.contacts.isChecked(),
+                      "order": self.events.order()})
+        save_prefs(prefs)
 
     # -- what the screen says ----------------------------------------------------
     def position(self) -> tuple[int, int]:
@@ -634,13 +692,15 @@ class ReviewMode(QDialog):
         filters = [events.kind.currentText()] if events.kind.currentIndex() > 0 else []
         chosen = events.chosen_channels()
         if chosen:
-            filters.append("on " + channel_phrase(chosen))
+            filters.append("on " + channel_phrase(chosen)
+                           + (" (as chosen last time)" if chosen == self.remembered else ""))
         if events.on_spike.isChecked():
             filters.append("riding a discharge")
         if events.rejected.isChecked():
             filters.append("rejected ones included")
-        self.scope.setText("The events list as filtered: " + ", ".join(filters)
-                           if filters else "Every accepted event, in time order")
+        order = "channel by channel" if events.order() == "channel" else "in time order"
+        self.scope.setText(f"The events list as filtered: {', '.join(filters)}; {order}"
+                           if filters else f"Every accepted event, {order}")
         done = self.judged_count()
         self.bar.setMaximum(max(total, 1))
         self.bar.setValue(done)

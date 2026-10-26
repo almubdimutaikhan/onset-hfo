@@ -427,7 +427,10 @@ events can come from anywhere on the implant. **Channels…** (`L`) chooses
 the channels to go through: tick one or several, or take *The busiest* (the
 channels the ranking could not tell apart from the leader) or *With events*;
 review mode starts at the first of their events nobody has judged, and the
-Events list narrows with it. The bar at the top counts what you have judged
+Events list narrows with it. The channels you chose come back the next time
+review mode opens on the same recording, unless you have narrowed the list
+some other way. **Order** (`O`) goes channel by channel instead, the busiest
+channel first and each channel's events in time. The bar at the top counts what you have judged
 of the events in the list. Nothing is kept twice:
 the verdicts go through the list and are saved as they are given, and leaving
 review mode leaves the list, the trace and the event view where you stopped.

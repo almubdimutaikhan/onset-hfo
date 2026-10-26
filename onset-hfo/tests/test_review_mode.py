@@ -267,6 +267,77 @@ def test_review_mode_goes_through_the_channels_a_reader_chooses(qapp, opened):
         mode.close()
 
 
+def test_review_mode_goes_channel_by_channel_and_keeps_the_event_shown(qapp, opened):
+    events = opened.parts.panels["events"]
+    pages = opened.parts.pages
+    mode = pages.open_review_mode(full_screen=False)
+    _settle(qapp)
+    try:
+        mode.step(+3)
+        shown = events.selected_key()
+        assert mode.toggle_order() == "channel"
+        assert events.selected_key() == shown, "the event on screen stays on screen"
+        assert "channel by channel" in mode.scope.text()
+        assert mode.buttons["Order: by time"].text() == "Order: by channel"
+        rows = [(events.model.row_value(r, "channel"), events.model.row_value(r, "t_local"))
+                for r in range(events.model.rowCount())]
+        names = events.channel_names()
+        assert [names.index(c) for c, _ in rows] == sorted(names.index(c) for c, _ in rows), \
+            "channels in the ranking's order"
+        for channel in {c for c, _ in rows}:
+            times = [t for c, t in rows if c == channel]
+            assert times == sorted(times), channel
+    finally:
+        mode.close()
+    _settle(qapp)
+    again = pages.open_review_mode(full_screen=False)
+    try:
+        assert events.order() == "channel", "the order is remembered"
+        assert again.set_order("time") == "time"
+        times = [events.model.row_value(r, "t_local") for r in range(events.model.rowCount())]
+        assert times == sorted(times)
+        assert again.scope.text().endswith("in time order")
+    finally:
+        again.close()
+
+
+def test_the_channels_chosen_come_back_for_the_same_recording(qapp, opened):
+    events = opened.parts.panels["events"]
+    pages = opened.parts.pages
+    mode = pages.open_review_mode(full_screen=False)
+    _settle(qapp)
+    with_events = [n for n, c in events.channel_counts().items() if c]
+    two = with_events[:2]
+    mode.choose_channels(two)
+    mode.close()
+    _settle(qapp)
+    events.set_channels(())                      # the list let go in between
+    again = pages.open_review_mode(full_screen=False)
+    try:
+        assert events.chosen_channels() == tuple(two)
+        assert "(as chosen last time)" in again.scope.text()
+    finally:
+        again.close()
+    _settle(qapp)
+    # A list narrowed by hand is the reader's choice, not last time's.
+    events.set_channels(())
+    events.channel.setCurrentText(with_events[2])
+    third = pages.open_review_mode(full_screen=False)
+    try:
+        assert events.chosen_channels() == (with_events[2],)
+        assert "last time" not in third.scope.text()
+        third.choose_channels(list(events.channel_counts()))      # every channel: forgotten
+    finally:
+        third.close()
+    _settle(qapp)
+    events.set_channels(())
+    fourth = pages.open_review_mode(full_screen=False)
+    try:
+        assert events.chosen_channels() == ()
+    finally:
+        fourth.close()
+
+
 def test_review_mode_is_reached_by_space_the_toolbar_and_the_menu(qapp, opened):
     from qtpy.QtWidgets import QShortcut
 
