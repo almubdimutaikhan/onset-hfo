@@ -211,6 +211,10 @@ class DataFrameModel(QAbstractTableModel):
         # which for the events list is time.
         return frame.sort_values(name, ascending=ascending, kind="stable")
 
+    def clear_order(self) -> None:
+        """Forget the header's sort: rows come in the order they are given."""
+        self._order = None
+
     def sort(self, column: int, order=Qt.AscendingOrder) -> None:
         """Sort by a column, which is what the clickable headers promised.
 
@@ -623,12 +627,17 @@ class EventsPanel(QWidget):
     #: (`set_channels`), told apart from a channel's own entry by this data.
     CHOSEN = "onset-chosen-channels"
 
+    #: The orders the list can come in (`set_order`): every event by its
+    #: time, or channel by channel in the ranking's order, each in time.
+    ORDERS = ("time", "channel")
+
     def __init__(self, session: ReviewSession, parent=None):
         super().__init__(parent)
         self._session = session
         self._all = trends.event_table(session, include_rejected=True)
         self._shown = self._all
         self._chosen: tuple[str, ...] = ()
+        self._order = "time"
 
         self.kind = QComboBox()
         self.kind.addItems(["All kinds", "Ripples only", "Fast ripples only",
@@ -846,6 +855,11 @@ class EventsPanel(QWidget):
             frame = frame[frame["channel"].isin(chosen)]
         if self.on_spike.isChecked():
             frame = frame[frame["with_spike"]]
+        if self._order == "channel" and len(frame):
+            rank = {name: i for i, name in enumerate(self.channel_names())}
+            frame = (frame.assign(_rank=frame["channel"].map(rank).fillna(len(rank)))
+                          .sort_values(["_rank", "t_local"], kind="stable")
+                          .drop(columns="_rank"))
         # `_shown` is the filtered frame in its natural order, which the
         # progress figures count over; the model may hold it in a different
         # order once the reader has clicked a header, which is why a row is
@@ -971,6 +985,37 @@ class EventsPanel(QWidget):
         self.channel.blockSignals(False)
         self.refilter()
         return chosen
+
+    def order(self) -> str:
+        return self._order
+
+    def set_order(self, order: str) -> str:
+        """List the events by time, or channel by channel (the ranking's
+        order, each channel's in time). The selected event stays selected."""
+        if order not in self.ORDERS:
+            raise ValueError(f"no order {order!r}; one of {self.ORDERS}")
+        key = self.selected_key()
+        self._order = order
+        if order == "channel":
+            # No column holds this order, so no arrow; and the model must
+            # stop re-sorting by the last header it was sorted by.
+            self.view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+            self.model.clear_order()
+        self.refilter()
+        if order == "time":
+            _indicate(self.view, self.model, "t_local")
+        if key:
+            self.select_key(key)
+        return order
+
+    def select_key(self, key: str) -> bool:
+        """Select the listed event whose verdict key is `key`."""
+        for row in range(self.model.rowCount()):
+            if str(self.model.row_value(row, "key") or "") == key:
+                self.view.selectRow(row)
+                self.view.scrollTo(self.model.index(row, 0))
+                return True
+        return False
 
     def step(self, delta: int) -> None:
         """Move the selection by `delta` rows, which is what the toolbar does."""
