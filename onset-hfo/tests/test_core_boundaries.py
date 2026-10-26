@@ -7,6 +7,7 @@ import subprocess
 import sys
 import textwrap
 import zipfile
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,4 +51,18 @@ def test_cli_report_never_imports_desktop_or_qt(tmp_path):
         report = zipped.read("report.txt").decode("utf-8")
     assert "core-only report" in report
     assert "Versions and machine" in report
+    assert f"onset-hfo: {version('onset-hfo')}" in report.splitlines()
     assert report in done.stdout
+
+
+def test_report_without_package_metadata_keeps_the_pipeline_version(monkeypatch):
+    from onset_hfo import problemreport
+    from onset_hfo.config import PIPELINE_VERSION
+
+    def missing_version(package):
+        raise PackageNotFoundError(package)
+
+    monkeypatch.setattr(problemreport, "version", missing_version)
+    report = problemreport.report_text("source checkout")
+    assert "onset-hfo: unknown (package metadata unavailable)" in report.splitlines()
+    assert f"pipeline: {PIPELINE_VERSION}" in report.splitlines()

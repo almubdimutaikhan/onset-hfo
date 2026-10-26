@@ -24,11 +24,16 @@ __all__ = ["Bundle", "about", "redact", "report_text", "build_bundle", "write_bu
 
 def about() -> dict:
     """Software versions and machine facts; no optional package is imported."""
-    from onset_hfo import __author__, __version__
+    from onset_hfo import __author__
     from onset_hfo.config import PIPELINE_VERSION
 
+    # The import package's __version__ tracks the pipeline, not the release.
+    try:
+        package_version = version("onset-hfo")
+    except PackageNotFoundError:
+        package_version = "unknown (package metadata unavailable)"
     out = {
-        "onset-hfo": __version__, "pipeline": PIPELINE_VERSION,
+        "onset-hfo": package_version, "pipeline": PIPELINE_VERSION,
         "developer": __author__,
         "python": sys.version.split()[0], "executable": sys.executable,
         "platform": platform.platform(), "machine": platform.machine(),
